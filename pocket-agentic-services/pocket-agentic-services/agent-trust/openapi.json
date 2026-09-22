@@ -1,0 +1,84 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Agent Trust and Compliance API",
+    "version": "1.0.0",
+    "description": "agent-trust on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body. Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every check is a real live call (RDAP, DNS, a live TLS handshake, the U.S. Consolidated Screening List, or a public Blockscout explorer instance) made at request time."
+  },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/v1/version": { "get": { "summary": "Service identity", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "service": { "type": "string" }, "version": { "type": "string" } } } } } } } } },
+    "/v1/health": { "get": { "summary": "Readiness", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "string" } } } } } } } } },
+    "/v1/domain-trust": {
+      "post": {
+        "summary": "RDAP + DNS trust score for a domain",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["domain"], "properties": { "domain": { "type": "string", "example": "example.com" } } } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": {
+            "domain": { "type": "string" }, "trust_score": { "type": "number" }, "registration": { "type": "object" }, "dns": { "type": "object" }, "reasons": { "type": "array", "items": { "type": "string" } }
+          } } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/brand-verify": {
+      "post": {
+        "summary": "Live TLS certificate check, optionally matched against a claimed brand name",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["domain"], "properties": { "domain": { "type": "string" }, "brand_name": { "type": "string" } } } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": {
+            "domain": { "type": "string" }, "brand_name_match": { "type": ["boolean", "null"] }, "brand_verify_score": { "type": "number" }, "certificate": { "type": "object" }, "reasons": { "type": "array", "items": { "type": "string" } }
+          } } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/seller-trust": {
+      "post": {
+        "summary": "Composite domain+certificate trust for a resource-server URL, with a trust recommendation",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["url"], "properties": { "url": { "type": "string", "example": "https://example.com/v1/resource" } } } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": {
+            "hostname": { "type": "string" }, "seller_trust_score": { "type": "number" }, "recommendation": { "type": "string", "enum": ["trusted", "proceed_with_caution", "high_risk"] }
+          } } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/sanctions-check": {
+      "post": {
+        "summary": "U.S. Consolidated Screening List lookup (OFAC SDN + other restricted-party lists)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["address"], "properties": { "address": { "type": "string", "description": "A wallet address, entity name, or other identifier to screen." } } } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": {
+            "sanctioned": { "type": "boolean" }, "match_count": { "type": "integer" }, "matches": { "type": "array" }
+          } } } } },
+          "422": { "description": "Bad input, or the operator has not configured TRADE_GOV_SUBSCRIPTION_KEY (code: not_configured)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/v1/reputation": {
+      "post": {
+        "summary": "EVM address reputation via a public Blockscout explorer instance",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["chain", "address"], "properties": {
+          "chain": { "type": "string", "enum": ["eth", "base", "arbitrum", "polygon"] }, "address": { "type": "string", "example": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" }
+        } } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": {
+            "reputation_score": { "type": "number" }, "is_contract": { "type": "boolean" }, "is_verified": { "type": "boolean" }, "is_scam": { "type": "boolean" }, "transactions_count": { "type": ["integer", "null"] }
+          } } } } },
+          "404": { "description": "No on-chain activity found for that address on that chain", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": { "type": "object", "required": ["error"], "properties": { "error": { "type": "object", "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } } }
+    },
+    "responses": {
+      "ClientError": { "description": "Bad input, an SSRF-guard refusal (code: refused_target), or a live upstream failure with no cached fallback. Always 4xx, never 5xx.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    }
+  }
+}

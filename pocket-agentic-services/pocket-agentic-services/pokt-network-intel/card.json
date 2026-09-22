@@ -1,0 +1,64 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "POKT Network Intelligence. Eight read-only endpoints over Pocket Network's own Shannon chain state, each sourced live (no cached-forever constants) from Pocket's public GraphQL indexer and Cosmos LCD: POST /v1/pulse (network snapshot), /v1/tokenomics (live governance params), /v1/validators (LCD validator set with true bonded voting power), /v1/suppliers (staked suppliers, network-wide or per service), /v1/throughput (claimed vs. difficulty-estimated relay volume), /v1/applications (staked applications), /v1/service-demand (per-service supply/demand proxy), /v1/supplier-trust (deterministic 0-100 score for one operator id). Full request/response shapes: see the openapi spec in specs[] and the repo README. Every response is a single JSON object; bad input returns 4xx JSON.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "pokt-network-intel HTTP server on :8080; mount at /",
+      "notes": "Only POST /v1/pulse, /v1/tokenomics, /v1/validators, /v1/suppliers, /v1/throughput, /v1/applications, /v1/service-demand, /v1/supplier-trust, and GET /v1/version, /v1/health are expected. Every response is a JSON object; bad input returns 4xx with a JSON error object, never HTML or plain text."
+    }
+  ],
+  "apis": [
+    "pokt-network-intel-pulse",
+    "pokt-network-intel-tokenomics",
+    "pokt-network-intel-validators",
+    "pokt-network-intel-suppliers",
+    "pokt-network-intel-throughput",
+    "pokt-network-intel-applications",
+    "pokt-network-intel-service-demand",
+    "pokt-network-intel-supplier-trust"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "pokt-network-intel-pulse",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pokt-network-intel/openapi.json",
+      "notes": "Covers all eight resources in one document. TODO before MainNet staking: pin this to an immutable commit SHA in the path (not 'main') and add a sha256 of the exact bytes once frozen, per this repo's own README."
+    }
+  ],
+  "access": "public",
+  "results": "deterministic",
+  "serving": {
+    "backend": "The pokt-network-intel Node.js HTTP server (no external dependencies) behind a RelayMiner, with the REST backend pointed at http://<container>:8080. No auth toward the backend; callers cannot send headers through the gateway. The backend itself calls out to Pocket's own public GraphQL indexer and Cosmos LCD on every request (short in-memory TTL cache, stale-on-error fallback) — it needs outbound HTTPS to data.pocket.network and sauron-api.infra.pocket.network (or the beta equivalents), nothing else.",
+    "implementations": [
+      "pokt-network-intel >= 1.0"
+    ],
+    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/main/pokt-network-intel",
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/version", "method": "GET" },
+        "expect": { "json_path": "$.service", "matches": "^pokt-network-intel$" },
+        "notes": "Identity probe: pins the backend to this service so a wrong backend cannot be staked under this id."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/health", "method": "GET" },
+        "expect": { "json_path": "$.status", "matches": "^ok$" },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/tokenomics", "method": "POST", "body": {} },
+        "expect": { "json_path": "$.mint_ratio", "matches": "^0\\.[0-9]+$" },
+        "notes": "Functional probe: mint_ratio is a live governance parameter fetched from the tokenomics module on every call, so a matching shape proves the backend can reach and correctly parse the Cosmos LCD right now. The exact value is not asserted because it is a live parameter that changes by governance proposal, not a constant."
+      }
+    ],
+    "notes": "Suppliers should disable any local rate limiting for the RelayMiner's address. Request bodies are capped at 1 MiB (every resource here is a small JSON query) and responses are ordinarily a few KB. Backend timeout budget: keep well under the operator's configured relay_timeout (typically 10-30s); the backend itself applies an 8s timeout (POCKET_FETCH_TIMEOUT_MS) to each upstream call with one retry, and serves the last good cached value (tagged stale) rather than blocking indefinitely on a slow upstream. Gateway operators: configure as type passthrough with rpc_types [\"rest\"]; see sage-service.yaml."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/pokt-network-intel/README.md",
+  "updated": "2026-09-19"
+}

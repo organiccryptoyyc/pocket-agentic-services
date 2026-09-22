@@ -1,0 +1,65 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "Wallet and DeFi Intelligence. Nine endpoints for an agent evaluating a wallet or a DeFi protocol before acting, each backed by a live call to a free public data source (Blockscout explorer instances for EVM chains, DefiLlama's public API) — nothing bundled or simulated. POST /v1/wallet-balance, /v1/wallet-risk, /v1/smart-money, /v1/prospect-enrichment (chain, address): balance/risk/heuristic-reputation/full-profile for an EVM wallet. POST /v1/nft-analytics (chain, address): NFT holdings summary. POST /v1/precheck (chain, address, protocol): a pre-transaction gate combining wallet risk with the target protocol's live TVL trend and hack history. POST /v1/protocol-health (protocol): DefiLlama TVL/hack/chain data for a protocol slug. POST /v1/depeg-check (symbol): live stablecoin price vs. peg. POST /v1/yields (chain?, stablecoin_only?, min_tvl_usd?, limit?): top yield opportunities ranked by live APY. EVM chains only in this version: eth, base, arbitrum, polygon. Every score is 0-100 with a 'reasons' array; wallet-risk and smart-money use opposite score directions (documented in each response) since 'risk' and 'trustworthiness' are inverses.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "wallet-defi-intel HTTP server on :8080; mount at /",
+      "notes": "Only POST /v1/wallet-balance, /v1/wallet-risk, /v1/smart-money, /v1/prospect-enrichment, /v1/precheck, /v1/yields, /v1/protocol-health, /v1/depeg-check, /v1/nft-analytics, and GET /v1/version, /v1/health are expected. Every response is a JSON object; bad input (including an unsupported chain or unknown protocol/symbol, 404) returns 4xx with a JSON error object, never HTML or plain text."
+    }
+  ],
+  "apis": [
+    "wallet-defi-intel-wallet-balance",
+    "wallet-defi-intel-wallet-risk",
+    "wallet-defi-intel-smart-money",
+    "wallet-defi-intel-prospect-enrichment",
+    "wallet-defi-intel-precheck",
+    "wallet-defi-intel-yields",
+    "wallet-defi-intel-protocol-health",
+    "wallet-defi-intel-depeg-check",
+    "wallet-defi-intel-nft-analytics"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "wallet-defi-intel-protocol-health",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/wallet-defi-intel/openapi.json",
+      "notes": "Covers all nine resources in one document. TODO before MainNet staking: pin this to an immutable commit SHA in the path (not 'main') and add a sha256 of the exact bytes once frozen, per this repo's own README."
+    }
+  ],
+  "access": "public",
+  "results": "deterministic",
+  "serving": {
+    "backend": "The wallet-defi-intel Node.js HTTP server (no external dependencies) behind a RelayMiner, with the REST backend pointed at http://<container>:8080. No auth toward the backend; callers cannot send headers through the gateway. The backend calls out to public Blockscout instances (eth/base/arbitrum/polygon .blockscout.com) and DefiLlama's public API (api.llama.fi, stablecoins.llama.fi, yields.llama.fi) on every request (short in-memory TTL cache, stale-on-error fallback; the yields/stablecoins lists are cached network-wide for 15 minutes since they are multi-MB downloads not meant to be re-fetched per request).",
+    "implementations": [
+      "wallet-defi-intel >= 1.0"
+    ],
+    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/main/wallet-defi-intel",
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/version", "method": "GET" },
+        "expect": { "json_path": "$.service", "matches": "^wallet-defi-intel$" },
+        "notes": "Identity probe: pins the backend to this service so a wrong backend cannot be staked under this id."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/health", "method": "GET" },
+        "expect": { "json_path": "$.status", "matches": "^ok$" },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/protocol-health", "method": "POST", "body": { "protocol": "aave" } },
+        "expect": { "json_path": "$.protocol", "matches": "^Aave$" },
+        "notes": "Functional probe against a large, long-lived DefiLlama-tracked protocol. Proves the backend can reach DefiLlama and correctly parse a live response right now; TVL/hack figures themselves are not asserted since they are live values."
+      }
+    ],
+    "notes": "Suppliers should disable any local rate limiting for the RelayMiner's address. Request bodies are capped at 1 MiB; /v1/yields' response can be a few dozen KB (limit capped at 50 rows) even though the backend downloads ~11MB from DefiLlama per cache refresh internally. Backend timeout budget: keep well under the operator's configured relay_timeout (typically 10-30s); each upstream call has an 8s timeout (15s for the larger DefiLlama pool list) with one retry, and serves the last good cached value (tagged stale) rather than blocking indefinitely. Gateway operators: configure as type passthrough with rpc_types [\"rest\"]; see sage-service.yaml."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/wallet-defi-intel/README.md",
+  "updated": "2026-09-19"
+}

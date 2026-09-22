@@ -1,0 +1,15 @@
+{
+  "name": "agent-trust",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agent Trust and Compliance — a Pocket Network service backend. Live domain/TLS/sanctions/on-chain reputation checks over REST.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node -r ./test/stub-network.js test/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

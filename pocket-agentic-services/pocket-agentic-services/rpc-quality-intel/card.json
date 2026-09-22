@@ -1,0 +1,60 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "RPC / Gateway Quality Intelligence. Four endpoints answering \"how well is Pocket actually serving RPC access to this chain/service right now?\" — a per-service quality lens, live from Pocket's own GraphQL indexer, distinct from network-wide protocol stats. POST /v1/rpc-pulse (service_id): current serving snapshot — active suppliers/applications, relay-mining difficulty EMA, trailing-1h settlement volume. POST /v1/rpc-performance (service_id, window_hours): settlement/proof performance over a window — claimed vs. estimated relays, distinct suppliers serving, proof success rate, slash events. POST /v1/rpc-anomaly (service_id): deterministic comparison of a recent window vs. a longer baseline, flagging relay-volume drops, supplier-participation drops, and slash-rate spikes by fixed thresholds. POST /v1/rpc-forecast (service_id, lookback_days, horizon_days): least-squares linear-trend projection over real daily settlement history. service_id is required on every resource (e.g. \"eth\"); every other field is optional with documented defaults. Every response is a single JSON object.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "rpc-quality-intel HTTP server on :8080; mount at /",
+      "notes": "Only POST /v1/rpc-pulse, /v1/rpc-performance, /v1/rpc-anomaly, /v1/rpc-forecast, and GET /v1/version, /v1/health are expected. Every response is a JSON object; bad input (including an unknown service_id, 404) returns 4xx with a JSON error object, never HTML or plain text."
+    }
+  ],
+  "apis": [
+    "rpc-quality-intel-pulse",
+    "rpc-quality-intel-performance",
+    "rpc-quality-intel-anomaly",
+    "rpc-quality-intel-forecast"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "rpc-quality-intel-pulse",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/rpc-quality-intel/openapi.json",
+      "notes": "Covers all four resources in one document. TODO before MainNet staking: pin this to an immutable commit SHA in the path (not 'main') and add a sha256 of the exact bytes once frozen, per this repo's own README."
+    }
+  ],
+  "access": "public",
+  "results": "deterministic",
+  "serving": {
+    "backend": "The rpc-quality-intel Node.js HTTP server (no external dependencies) behind a RelayMiner, with the REST backend pointed at http://<container>:8080. No auth toward the backend; callers cannot send headers through the gateway. The backend calls out to Pocket's own public GraphQL indexer on every request (short in-memory TTL cache, stale-on-error fallback) — it needs outbound HTTPS to data.pocket.network (or data.beta.pocket.network), nothing else.",
+    "implementations": [
+      "rpc-quality-intel >= 1.0"
+    ],
+    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/main/rpc-quality-intel",
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/version", "method": "GET" },
+        "expect": { "json_path": "$.service", "matches": "^rpc-quality-intel$" },
+        "notes": "Identity probe: pins the backend to this service so a wrong backend cannot be staked under this id."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/health", "method": "GET" },
+        "expect": { "json_path": "$.status", "matches": "^ok$" },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/rpc-pulse", "method": "POST", "body": { "service_id": "pocket" } },
+        "expect": { "json_path": "$.active_suppliers", "matches": "^[0-9]+$" },
+        "notes": "Functional probe against Pocket's own 'pocket' service (always registered, so this never depends on a third-party chain being staked). Proves the backend can reach and correctly parse the live GraphQL indexer right now; the count itself is a live participant count, not a constant, so only its shape is asserted."
+      }
+    ],
+    "notes": "Suppliers should disable any local rate limiting for the RelayMiner's address. Request bodies are capped at 1 MiB and responses are ordinarily a few KB. Backend timeout budget: keep well under the operator's configured relay_timeout (typically 10-30s); the backend applies an 8s timeout (POCKET_FETCH_TIMEOUT_MS) to each upstream call with one retry, and serves the last good cached value (tagged stale) rather than blocking indefinitely on a slow upstream. /v1/rpc-forecast issues one batched GraphQL query per call (aliased, not N round trips) to stay inside the timeout budget even at the maximum 30-day lookback. Gateway operators: configure as type passthrough with rpc_types [\"rest\"]; see sage-service.yaml."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/rpc-quality-intel/README.md",
+  "updated": "2026-09-19"
+}

@@ -1,0 +1,211 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "POKT Network Intelligence API",
+    "version": "1.0.0",
+    "description": "pokt-network-intel on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body (query params and headers are not read). Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every field is fetched live from Pocket's own GraphQL indexer (https://data.pocket.network/graphql) and Cosmos LCD (https://sauron-api.infra.pocket.network) at request time; nothing is a hardcoded constant."
+  },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/v1/version": {
+      "get": {
+        "summary": "Service identity (health-check identity probe)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": {
+              "type": "object", "required": ["service", "version"],
+              "properties": { "service": { "type": "string", "example": "pokt-network-intel" }, "version": { "type": "string", "example": "1.0.0" } }
+            } } }
+          }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "summary": "Readiness (health-check readiness probe)",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": {
+            "type": "object", "required": ["status"], "properties": { "status": { "type": "string", "example": "ok" } }
+          } } } }
+        }
+      }
+    },
+    "/v1/pulse": {
+      "post": {
+        "summary": "Network-wide snapshot: chain tip, indexer health, staked-actor counts",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": {
+            "type": "object",
+            "properties": {
+              "chain_tip": { "type": "object", "properties": { "height": { "type": "integer" }, "time": { "type": "string" }, "catching_up": { "type": "boolean" } } },
+              "indexer": { "type": "object", "properties": { "target_height": { "type": "integer" }, "last_processed_height": { "type": "integer" }, "lag_blocks": { "type": "integer" }, "healthy": { "type": "boolean" } } },
+              "staked": { "type": "object", "properties": { "validators": { "type": "integer" }, "suppliers": { "type": "integer" }, "applications": { "type": "integer" }, "gateways": { "type": "integer" } } },
+              "services_registered": { "type": "integer" }
+            }
+          } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/tokenomics": {
+      "post": {
+        "summary": "Live tokenomics/governance parameters (mint ratio, burn-equals-mint distribution, CUTTM)",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": {
+            "type": "object",
+            "properties": {
+              "compute_units_to_tokens_multiplier": { "type": "string" },
+              "compute_unit_cost_granularity": { "type": "string" },
+              "mint_ratio": { "type": "number" },
+              "global_inflation_per_claim": { "type": "number" },
+              "mint_equals_burn_claim_distribution": { "type": "object" },
+              "mint_allocation_percentages": { "type": "object" },
+              "dao_reward_address": { "type": "string" }
+            }
+          } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/validators": {
+      "post": {
+        "summary": "LCD staking validator set (true total-bonded voting power, not self-stake)",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": {
+          "type": "object",
+          "properties": {
+            "status": { "type": "string", "enum": ["bonded", "unbonding", "unbonded"], "default": "bonded" },
+            "limit": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 },
+            "offset": { "type": "integer", "minimum": 0, "default": 0 }
+          }
+        } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string" }, "total_count": { "type": "integer" }, "limit": { "type": "integer" }, "offset": { "type": "integer" },
+              "validators": { "type": "array", "items": { "type": "object", "properties": {
+                "operator_address": { "type": "string" }, "moniker": { "type": "string" },
+                "tokens_upokt": { "type": "string" }, "tokens_pokt": { "type": "number" },
+                "commission_rate_pct": { "type": "number" }, "jailed": { "type": "boolean" }, "status": { "type": "string" }
+              } } }
+            }
+          } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/suppliers": {
+      "post": {
+        "summary": "Staked suppliers, network-wide (ranked by stake) or filtered to one service_id",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": {
+          "type": "object",
+          "properties": {
+            "service_id": { "type": "string", "description": "e.g. \"eth\"; omit for the network-wide top-stake ranking" },
+            "limit": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 },
+            "offset": { "type": "integer", "minimum": 0, "default": 0 }
+          }
+        } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/throughput": {
+      "post": {
+        "summary": "Claimed vs. difficulty-estimated relay/compute-unit volume over a trailing window",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": {
+          "type": "object", "properties": { "window_hours": { "type": "integer", "minimum": 1, "maximum": 168, "default": 24 } }
+        } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": {
+            "type": "object",
+            "properties": {
+              "window_hours": { "type": "integer" }, "since": { "type": "string" }, "blocks_observed": { "type": "integer" },
+              "claimed": { "type": "object", "properties": { "relays": { "type": "integer" }, "compute_units": { "type": "integer" } } },
+              "estimated_true_throughput": { "type": "object", "properties": { "relays": { "type": "integer" }, "compute_units": { "type": "integer" } } },
+              "transactions": { "type": "integer" }
+            }
+          } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/applications": {
+      "post": {
+        "summary": "Staked applications, network-wide (ranked by stake) or filtered to one service_id",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": {
+          "type": "object",
+          "properties": {
+            "service_id": { "type": "string" },
+            "limit": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 },
+            "offset": { "type": "integer", "minimum": 0, "default": 0 }
+          }
+        } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/service-demand": {
+      "post": {
+        "summary": "Per-service active-supplier/active-application counts (a live supply/demand proxy)",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": {
+          "type": "object",
+          "properties": { "service_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 20, "description": "Omit to rank the first 30 registered services." } }
+        } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": {
+            "type": "object",
+            "properties": { "requested": { "type": "boolean" }, "services": { "type": "array", "items": { "type": "object", "properties": {
+              "service_id": { "type": "string" }, "name": { "type": "string" }, "compute_units_per_relay": { "type": "string" },
+              "active_suppliers": { "type": "integer" }, "active_applications": { "type": "integer" }
+            } } } }
+          } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/supplier-trust": {
+      "post": {
+        "summary": "Deterministic 0-100 composite trust score for one supplier operator id",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["operator_id"], "properties": { "operator_id": { "type": "string", "example": "pokt1cr5suvepkkqp22qhz4g6pkt7rwdqspm9rhn0d9" } }
+        } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": {
+            "type": "object",
+            "properties": {
+              "operator_id": { "type": "string" }, "trust_score": { "type": "number" }, "trust_score_scale": { "type": "string" },
+              "stake_status": { "type": "string" }, "stake_upokt": { "type": "string" }, "stake_pokt": { "type": "number" },
+              "active_service_configs": { "type": "integer" }, "unstaking": { "type": "boolean" },
+              "settlements_observed": { "type": "integer" }, "proof_required_settlements_observed": { "type": "integer" },
+              "proof_success_rate": { "type": ["number", "null"] }, "slash_events_total": { "type": "integer" },
+              "methodology": { "type": "string" }
+            }
+          } } } },
+          "404": { "description": "No supplier with that operator id on this network", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object", "required": ["error"],
+        "properties": { "error": { "type": "object", "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } }
+      }
+    },
+    "responses": {
+      "ClientError": {
+        "description": "Bad input, or a live upstream (Pocket indexer/LCD) query that could not be completed and had no cached fallback. Always 4xx with a JSON error body, never 5xx.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    }
+  }
+}

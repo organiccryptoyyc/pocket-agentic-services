@@ -1,0 +1,61 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "Agent Trust and Compliance. Five endpoints an autonomous agent can call before it trusts a counterparty domain or address, each backed by a real live check (no simulated or bundled-static data). POST /v1/domain-trust (domain): RDAP registration data + DNS (MX/SPF/DMARC/DNSSEC) -> a 0-100 trust score. POST /v1/brand-verify (domain, brand_name?): a live TLS certificate handshake -> validity, organization-validation, SAN coverage, and an optional brand-name match against the certificate identity. POST /v1/seller-trust (url): a composite of both for one resource-server URL, with a trusted/proceed_with_caution/high_risk recommendation. POST /v1/sanctions-check (address): the U.S. Consolidated Screening List (OFAC SDN + 10+ other restricted-party lists), requires an operator-supplied free API key. POST /v1/reputation (chain, address): an EVM address's on-chain activity/verification/scam-flag signal via public Blockscout explorer instances (eth, base, arbitrum, polygon). Every score is 0-100 with a 'reasons' array explaining exactly how it was computed. All outbound domain/IP lookups are guarded against private/loopback/link-local targets.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "agent-trust HTTP server on :8080; mount at /",
+      "notes": "Only POST /v1/domain-trust, /v1/brand-verify, /v1/seller-trust, /v1/sanctions-check, /v1/reputation, and GET /v1/version, /v1/health are expected. Every response is a JSON object; bad input (including an SSRF-guard refusal or an unconfigured operator API key) returns 4xx with a JSON error object, never HTML or plain text."
+    }
+  ],
+  "apis": [
+    "agent-trust-brand-verify",
+    "agent-trust-domain-trust",
+    "agent-trust-seller-trust",
+    "agent-trust-sanctions-check",
+    "agent-trust-reputation"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "agent-trust-domain-trust",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/agent-trust/openapi.json",
+      "notes": "Covers all five resources in one document. TODO before MainNet staking: pin this to an immutable commit SHA in the path (not 'main') and add a sha256 of the exact bytes once frozen, per this repo's own README."
+    }
+  ],
+  "access": "public",
+  "results": "deterministic",
+  "serving": {
+    "backend": "The agent-trust Node.js HTTP server (no external dependencies) behind a RelayMiner, with the REST backend pointed at http://<container>:8080. No auth toward the backend; callers cannot send headers through the gateway. The backend calls out to rdap.org, the domain/hostname under test itself (DNS + a live TLS handshake on :443), data.trade.gov (only if the operator has set TRADE_GOV_SUBSCRIPTION_KEY), and public Blockscout instances (eth/base/arbitrum/polygon .blockscout.com) — it needs broad outbound HTTPS/DNS/TLS access, not a fixed allowlist, since domain/brand-verify/seller-trust probe whatever domain the caller names (subject to the backend's own private-IP SSRF guard).",
+    "implementations": [
+      "agent-trust >= 1.0"
+    ],
+    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/main/agent-trust",
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/version", "method": "GET" },
+        "expect": { "json_path": "$.service", "matches": "^agent-trust$" },
+        "notes": "Identity probe: pins the backend to this service so a wrong backend cannot be staked under this id."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/health", "method": "GET" },
+        "expect": { "json_path": "$.status", "matches": "^ok$" },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/domain-trust", "method": "POST", "body": { "domain": "example.com" } },
+        "expect": { "json_path": "$.trust_score", "matches": "^[0-9]+(\\.[0-9]+)?$" },
+        "notes": "Functional probe against example.com (IANA-reserved for documentation/testing, always resolvable). Proves the backend can reach RDAP and resolve DNS right now; example.com's real registration data changes rarely, but only the score's numeric shape is asserted, not a value, since it is a live computation."
+      }
+    ],
+    "notes": "Suppliers should disable any local rate limiting for the RelayMiner's address. Request bodies are capped at 1 MiB and responses are ordinarily a few KB. Backend timeout budget: keep well under the operator's configured relay_timeout (typically 10-30s); each upstream call has an 8s timeout with one retry, and DNS/TLS calls this backend makes to the caller-named domain are separately bounded to 8s. /v1/sanctions-check needs an operator-supplied free API key (TRADE_GOV_SUBSCRIPTION_KEY from https://developer.trade.gov) — without one it returns 422 not_configured rather than a false 'clean' result. Gateway operators: configure as type passthrough with rpc_types [\"rest\"]; see sage-service.yaml."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/agent-trust/README.md",
+  "updated": "2026-09-19"
+}

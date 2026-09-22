@@ -1,0 +1,15 @@
+{
+  "name": "rpc-quality-intel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RPC / Gateway Quality Intelligence — a Pocket Network service backend. Per-service live serving-quality signal over REST.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/unit-cache.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

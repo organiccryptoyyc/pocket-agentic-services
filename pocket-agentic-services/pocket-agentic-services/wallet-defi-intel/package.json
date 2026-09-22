@@ -1,0 +1,14 @@
+{
+  "name": "wallet-defi-intel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Wallet and DeFi Intelligence — a Pocket Network service backend. Live wallet/protocol/yield/depeg signals over REST.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

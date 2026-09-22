@@ -1,0 +1,136 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "RPC / Gateway Quality Intelligence API",
+    "version": "1.0.0",
+    "description": "rpc-quality-intel on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body. Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every field is fetched live from Pocket's own GraphQL indexer (https://data.pocket.network/graphql) at request time; nothing is a hardcoded constant."
+  },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/v1/version": {
+      "get": {
+        "summary": "Service identity (health-check identity probe)",
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": {
+          "type": "object", "required": ["service", "version"],
+          "properties": { "service": { "type": "string", "example": "rpc-quality-intel" }, "version": { "type": "string", "example": "1.0.0" } }
+        } } } } }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "summary": "Readiness (health-check readiness probe)",
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": {
+          "type": "object", "required": ["status"], "properties": { "status": { "type": "string", "example": "ok" } }
+        } } } } }
+      }
+    },
+    "/v1/rpc-pulse": {
+      "post": {
+        "summary": "Current serving snapshot for one service: active suppliers/apps, difficulty EMA, trailing-1h volume",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["service_id"], "properties": { "service_id": { "type": "string", "example": "eth" } }
+        } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": {
+            "type": "object",
+            "properties": {
+              "service_id": { "type": "string" }, "service_name": { "type": "string" }, "compute_units_per_relay": { "type": "string" },
+              "active_suppliers": { "type": "integer" }, "active_applications": { "type": "integer" },
+              "relay_mining_difficulty": { "type": ["object", "null"], "properties": { "relays_ema": { "type": "string" }, "target_hash": { "type": "string" }, "as_of_height": { "type": "string" } } },
+              "trailing_1h": { "type": "object", "properties": { "settlements": { "type": "integer" }, "claimed_relays": { "type": "integer" }, "estimated_relays": { "type": "integer" }, "distinct_suppliers_serving": { "type": "integer" } } }
+            }
+          } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/rpc-performance": {
+      "post": {
+        "summary": "Settlement/proof performance for one service over a trailing window",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["service_id"],
+          "properties": { "service_id": { "type": "string" }, "window_hours": { "type": "integer", "minimum": 1, "maximum": 168, "default": 24 } }
+        } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": {
+            "type": "object",
+            "properties": {
+              "settlements": { "type": "integer" }, "distinct_suppliers_serving": { "type": "integer" },
+              "claimed_relays": { "type": "integer" }, "estimated_relays": { "type": "integer" }, "claimed_compute_units": { "type": "integer" },
+              "average_relays_per_settlement": { "type": ["number", "null"] },
+              "proof": { "type": "object", "properties": { "required": { "type": "integer" }, "validated": { "type": "integer" }, "invalid": { "type": "integer" }, "pending_or_unresolved": { "type": "integer" }, "success_rate": { "type": ["number", "null"] } } },
+              "slash_events": { "type": "integer" }
+            }
+          } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/rpc-anomaly": {
+      "post": {
+        "summary": "Deterministic recent-vs-baseline anomaly flags for one service (fixed thresholds, not a statistical model)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["service_id"],
+          "properties": {
+            "service_id": { "type": "string" },
+            "recent_window_hours": { "type": "integer", "minimum": 1, "maximum": 72, "default": 24 },
+            "baseline_window_hours": { "type": "integer", "minimum": 2, "maximum": 720, "description": "Defaults to max(168, 7x recent_window_hours)." }
+          }
+        } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": {
+            "type": "object",
+            "properties": {
+              "recent": { "type": "object" }, "baseline": { "type": "object" }, "active_suppliers_now": { "type": "integer" },
+              "relay_volume_change_pct": { "type": ["number", "null"] },
+              "anomalies": { "type": "array", "items": { "type": "object", "properties": { "signal": { "type": "string" }, "severity": { "type": "string" }, "detail": { "type": "string" } } } },
+              "is_anomalous": { "type": "boolean" }
+            }
+          } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/rpc-forecast": {
+      "post": {
+        "summary": "Least-squares linear-trend projection of claimed relays for one service, over real daily settlement history",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["service_id"],
+          "properties": {
+            "service_id": { "type": "string" },
+            "lookback_days": { "type": "integer", "minimum": 3, "maximum": 30, "default": 7 },
+            "horizon_days": { "type": "integer", "minimum": 1, "maximum": 7, "default": 1 }
+          }
+        } } } },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": {
+            "type": "object",
+            "properties": {
+              "daily_claimed_relays_oldest_first": { "type": "array", "items": { "type": "integer" } },
+              "trend": { "type": "object", "properties": { "slope_relays_per_day": { "type": "number" }, "mean_daily_relays": { "type": "number" }, "coefficient_of_variation": { "type": ["number", "null"] } } },
+              "forecast": { "type": "array", "items": { "type": "object", "properties": { "day_offset": { "type": "integer" }, "projected_claimed_relays": { "type": "integer" } } } },
+              "confidence": { "type": "string", "enum": ["low", "medium", "high"] }
+            }
+          } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object", "required": ["error"],
+        "properties": { "error": { "type": "object", "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } }
+      }
+    },
+    "responses": {
+      "NotFound": { "description": "No service with that service_id on this network", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "ClientError": { "description": "Bad input, or a live upstream query that could not be completed and had no cached fallback. Always 4xx, never 5xx.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    }
+  }
+}
