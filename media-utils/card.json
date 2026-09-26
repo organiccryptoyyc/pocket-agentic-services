@@ -1,0 +1,67 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "Agent Media Utilities. Three things an autonomous agent needs and could not get anywhere on Pocket's Agentic Portal as of 2026-09-26 (checked against the live 99-service catalog before building this): POST /v1/pdf-render (pdf_base64, page?, dpi?, format?) renders one real page of a PDF to a PNG/JPEG image via poppler. POST /v1/image-convert (image_base64, to, quality?, max_width?) converts between image formats -- png, jpeg, webp, tiff, avif -- including real HEIC/HEVC photos (the format virtually all iPhones produce), which the portal's existing OCR/chart services don't handle. POST /v1/audio-transcribe (audio_base64, language?) submits a short audio clip for transcription and returns a job_id; POST /v1/audio-transcribe-status (job_id) polls it -- split into submit+poll because a real speech-to-text pass cannot reliably finish inside a gateway's relay timeout (design rule 7), so the work runs in the background instead of blocking the relay. Every conversion runs through real tools (poppler, libvips/sharp, libheif, ffmpeg, whisper.cpp) on the request's actual bytes -- nothing here is a stub, a guessed format, or a cached-forever answer.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "media-utils HTTP server on :8080; mount at /",
+      "notes": "Only POST /v1/pdf-render, /v1/image-convert, /v1/audio-transcribe, /v1/audio-transcribe-status, and GET /v1/version, /v1/health are expected. Every response is a JSON object; bad input (unreadable PDF/image/audio, an out-of-range page, an unsupported target format, a missing whisper.cpp model) returns 4xx with a JSON error object, never HTML or plain text."
+    }
+  ],
+  "apis": [
+    "media-utils-pdf-render",
+    "media-utils-image-convert",
+    "media-utils-audio-transcribe"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "media-utils-pdf-render",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/media-utils/openapi.json",
+      "notes": "Covers all four resources in one document. TODO before MainNet staking: pin this to an immutable commit SHA in the path (not 'main') and add a sha256 of the exact bytes once frozen, per this repo's own README."
+    }
+  ],
+  "access": "public",
+  "results": "variable",
+  "serving": {
+    "backend": "The media-utils Node.js HTTP server behind a RelayMiner, with the REST backend pointed at http://<container>:8080. No auth toward the backend; callers cannot send headers through the gateway. The backend makes NO outbound network calls of its own -- every conversion runs entirely on the request's own bytes through local tools (poppler, libvips/sharp, libheif+libde265, ffmpeg, whisper.cpp) -- so it needs no egress allowlist, unlike this repo's other three services.",
+    "implementations": [
+      "media-utils >= 1.0"
+    ],
+    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/main/media-utils",
+    "min_disk_gb": 2,
+    "min_ram_gb": 2,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/version", "method": "GET" },
+        "expect": { "json_path": "$.service", "matches": "^media-utils$" },
+        "notes": "Identity probe: pins the backend to this service so a wrong backend cannot be staked under this id."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/health", "method": "GET" },
+        "expect": { "json_path": "$.status", "matches": "^ok$" }
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/pdf-render",
+          "method": "POST",
+          "body": {
+            "pdf_base64": "JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgMjAwIDEwMF0vUmVzb3VyY2VzPDwvRm9udDw8L0YxIDQgMCBSPj4+Pi9Db250ZW50cyA1IDAgUj4+ZW5kb2JqCjQgMCBvYmo8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PmVuZG9iago1IDAgb2JqPDwvTGVuZ3RoIDU0Pj4Kc3RyZWFtCkJUIC9GMSAxOCBUZiAxMCA1MCBUZCAoUG9ja2V0IG1lZGlhLXV0aWxzIHByb2JlKSBUaiBFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKdHJhaWxlcjw8L1NpemUgNi9Sb290IDEgMCBSPj4KJSVFT0Y=",
+            "page": 1,
+            "dpi": 72,
+            "format": "png"
+          }
+        },
+        "expect": { "json_path": "$.width", "matches": "^200$" },
+        "notes": "Functional probe: a tiny hand-built one-page 200x100pt PDF embedded directly in this card, rendered at 72 DPI (1pt = 1px), so the expected output width is exactly 200 regardless of which supplier serves it. Confirmed for real against this exact base64 and this exact expected value during this build (poppler's rasterization is not byte-for-byte guaranteed identical across versions, hence 'results': 'variable' for the service as a whole, but this probe's *pixel dimensions* are deterministic geometry, not raster content)."
+      }
+    ],
+    "notes": "Suppliers should disable any local rate limiting for the RelayMiner's address. Request bodies are base64 file payloads capped at 12 MiB (~9 MiB of real file bytes) -- see lib/http.js MAX_BODY_BYTES; responses are the converted file re-encoded as base64, typically under 2 MiB. /v1/pdf-render and /v1/image-convert are synchronous and fast (poppler/libvips/libheif all run in well under a second for typical inputs, confirmed during this build). /v1/audio-transcribe is NOT synchronous by design (rule 7) -- it returns a job_id immediately and the caller polls /v1/audio-transcribe-status; jobs are capped at MAX_AUDIO_SECONDS (default 180s) of input audio and run one at a time. /v1/audio-transcribe requires WHISPER_BIN and WHISPER_MODEL to be present in the container (built into the image by this package's own Dockerfile) -- without them it returns 422 not_configured rather than a fake transcript. Gateway operators: configure as type passthrough with rpc_types [\"rest\"]; see sage-service.yaml."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/media-utils/README.md",
+  "updated": "2026-09-26"
+}

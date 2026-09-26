@@ -1,0 +1,103 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Agent Media Utilities API",
+    "version": "1.0.0",
+    "description": "media-utils on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body as base64 file payloads. Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. PDF rendering and image conversion run synchronously and fast (poppler/libvips/libheif); audio transcription is submit-then-poll because a real speech-to-text pass cannot reliably finish inside a gateway relay timeout."
+  },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/v1/version": { "get": { "summary": "Service identity", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "service": { "type": "string" }, "version": { "type": "string" } } } } } } } } },
+    "/v1/health": { "get": { "summary": "Readiness", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "string" } } } } } } } } },
+    "/v1/pdf-render": {
+      "post": {
+        "summary": "Render one page of a PDF to a PNG or JPEG image",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["pdf_base64"], "properties": {
+            "pdf_base64": { "type": "string", "description": "Base64-encoded PDF bytes." },
+            "page": { "type": "integer", "minimum": 1, "default": 1, "description": "1-indexed page number." },
+            "dpi": { "type": "number", "minimum": 36, "maximum": 600, "default": 150 },
+            "format": { "type": "string", "enum": ["png", "jpeg"], "default": "png" }
+          } } } }
+        },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": {
+            "page": { "type": "integer" }, "page_count": { "type": "integer" }, "dpi": { "type": "number" }, "format": { "type": "string" },
+            "width": { "type": "integer" }, "height": { "type": "integer" }, "image_base64": { "type": "string" }
+          } } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/image-convert": {
+      "post": {
+        "summary": "Convert an image between formats, including real HEIC/HEVC photos",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["image_base64", "to"], "properties": {
+            "image_base64": { "type": "string", "description": "Base64-encoded source image (png, jpeg, webp, gif, tiff, bmp, avif, or real HEIC/HEIF). Detected automatically -- no 'from' field needed." },
+            "to": { "type": "string", "enum": ["png", "jpeg", "webp", "tiff", "avif"], "description": "Target format." },
+            "quality": { "type": "number", "minimum": 1, "maximum": 100, "description": "Applies to lossy targets (jpeg/webp/avif)." },
+            "max_width": { "type": "integer", "minimum": 1, "maximum": 8000, "description": "Optional downscale cap; never enlarges." }
+          } } } }
+        },
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": {
+            "detected_format": { "type": "string" }, "output_format": { "type": "string" }, "width": { "type": "integer" }, "height": { "type": "integer" }, "image_base64": { "type": "string" }
+          } } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/audio-transcribe": {
+      "post": {
+        "summary": "Submit a short audio clip for transcription (async -- returns a job_id)",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["audio_base64"], "properties": {
+            "audio_base64": { "type": "string", "description": "Base64-encoded audio in any ffmpeg-readable container/codec." },
+            "language": { "type": "string", "default": "auto", "description": "ISO 639-1 code, or 'auto' to let whisper.cpp detect it." }
+          } } } }
+        },
+        "responses": {
+          "200": { "description": "Job accepted", "content": { "application/json": { "schema": { "type": "object", "properties": {
+            "job_id": { "type": "string" }, "status": { "type": "string", "enum": ["queued"] }, "poll": { "type": "object" }
+          } } } } },
+          "422": { "description": "Bad input, audio too long for one job, or WHISPER_BIN/WHISPER_MODEL not configured on this backend (code: not_configured)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/v1/audio-transcribe-status": {
+      "post": {
+        "summary": "Poll a transcription job started by /v1/audio-transcribe",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["job_id"], "properties": { "job_id": { "type": "string" } } } } }
+        },
+        "responses": {
+          "200": { "description": "Job status", "content": { "application/json": { "schema": { "type": "object", "properties": {
+            "job_id": { "type": "string" },
+            "status": { "type": "string", "enum": ["queued", "running", "done", "error"] },
+            "result": { "type": "object", "description": "Present when status is 'done'.", "properties": {
+              "duration_s": { "type": "number" }, "text": { "type": "string" }, "language": { "type": "string" },
+              "segments": { "type": "array", "items": { "type": "object", "properties": { "start_s": { "type": "number" }, "end_s": { "type": "number" }, "text": { "type": "string" } } } },
+              "model": { "type": "string" }
+            } },
+            "error": { "type": "object", "description": "Present when status is 'error'." }
+          } } } } },
+          "404": { "description": "No such job (never existed, or swept after 15 minutes finished)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": { "type": "object", "required": ["error"], "properties": { "error": { "type": "object", "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } } }
+    },
+    "responses": {
+      "ClientError": { "description": "Bad input (unreadable file, out-of-range page, unsupported target format). Always 4xx, never 5xx.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    }
+  }
+}

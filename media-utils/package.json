@@ -1,0 +1,17 @@
+{
+  "name": "media-utils",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agent Media Utilities — a Pocket Network service backend. PDF-page-to-image, any-format image conversion (including real HEIC/HEVC), and audio transcription over REST.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "sharp": "^0.35.4"
+  }
+}

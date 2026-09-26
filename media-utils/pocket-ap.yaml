@@ -1,0 +1,13 @@
+# Minimal pocket-ap config for one-shot relay testing of media-utils.
+# fullnode values are the same live Beta endpoints already confirmed
+# working in ../deploy/supplier/relayer-config.yaml (chain_id
+# pocket-lego-testnet is implied by these Beta-specific hosts). The app's
+# private key is intentionally NOT in this file — pocket-ap reads it from
+# the POCKET_APP_PRIVATE_KEY env var when app.private_key_hex is omitted.
+fullnode:
+  grpc_host_port: "sauron-grpc.beta.infra.pocket.network:443"
+  grpc_insecure: false
+  rpc_url: "https://sauron-rpc.beta.infra.pocket.network"
+
+app:
+  service_id: media-utils
