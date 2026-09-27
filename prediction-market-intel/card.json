@@ -1,0 +1,60 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "Prediction Market Intelligence. Four REST endpoints turning Polymarket's live public market data into agent-ready strategy/insight signal, not a raw passthrough: POST /v1/top-markets (ranked top-N currently-open markets by trailing volume), POST /v1/market-momentum (biggest observed consensus shifts), POST /v1/rotation-diff (top-100-by-30-day-volume entries/exits since a lookback, reporting insufficient_history honestly rather than fabricating a comparison), POST /v1/market-quality (0-100 liquidity/spread scoring with a reasons[] array). Every field is fetched live from Polymarket's free, public, no-key-required Gamma API at request time via a short cache; results are variable, not deterministic, since upstream data changes continuously. Every response, success or error, is a single JSON object — never HTML or plain text. Independent, standalone project: not affiliated with, endorsed by, or sponsored by Polymarket. Full per-endpoint parameters and behavior: see specs[] and docs.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "prediction-market-intel HTTP server on :8080; mount at /",
+      "notes": "Expected paths: POST /v1/top-markets, /v1/market-momentum, /v1/rotation-diff, /v1/market-quality; GET /v1/version, /v1/health. Bad input returns 4xx with a JSON error object, never HTML or plain text."
+    }
+  ],
+  "apis": [
+    "prediction-market-intel-top-markets",
+    "prediction-market-intel-market-momentum",
+    "prediction-market-intel-rotation-diff",
+    "prediction-market-intel-market-quality"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "prediction-market-intel-top-markets",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/prediction-market-intel/openapi.json",
+      "notes": "Covers all four endpoints in one document."
+    }
+  ],
+  "access": "public",
+  "results": "variable",
+  "serving": {
+    "backend": "Node.js HTTP server (zero npm dependencies) behind a RelayMiner, REST backend at http://<container>:8080. No caller auth. Calls Polymarket's public Gamma API on a cache miss (3-minute in-memory TTL, stale-on-error fallback), shared across suppliers' relays.",
+    "implementations": [
+      "prediction-market-intel >= 1.0"
+    ],
+    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/main/prediction-market-intel",
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/version", "method": "GET" },
+        "expect": { "json_path": "$.service", "matches": "^prediction-market-intel$" },
+        "notes": "Identity probe: pins the backend to this service so a wrong backend cannot be staked under this id."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/health", "method": "GET" },
+        "expect": { "json_path": "$.status", "matches": "^ok$" },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/top-markets", "method": "POST", "body": { "limit": 1 } },
+        "expect": { "json_path": "$.count", "matches": "^1$" },
+        "notes": "Functional probe: proves the backend can reach Polymarket's Gamma API and return a correctly-shaped ranked result right now. The specific market returned is a live value and not asserted."
+      }
+    ],
+    "notes": "Disable local rate limiting for the RelayMiner's address. Request bodies capped at 1 MiB. Cache-miss requests make 4 parallel upstream calls (12s timeout, 1 retry) and serve stale cache rather than block. rotation-diff's snapshot history is in-memory only, resets on restart. Gateway config: type passthrough, rpc_types [\"rest\"]; see sage-service.yaml."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/prediction-market-intel/README.md",
+  "updated": "2026-09-27"
+}

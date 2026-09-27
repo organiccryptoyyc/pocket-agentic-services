@@ -1,0 +1,7 @@
+fullnode:
+  grpc_host_port: "sauron-grpc.beta.infra.pocket.network:443"
+  grpc_insecure: false
+  rpc_url: "https://sauron-rpc.beta.infra.pocket.network"
+
+app:
+  service_id: prediction-market-intel

@@ -1,0 +1,105 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Prediction Market Intelligence API",
+    "version": "1.0.0",
+    "description": "prediction-market-intel on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body. Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every field is fetched live from Polymarket's free, public Gamma API at request time (via a short cache). Independent project, not affiliated with, endorsed by, or sponsored by Polymarket."
+  },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/v1/version": { "get": { "summary": "Service identity", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object" } } } } } } },
+    "/v1/health": { "get": { "summary": "Readiness", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object" } } } } } } },
+    "/v1/top-markets": {
+      "post": {
+        "summary": "Correctly-ranked top N currently-open markets by trailing volume window",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 },
+                  "window": { "type": "string", "enum": ["24hr", "1wk", "1mo"], "default": "1mo" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Success" }, "422": { "$ref": "#/components/responses/ClientError" } }
+      }
+    },
+    "/v1/market-momentum": {
+      "post": {
+        "summary": "Biggest observed consensus shifts (price-change magnitude) among the candidate pool",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": { "type": "integer", "minimum": 1, "maximum": 50, "default": 10 },
+                  "window": { "type": "string", "enum": ["1d", "1w", "1mo"], "default": "1w" },
+                  "direction": { "type": "string", "enum": ["up", "down", "any"], "default": "any" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Success" }, "422": { "$ref": "#/components/responses/ClientError" } }
+      }
+    },
+    "/v1/rotation-diff": {
+      "post": {
+        "summary": "Markets that entered/exited the top 100 by 30-day volume over a lookback window",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lookback_hours": { "type": "integer", "minimum": 1, "maximum": 168, "default": 24 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success. May report {\"insufficient_history\": true} instead of a diff if this backend has not been running long enough to have a snapshot far enough back — an honest degraded response, not an error.",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          },
+          "422": { "$ref": "#/components/responses/ClientError" }
+        }
+      }
+    },
+    "/v1/market-quality": {
+      "post": {
+        "summary": "0-100 liquidity-depth/spread quality score for the busiest markets, with reasons[]",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 },
+                  "window": { "type": "string", "enum": ["24hr", "1wk", "1mo"], "default": "1mo" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Success" }, "422": { "$ref": "#/components/responses/ClientError" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": { "Error": { "type": "object", "required": ["error"], "properties": { "error": { "type": "object", "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } } } },
+    "responses": {
+      "ClientError": { "description": "Bad input, or a live upstream failure with no cached fallback. Always 4xx, never 5xx.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    }
+  }
+}
