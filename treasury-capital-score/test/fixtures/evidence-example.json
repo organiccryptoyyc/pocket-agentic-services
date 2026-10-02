@@ -1,0 +1,111 @@
+{
+  "entity_id": "example-dao",
+  "collected_at": "2026-10-01T12:00:00Z",
+  "collector": { "name": "tcs6-pi-collector", "version": "0.1.0" },
+  "holdings": [
+    {
+      "asset_id": "eth:usdc",
+      "exposure_id": "usdc-main-safe",
+      "symbol": "USDC",
+      "chain": "ethereum",
+      "address": "0x0000000000000000000000000000000000000001",
+      "bucket": "onchain",
+      "asset_class": "fiat_stablecoin",
+      "control": "verified",
+      "quantity": 40000000,
+      "holdings_observed_at": "2026-10-01T11:58:00Z",
+      "prices": [
+        { "source_ref": "S2", "usd": 1.0, "observed_at": "2026-10-01T11:55:00Z" },
+        { "source_ref": "S3", "usd": 0.9998, "observed_at": "2026-10-01T11:56:00Z" }
+      ],
+      "haircut_flags": [],
+      "source_refs": ["S1"]
+    },
+    {
+      "asset_id": "eth:weth",
+      "symbol": "WETH",
+      "chain": "ethereum",
+      "address": "0x0000000000000000000000000000000000000001",
+      "bucket": "onchain",
+      "asset_class": "major_crypto",
+      "control": "verified",
+      "quantity": 5000,
+      "holdings_observed_at": "2026-10-01T11:58:00Z",
+      "prices": [{ "source_ref": "S2", "usd": 3000, "observed_at": "2026-10-01T11:55:00Z" }],
+      "haircut_flags": ["thin_depth"],
+      "source_refs": ["S1"]
+    },
+    {
+      "asset_id": "eth:native",
+      "symbol": "EXD",
+      "chain": "ethereum",
+      "address": "0x0000000000000000000000000000000000000002",
+      "bucket": "onchain",
+      "asset_class": "native_token",
+      "control": "verified",
+      "quantity": 100000000,
+      "holdings_observed_at": "2026-10-01T11:58:00Z",
+      "prices": [{ "source_ref": "S2", "usd": 0.5, "observed_at": "2026-10-01T11:55:00Z" }],
+      "haircut_flags": [],
+      "source_refs": ["S1"]
+    },
+    {
+      "asset_id": "offchain:tbills",
+      "bucket": "offchain",
+      "asset_class": "cash_equivalent",
+      "control": "verified",
+      "fair_value_usd": 10000000,
+      "holdings_observed_at": "2026-09-15T00:00:00Z",
+      "source_refs": ["S4"]
+    },
+    {
+      "asset_id": "eth:unknown-wallet",
+      "bucket": "onchain",
+      "asset_class": "liquid_alt",
+      "control": "unverified",
+      "quantity": 1000,
+      "holdings_observed_at": "2026-10-01T11:58:00Z",
+      "prices": [{ "source_ref": "S2", "usd": 100, "observed_at": "2026-10-01T11:55:00Z" }],
+      "source_refs": ["S5"]
+    }
+  ],
+  "obligations": {
+    "visibility": "adequate",
+    "bounded": true,
+    "material_unresolved_claim": false,
+    "items": [
+      { "type": "payable", "usd": 2000000, "source_refs": ["S4"] },
+      { "type": "contingency", "usd": 5000000, "probability": 0.2, "source_refs": ["S6"] }
+    ],
+    "source_refs": ["S4", "S6"]
+  },
+  "cash_uses_12m": { "usd": 18000000, "status": "single_source", "source_refs": ["S6"] },
+  "flows_12m": { "recurring_treasury_inflows_usd": 15000000, "controllable_cash_uses_usd": 18000000, "repeatable": true, "status": "single_source", "source_refs": ["S6"] },
+  "governance": {
+    "control_known": true,
+    "contradictory": false,
+    "reconciliation_pct": 88,
+    "disclosure_age_days": 16,
+    "has_treasury_policy": true,
+    "multisig": { "threshold": 4, "signers": 7 },
+    "timelock": true,
+    "independent_attestation": false,
+    "governance_transparent": true,
+    "governance_opaque": false,
+    "status": "verified",
+    "source_refs": ["S1", "S7"]
+  },
+  "penalties": [],
+  "risks": [],
+  "gaps": [],
+  "perimeter_gaps": [],
+  "sources": [
+    { "source_ref": "S1", "title": "Treasury Safe state", "publisher": "Safe Transaction Service", "url": "https://safe-transaction-mainnet.safe.global/", "retrieved_at": "2026-10-01T11:58:00Z", "observation_time": "2026-10-01T11:58:00Z", "source_tier": 1, "rights_status": "permitted_for_derived_output" },
+    { "source_ref": "S2", "title": "Spot prices", "publisher": "CoinGecko", "url": "https://www.coingecko.com/", "retrieved_at": "2026-10-01T11:55:00Z", "observation_time": "2026-10-01T11:55:00Z", "source_tier": 2, "rights_status": "permitted_for_derived_output" },
+    { "source_ref": "S3", "title": "Spot prices (second source)", "publisher": "DefiLlama", "url": "https://defillama.com/", "retrieved_at": "2026-10-01T11:56:00Z", "observation_time": "2026-10-01T11:56:00Z", "source_tier": 2, "rights_status": "permitted_for_derived_output" },
+    { "source_ref": "S4", "title": "Quarterly treasury report", "publisher": "Example DAO", "url": "https://example.invalid/report", "retrieved_at": "2026-10-01T11:00:00Z", "observation_time": "2026-09-15T00:00:00Z", "source_tier": 1, "rights_status": "permitted_for_derived_output" },
+    { "source_ref": "S5", "title": "Unattributed wallet", "publisher": "Block explorer", "url": "https://example.invalid/wallet", "retrieved_at": "2026-10-01T11:58:00Z", "observation_time": null, "source_tier": 3, "rights_status": "internal_only" },
+    { "source_ref": "S6", "title": "Budget proposal", "publisher": "Example DAO forum", "url": "https://example.invalid/budget", "retrieved_at": "2026-10-01T11:00:00Z", "observation_time": "2026-08-01T00:00:00Z", "source_tier": 1, "rights_status": "permitted_for_derived_output" },
+    { "source_ref": "S7", "title": "Governance space", "publisher": "Snapshot", "url": "https://snapshot.org/", "retrieved_at": "2026-10-01T11:58:00Z", "observation_time": "2026-10-01T11:58:00Z", "source_tier": 2, "rights_status": "permitted_for_derived_output" }
+  ]
+}

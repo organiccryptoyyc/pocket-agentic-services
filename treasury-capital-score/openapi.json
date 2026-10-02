@@ -1,0 +1,116 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TCS-6: Crypto Treasury Capital Score",
+    "version": "1.0.0",
+    "description": "Pocket Network service `treasury-capital-score`. All inputs travel in a JSON POST body; every response is a JSON object. Paid per relay via a staked Pocket application — there is no checkout. Reports are recomputed every 12 hours and served from cache. Methodology: methodology/tcs6_scoring_blueprint_v1.json. Research score, not investment advice."
+  },
+  "paths": {
+    "/v1/tcs6/score": {
+      "post": {
+        "operationId": "score",
+        "summary": "Full TCS-6 report for one registry entity",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["entity_id"],
+                "additionalProperties": false,
+                "properties": { "entity_id": { "type": "string", "examples": ["aave"], "description": "Registry id from /v1/tcs6/entities." } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A report conforming to tcs6_paid_response_schema_v1.json. analysis_status is ready, provisional, or insufficient_data; all are successful answers.",
+            "content": { "application/json": { "schema": { "$ref": "./methodology/tcs6_paid_response_schema_v1.json" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/v1/tcs6/entities": {
+      "post": {
+        "operationId": "entities",
+        "summary": "List the curated entity registry and each entity's latest report status",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "peer_cohort": { "type": "string", "examples": ["DeFi protocol"] } } }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registry listing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["service", "method_version", "count", "entities"],
+                  "properties": {
+                    "service": { "const": "treasury-capital-score" },
+                    "method_version": { "const": "tcs-6/1.0" },
+                    "count": { "type": "integer" },
+                    "entities": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "entity_id": { "type": "string" },
+                          "name": { "type": "string" },
+                          "entity_type": { "type": "string" },
+                          "peer_cohort": { "type": ["string", "null"] },
+                          "registry_status": { "enum": ["verified", "partially_verified", "unverified"] },
+                          "eligibility": { "type": "string" },
+                          "scoreable": { "type": "boolean" },
+                          "report": {
+                            "type": ["object", "null"],
+                            "properties": {
+                              "analysis_status": { "type": "string" },
+                              "as_of": { "type": "string" },
+                              "overall_score": { "type": ["number", "null"] },
+                              "decision_band": { "type": ["string", "null"] }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "note": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/v1/version": {
+      "get": { "operationId": "version", "responses": { "200": { "description": "{\"service\":\"treasury-capital-score\",\"version\":\"1.0.0\"}", "content": { "application/json": {} } } } }
+    },
+    "/v1/health": {
+      "get": { "operationId": "health", "responses": { "200": { "description": "{\"status\":\"ok\",\"last_pipeline_run\":\"...\",...}", "content": { "application/json": {} } } } }
+    }
+  },
+  "components": {
+    "responses": {
+      "BadRequest": {
+        "description": "Malformed body, missing entity_id, or an id not in the registry.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["error"],
+              "properties": { "error": { "type": "object", "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

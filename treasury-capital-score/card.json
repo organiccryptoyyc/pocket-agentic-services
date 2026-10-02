@@ -1,0 +1,62 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "TCS-6 Crypto Treasury Capital Score. Paid, derived treasury analysis for DeFi protocols and DAOs: six weighted dimensions (net realizable capital scale, liquidity runway, obligation coverage, stress resilience, replenishment, control/governance), five hard gates, realization haircuts on every asset class, and a cited source manifest. POST /v1/tcs6/score {entity_id} returns the full report; POST /v1/tcs6/entities {} lists the curated registry. Reports are recomputed by a background pipeline every 12h and served from cache, so results are deterministic between refreshes but change across them. Every response, success or error, is a single JSON object. Output is derived values and citations only, never raw vendor data. Research score, not investment advice.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "treasury-capital-score container on :8080; mount at /",
+      "notes": "POST /v1/tcs6/score, /v1/tcs6/entities; GET /v1/version, /v1/health. JSON body only. Unknown entity_id or malformed input returns 400 + JSON. Thin evidence is a 200 with analysis_status insufficient_data, never an error."
+    }
+  ],
+  "apis": [
+    "treasury-capital-score-score",
+    "treasury-capital-score-entities"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "treasury-capital-score-score",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/treasury-capital-score/openapi.json"
+    },
+    {
+      "kind": "docs",
+      "api": "treasury-capital-score-score",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/treasury-capital-score/methodology/tcs6_scoring_blueprint_v1.json",
+      "notes": "Full scoring methodology."
+    }
+  ],
+  "access": "public",
+  "results": "variable",
+  "serving": {
+    "backend": "Node.js HTTP server (zero npm dependencies) behind a RelayMiner at http://<container>:8080. No caller auth. Relay path is a file-cache read; a separate pipeline process computes reports every 12h from evidence pushed by a private collector.",
+    "implementations": [
+      "treasury-capital-score >= 1.0"
+    ],
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/version", "method": "GET" },
+        "expect": { "json_path": "$.service", "matches": "^treasury-capital-score$" },
+        "notes": "Identity probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/health", "method": "GET" },
+        "expect": { "json_path": "$.status", "matches": "^ok$" },
+        "notes": "Readiness probe; body also reports last_pipeline_run."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/tcs6/entities", "method": "POST", "body": {} },
+        "expect": { "json_path": "$.method_version", "matches": "^tcs-6/1\\.0$" },
+        "notes": "Functional probe with a deterministic expected value."
+      }
+    ],
+    "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/treasury-capital-score/README.md",
+  "updated": "2026-10-01"
+}

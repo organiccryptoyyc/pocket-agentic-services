@@ -1,0 +1,644 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/tcs6-paid-response/1.0",
+  "title": "TCS-6 Paid Crypto Treasury Report",
+  "description": "Strict response contract for a payment-entitled, derived treasury analysis. Unknown financial values must be null and accompanied by a data gap; never serialize unknown as zero.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_id",
+    "analysis_status",
+    "as_of",
+    "currency",
+    "entity",
+    "payment_entitlement",
+    "capital_perimeter",
+    "headline",
+    "hard_gates",
+    "dimensions",
+    "overall_score",
+    "confidence",
+    "data_coverage",
+    "source_manifest",
+    "risks",
+    "data_gaps",
+    "disclaimer"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "tcs-6-paid-response/1.0"
+    },
+    "report_id": {
+      "type": "string",
+      "description": "Opaque report identifier; do not encode customer information."
+    },
+    "analysis_status": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "provisional",
+        "insufficient_data",
+        "failed"
+      ]
+    },
+    "as_of": {
+      "type": "string",
+      "description": "RFC 3339 analysis snapshot timestamp with timezone."
+    },
+    "currency": {
+      "type": "string",
+      "const": "USD"
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity_id",
+        "name",
+        "entity_type",
+        "peer_cohort",
+        "registry_status"
+      ],
+      "properties": {
+        "entity_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "dao",
+            "defi_protocol",
+            "foundation",
+            "l1_l2_ecosystem",
+            "token_operating_entity",
+            "digital_asset_treasury_company",
+            "other"
+          ]
+        },
+        "peer_cohort": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registry_status": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "partially_verified",
+            "unverified"
+          ]
+        }
+      }
+    },
+    "payment_entitlement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_condition",
+        "entitlement_id",
+        "payment_verified_at",
+        "delivery_expires_at"
+      ],
+      "properties": {
+        "release_condition": {
+          "type": "string",
+          "const": "verified_payment_webhook_and_ready_validated_report"
+        },
+        "entitlement_id": {
+          "type": "string",
+          "description": "Opaque server-generated entitlement reference; no processor event payload, customer email, card data, or billing address."
+        },
+        "payment_verified_at": {
+          "type": "string"
+        },
+        "delivery_expires_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "capital_perimeter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "included_classes",
+        "excluded_classes",
+        "beneficial_ownership_rule",
+        "known_perimeter_gaps"
+      ],
+      "properties": {
+        "included_classes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_classes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "beneficial_ownership_rule": {
+          "type": "string"
+        },
+        "known_perimeter_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "headline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gross_adjusted_treasury_usd",
+        "obligations_usd",
+        "net_realizable_treasury_usd",
+        "capital_scale_percentile",
+        "capital_scale_peer_count"
+      ],
+      "properties": {
+        "gross_adjusted_treasury_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "obligations_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "net_realizable_treasury_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "capital_scale_percentile": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "capital_scale_peer_count": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    },
+    "hard_gates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/hard_gate"
+      }
+    },
+    "dimensions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dimension"
+      },
+      "description": "Server validation must require exactly one each of D1, D2, D3, D4, D5, and D6, with weights totaling 100."
+    },
+    "overall_score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "coverage_pct",
+        "decision_band",
+        "status",
+        "method_version"
+      ],
+      "properties": {
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "coverage_pct": {
+          "type": "number"
+        },
+        "decision_band": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "strong",
+            "positive",
+            "watch",
+            "weak",
+            "reject",
+            null
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "eligible",
+            "provisional",
+            "insufficient_data",
+            "ineligible"
+          ]
+        },
+        "method_version": {
+          "type": "string",
+          "const": "tcs-6/1.0"
+        }
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "label",
+        "source_quality",
+        "data_coverage",
+        "cross_source_consistency",
+        "recency_fit"
+      ],
+      "properties": {
+        "score": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "source_quality": {
+          "type": "number"
+        },
+        "data_coverage": {
+          "type": "number"
+        },
+        "cross_source_consistency": {
+          "type": "number"
+        },
+        "recency_fit": {
+          "type": "number"
+        }
+      }
+    },
+    "data_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verified_control_value_pct",
+        "offchain_disclosed_value_pct",
+        "fresh_price_value_pct",
+        "obligation_visibility_status"
+      ],
+      "properties": {
+        "verified_control_value_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "offchain_disclosed_value_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "fresh_price_value_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "obligation_visibility_status": {
+          "type": "string",
+          "enum": [
+            "adequate",
+            "partial",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "source_manifest": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/risk"
+      }
+    },
+    "data_gaps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/data_gap"
+      }
+    },
+    "disclaimer": {
+      "type": "string",
+      "const": "This report is derived from public evidence and stated assumptions as of the reported timestamp. It is not legal, tax, accounting, or personalized investment advice, and it does not authorize or execute any transaction."
+    }
+  },
+  "$defs": {
+    "hard_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "evidence_refs",
+        "effect"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "entity_identity",
+            "control_coverage",
+            "valuation_freshness",
+            "obligation_visibility",
+            "source_rights"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "unknown_gate"
+          ]
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "effect": {
+          "type": "string"
+        }
+      }
+    },
+    "dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "weight_pct",
+        "score",
+        "status",
+        "rationale",
+        "confidence",
+        "primary_metrics",
+        "evidence_refs"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "D1",
+            "D2",
+            "D3",
+            "D4",
+            "D5",
+            "D6"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "weight_pct": {
+          "type": "number"
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "provisional",
+            "insufficient_data",
+            "not_applicable"
+          ]
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "primary_metrics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metric"
+          }
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "method",
+        "status",
+        "source_refs"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "single_source",
+            "estimated",
+            "stale",
+            "insufficient_data",
+            "not_meaningful"
+          ]
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ref",
+        "title",
+        "publisher",
+        "url",
+        "retrieved_at",
+        "observation_time",
+        "source_tier",
+        "rights_status"
+      ],
+      "properties": {
+        "source_ref": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "retrieved_at": {
+          "type": "string"
+        },
+        "observation_time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_tier": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        "rights_status": {
+          "type": "string",
+          "enum": [
+            "permitted_for_derived_output",
+            "licensed_for_display",
+            "internal_only",
+            "pending_review"
+          ]
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "category",
+        "severity",
+        "description",
+        "monitoring_action"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "market",
+            "liquidity",
+            "stablecoin",
+            "counterparty",
+            "smart_contract",
+            "governance",
+            "legal_claim",
+            "data_quality",
+            "other"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "monitoring_action": {
+          "type": "string"
+        }
+      }
+    },
+    "data_gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "reason",
+        "impact",
+        "remediation"
+      ],
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "impact": {
+          "type": "string"
+        },
+        "remediation": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

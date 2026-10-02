@@ -1,0 +1,7 @@
+{
+  "service_id": "treasury-capital-score",
+  "name": "TCS-6 Crypto Treasury Capital Score",
+  "compute_units_per_relay": 100000,
+  "card": "card.json",
+  "networks": {}
+}

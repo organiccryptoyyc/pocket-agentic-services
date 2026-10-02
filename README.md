@@ -23,6 +23,7 @@ shared and what's original.
 | [`agent-trust/`](./agent-trust) | Agent Trust and Compliance — domain/brand verification, TLS inspection, sanctions screening, composite seller trust | 5 | RDAP, live TLS handshake, DNS, trade.gov CSL, Blockscout |
 | [`wallet-defi-intel/`](./wallet-defi-intel) | Wallet and DeFi Intelligence — wallet risk/reputation, DeFi protocol health, yields, depeg checks | 9 | Public Blockscout instances, DefiLlama |
 | [`media-utils/`](./media-utils) | Agent Media Utilities — PDF-page-to-image, any-format image conversion (incl. real HEIC/HEVC photos), audio transcription | 4 | poppler, libvips/sharp + libheif, ffmpeg, whisper.cpp (local — no outbound network) |
+| [`treasury-capital-score/`](./treasury-capital-score) | TCS-6 Crypto Treasury Capital Score: six-dimension, hard-gated treasury reports for DeFi protocols, served from a 12h-refreshed cache | 2 | Evidence pushed by a private collector (chain state, Safe, Snapshot, CoinGecko, Chainlink, DefiLlama, protocol disclosures) |
 
 Every backend follows the same design rules (Pocket's gateway-compliance
 contract): every response is a JSON object; bad input is 4xx+JSON; upstream

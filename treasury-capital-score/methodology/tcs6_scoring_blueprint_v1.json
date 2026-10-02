@@ -1,0 +1,463 @@
+{
+  "schema_version": "tcs-6-scoring-blueprint/1.0",
+  "title": "TCS-6: Crypto Treasury Capital Score",
+  "created_at": "2026-10-01T02:30:00Z",
+  "purpose": "Score the financial strength of a crypto entity's protocol-controlled treasury while preserving a separate measure of absolute capital scale. This is a research score, not investment advice or a transaction signal.",
+  "recommended_decision": {
+    "six_dimensions": [
+      "Net realizable capital scale",
+      "Liquidity and operating runway",
+      "Obligation and claim coverage",
+      "Concentration and stress resilience",
+      "Capital productivity and replenishment",
+      "Control, governance, and transparency"
+    ],
+    "total_weight_pct": 100,
+    "design_principle": "Do not mix sheer treasury size with treasury quality. Publish both a 0-100 Treasury Strength Score and the absolute Net Realizable Treasury value with a same-cohort percentile."
+  },
+  "entity_scope": {
+    "supported_entity_types": [
+      "DAO",
+      "DeFi protocol",
+      "foundation",
+      "L1 or L2 ecosystem treasury",
+      "token project operating entity",
+      "digital-asset treasury company"
+    ],
+    "peer_cohorts": [
+      "DeFi protocol",
+      "L1 or L2 ecosystem",
+      "foundation or token operating entity",
+      "public digital-asset treasury company"
+    ],
+    "peer_rule": "Calculate capital-scale percentiles only within the same entity type and business model. Require at least 20 eligible peers; otherwise report absolute Net Realizable Treasury and set percentile to null."
+  },
+  "capital_perimeter": {
+    "include": [
+      "On-chain assets controlled by a verified treasury address, Safe, timelock, or governance-controlled contract",
+      "Off-chain cash, fiat, money-market funds, T-bills, and custody balances that are publicly disclosed by an authoritative issuer, audit, filing, or treasury report",
+      "Protocol-owned liquidity and LP positions, valued net of embedded borrowing and realization costs",
+      "Staked or locked assets only after applying an unbonding, exit-liquidity, and market-impact haircut",
+      "Documented receivables only when legally enforceable, attributable to the entity, and reasonably collectible",
+      "Recorded debt, payables, pledge claims, pending distributions, and documented contingent claims as deductions from realizable capital"
+    ],
+    "exclude_from_treasury_capital": [
+      "TVL, deposits, collateral, bridge balances, or insurance funds beneficially owned by users",
+      "Circulating market capitalization, FDV, token price, and unissued token supply",
+      "Unvested grants, unsigned commitments, or expected future token emissions",
+      "Unverified wallet balances, unaudited off-chain accounts, and assets whose beneficial owner cannot be established",
+      "Gross LP notional without deducting debt, impermanent-loss exposure, exit costs, or restricted ownership"
+    ],
+    "treatment_note": "TVL, market capitalization, revenue, and token liquidity may be retained as contextual business KPIs, but are not counted as protocol-controlled treasury capital."
+  },
+  "valuation_policy": {
+    "base_currency": "USD",
+    "price_policy": "Use a timestamped USD price from two independent sources where feasible; disclose the source, observation time, contract or asset identifier, and whether the value is reported, estimated, or single-source.",
+    "realization_value_formula": "adjusted_value_i = fair_value_usd_i * (1 - realization_haircut_i) * control_verification_factor_i",
+    "net_realizable_treasury_formula": "NRT = sum(adjusted_value_i) - recorded_debt - enforceable_payables - pledged_asset_claims - pending_distributions - probability_weighted_documented_contingencies",
+    "default_realization_haircut_ranges": [
+      {
+        "asset_class": "Fiat, short-duration sovereign bills, or regulated cash equivalent",
+        "range_pct": "0-5",
+        "conditions": "Increase for redemption limits, legal restrictions, or custody concentration."
+      },
+      {
+        "asset_class": "Major fiat-backed stablecoin",
+        "range_pct": "2-10",
+        "conditions": "Increase for depeg history, redemption friction, issuer concentration, or chain bridge risk."
+      },
+      {
+        "asset_class": "BTC, ETH, or comparably deep liquid asset",
+        "range_pct": "5-20",
+        "conditions": "Use a market-impact schedule based on the entity's observable exit size."
+      },
+      {
+        "asset_class": "Liquid non-native cryptoasset or liquid staking token",
+        "range_pct": "15-40",
+        "conditions": "Include volatility, unlock, liquidity-depth, validator, and smart-contract risks."
+      },
+      {
+        "asset_class": "LP share, lending position, or protocol-owned liquidity",
+        "range_pct": "30-70",
+        "conditions": "Value look-through assets and deduct borrow exposure, exit costs, concentration, and stressed impermanent loss."
+      },
+      {
+        "asset_class": "Native token reserve",
+        "range_pct": "60-100",
+        "conditions": "Apply a market-impact model. Use a 100% haircut when no credible orderly exit path exists."
+      },
+      {
+        "asset_class": "Locked, disputed, unverifiable, or non-transferable asset",
+        "range_pct": "50-100",
+        "conditions": "Do not include unless control, legal claim, and an evidence-backed realization path are visible."
+      }
+    ],
+    "anti_double_counting_rules": [
+      "Deduplicate bridge representations, wrapped assets, LP constituents, and cross-chain mirrors by beneficial ownership.",
+      "Do not count protocol token reserves both as a treasury asset and as a share of market capitalization.",
+      "Net debt and encumbered collateral against the directly related asset before portfolio aggregation.",
+      "Treat a custodied asset as a single economic exposure even if several addresses display it."
+    ]
+  },
+  "hard_gates": [
+    {
+      "id": "entity_identity",
+      "pass_condition": "Legal, governance, and on-chain entity mapping is sufficiently specific to distinguish the treasury from unrelated wallets and user funds.",
+      "failure_action": "Return status=insufficient_data; do not issue an overall score."
+    },
+    {
+      "id": "control_coverage",
+      "pass_condition": "At least 60% of reported gross treasury value is backed by verified control evidence; report the exact verified-value percentage.",
+      "failure_action": "Return status=unknown_gate; do not treat unknown holdings as zero or as verified capital."
+    },
+    {
+      "id": "valuation_freshness",
+      "pass_condition": "Asset prices are timestamped within 60 minutes for a live report, and holdings evidence is no older than 90 days unless a fresher official report is unavailable and flagged.",
+      "failure_action": "Downgrade confidence or mark the affected metric stale; never present it as current."
+    },
+    {
+      "id": "obligation_visibility",
+      "pass_condition": "Known debt, pledged assets, major payables, and disclosed financial commitments are captured or explicitly unavailable.",
+      "failure_action": "Allow a provisional score only when the unobserved obligation risk is explicitly bounded; otherwise withhold the total score."
+    },
+    {
+      "id": "source_rights",
+      "pass_condition": "Every external source is permitted for the intended internal use and any paid-report redistribution is limited to derived analysis, citations, and licensed data.",
+      "failure_action": "Block the affected source from customer delivery; do not resell raw vendor data."
+    }
+  ],
+  "score_model": {
+    "scale": "0-100 per dimension; linearly interpolate only between stated anchors and round the final score to the nearest whole number.",
+    "base_score_formula": "BaseScore = sum(weight_i * score_i for available dimensions) / sum(weight_i for available dimensions)",
+    "coverage_formula": "Coverage = sum(weight_i for available dimensions) / 100",
+    "final_score_formula": "FinalScore = clamp(BaseScore - explicitly documented non-duplicative penalties, 0, 100)",
+    "coverage_policy": {
+      "at_least_90_pct": "Complete score with rating and confidence.",
+      "80_to_under_90_pct": "Score allowed but gaps must be prominent.",
+      "60_to_under_80_pct": "Provisional score only; no strong conclusion.",
+      "under_60_pct": "No overall score; emit evaluated dimensions and data gaps only."
+    },
+    "decision_bands": [
+      {
+        "range": "85-100",
+        "label": "strong",
+        "meaning": "Strong treasury resilience subject to hard gates and confidence."
+      },
+      {
+        "range": "70-84",
+        "label": "positive",
+        "meaning": "Supportive evidence with material monitoring items."
+      },
+      {
+        "range": "55-69",
+        "label": "watch",
+        "meaning": "Mixed quality or incomplete resilience."
+      },
+      {
+        "range": "40-54",
+        "label": "weak",
+        "meaning": "Risks dominate or capital quality is fragile."
+      },
+      {
+        "range": "0-39",
+        "label": "reject",
+        "meaning": "Fails the framework's risk tolerance; not investment advice."
+      }
+    ],
+    "confidence_formula": "Confidence = 0.35*source_quality + 0.30*data_coverage + 0.20*cross_source_consistency + 0.15*recency_fit",
+    "confidence_labels": {
+      "high": ">=80",
+      "medium": "60-79",
+      "low": "<60"
+    }
+  },
+  "dimensions": [
+    {
+      "id": "D1",
+      "name": "Net Realizable Capital Scale",
+      "weight_pct": 20,
+      "question": "How much protocol-controlled capital remains after realization haircuts and known claims?",
+      "primary_metrics": [
+        "gross_adjusted_treasury_usd",
+        "net_realizable_treasury_usd",
+        "same_cohort_nrt_percentile"
+      ],
+      "scoring_measure": "Same-cohort percentile of Net Realizable Treasury, with absolute USD NRT published beside the score.",
+      "anchors": {
+        "0": "Below the 10th percentile or NRT is non-positive.",
+        "25": "10th to under 25th percentile.",
+        "50": "25th to under 50th percentile.",
+        "75": "50th to under 75th percentile.",
+        "100": "At or above the 75th percentile."
+      },
+      "important_rule": "Never substitute market cap, FDV, token supply, or TVL for NRT. If there is no eligible peer universe of at least 20 entities, set this dimension to null and disclose only NRT."
+    },
+    {
+      "id": "D2",
+      "name": "Liquidity and Operating Runway",
+      "weight_pct": 20,
+      "question": "Can the treasury meet expected 12-month cash needs using assets that can be realized without severe impairment?",
+      "primary_metrics": [
+        "tier_0_to_1_hqla_usd",
+        "expected_12m_cash_uses_usd",
+        "liquidity_runway_months"
+      ],
+      "formula": "liquidity_runway_months = 12 * tier_0_to_1_hqla_usd / expected_12m_cash_uses_usd",
+      "anchors": {
+        "0": "Under 3 months of runway or no credible cash-use data.",
+        "25": "3 to under 6 months.",
+        "50": "6 to under 12 months.",
+        "75": "12 to under 24 months.",
+        "100": "At least 24 months."
+      },
+      "important_rule": "Use cash needs, documented budget, debt service, and unavoidable commitments. Do not assume token emissions, possible grants, or gross TVL are immediately usable liquidity."
+    },
+    {
+      "id": "D3",
+      "name": "Obligation and Claim Coverage",
+      "weight_pct": 15,
+      "question": "Does realizable capital cover debt, pledge claims, enforceable payables, pending distributions, and documented contingencies?",
+      "primary_metrics": [
+        "obligations_due_or_enforceable_usd",
+        "net_realizable_treasury_usd",
+        "claim_coverage_ratio"
+      ],
+      "formula": "claim_coverage_ratio = net_realizable_treasury_usd / obligations_due_or_enforceable_usd",
+      "anchors": {
+        "0": "Ratio below 0.75x or known insolvency.",
+        "25": "0.75x to under 1.0x.",
+        "50": "1.0x to under 1.5x.",
+        "75": "1.5x to under 2.0x.",
+        "100": "At least 2.0x with no material unresolved claim."
+      },
+      "important_rule": "If the denominator is zero, report no material known obligations and score using documented legal and contingency evidence rather than manufacturing an infinite ratio."
+    },
+    {
+      "id": "D4",
+      "name": "Concentration and Stress Resilience",
+      "weight_pct": 15,
+      "question": "How much realizable capital survives plausible crypto-market, stablecoin, native-token, and liquidity shocks?",
+      "primary_metrics": [
+        "top_1_asset_weight_pct",
+        "native_token_weight_pct",
+        "herfindahl_hirschman_index",
+        "post_stress_nrt_usd",
+        "nrt_survival_pct"
+      ],
+      "formula": "nrt_survival_pct = post_stress_nrt_usd / pre_stress_net_realizable_treasury_usd * 100",
+      "standardized_stress_library": [
+        "Apply a severe native-token price and market-impact shock consistent with the entity's observable depth.",
+        "Apply a large-cap crypto drawdown and a more severe long-tail asset drawdown.",
+        "Apply a stablecoin/depeg, bridge, or issuer-concentration scenario where exposure exists.",
+        "Apply LP, lending, and lockup realization shocks using look-through and exit assumptions.",
+        "Publish all shock parameters and do not compare scenarios with different parameter sets."
+      ],
+      "anchors": {
+        "0": "Post-stress NRT is non-positive or survival is 0% or below.",
+        "25": "Survival above 0% to under 35%.",
+        "50": "35% to under 55%.",
+        "75": "55% to under 75%.",
+        "100": "At least 75% survival with no single unmitigated concentration failure."
+      },
+      "important_rule": "Do not deduct the same concentration risk again as a separate overall penalty."
+    },
+    {
+      "id": "D5",
+      "name": "Capital Productivity and Replenishment",
+      "weight_pct": 15,
+      "question": "Is the treasury being replenished by recurring, treasury-captured cash flows rather than only token issuance or one-off financing?",
+      "primary_metrics": [
+        "trailing_12m_recurring_treasury_inflows_usd",
+        "trailing_12m_controllable_cash_uses_usd",
+        "net_treasury_flow_usd",
+        "self_funding_ratio"
+      ],
+      "formula": "self_funding_ratio = (recurring_treasury_inflows_usd - controllable_cash_uses_usd) / controllable_cash_uses_usd",
+      "anchors": {
+        "0": "Self-funding ratio below -50%, or no credible recurring inflow and a rapidly expanding burn.",
+        "25": "-50% to under 0%.",
+        "50": "0% to under 25%.",
+        "75": "25% to under 75%.",
+        "100": "At least 75% and repeatable treasury-captured inflows."
+      },
+      "important_rule": "Count only income or fees that verifiably accrue to the treasury. Do not equate application fees, gross protocol revenue, token emissions, or TVL growth with treasury replenishment."
+    },
+    {
+      "id": "D6",
+      "name": "Control, Governance, and Transparency",
+      "weight_pct": 15,
+      "question": "Can public evidence establish who controls capital, how it can move, whether policy limits exist, and how complete the disclosure is?",
+      "primary_metrics": [
+        "verified_control_value_pct",
+        "offchain_disclosure_value_pct",
+        "address_or_custody_reconciliation_pct",
+        "disclosure_age_days",
+        "treasury_policy_and_multisig_controls"
+      ],
+      "scoring_measure": "Documented composite of control verification, reconciliation coverage, disclosure freshness, custody/multisig or timelock controls, and governance oversight.",
+      "anchors": {
+        "0": "Control and beneficial ownership are unknown, materially contradictory, or no usable disclosure exists.",
+        "25": "Less than 60% value coverage, stale disclosure, or material governance opacity.",
+        "50": "Identifiable primary wallets and partial disclosure, but material off-chain or governance gaps remain.",
+        "75": "At least 80% of value reconciled, current disclosures, visible controls, and a documented treasury policy or comparable governance process.",
+        "100": "Near-complete reconciliation, timely attestations or audited disclosures, robust independent controls, and transparent governance evidence."
+      },
+      "important_rule": "This dimension measures evidence quality and control quality, not the popularity of a governance token or the number of votes."
+    }
+  ],
+  "public_data_stack": {
+    "tier_1_primary": [
+      {
+        "source": "Verified blockchain state and canonical block explorers",
+        "use": "Treasury address balances, token transfers, contract ownership, timelocks, debt positions, and transaction history."
+      },
+      {
+        "source": "Safe Transaction Service",
+        "url": "https://docs.safe.global/core-api/transaction-service-overview",
+        "use": "Read-only evidence for Safe smart-account transactions and control history. Restrict the integration to read endpoints."
+      },
+      {
+        "source": "Issuer filings, foundation reports, governance proposals, on-chain governance records, and audited attestations",
+        "use": "Off-chain balances, debt, budgets, commitments, liabilities, ownership mapping, and treasury policy."
+      }
+    ],
+    "tier_2_structured": [
+      {
+        "source": "CoinGecko Keyless Public API",
+        "url": "https://docs.coingecko.com/docs/keyless-public-api",
+        "use": "Spot prices, asset identifiers, market metadata, and historical context.",
+        "production_note": "The keyless tier is rate-limited and explicitly unsuitable for production polling; cache prices, back off on 429s, and use a licensed production tier when scale requires it."
+      },
+      {
+        "source": "DefiLlama official API",
+        "url": "https://defillama.com/docs/api",
+        "use": "Protocol context, TVL, fees, revenue, token rights, and published treasury metadata as corroborative or contextual inputs, never as sole proof of treasury ownership."
+      },
+      {
+        "source": "Snapshot Hub GraphQL API",
+        "url": "https://docs.snapshot.box/tools/api",
+        "use": "Public governance spaces, proposals, and voting evidence. The documented public rate limit is 100 requests per minute."
+      }
+    ],
+    "optional_enrichment_not_required_for_mvp": [
+      {
+        "source": "Token Terminal API",
+        "url": "https://tokenterminal.com/docs/api-reference/introduction",
+        "use": "Standardized protocol financial metrics when separately licensed.",
+        "constraint": "It requires an API-plan key and therefore is not a public, keyless dependency."
+      },
+      {
+        "source": "Dune or other on-chain analytics providers",
+        "use": "Reusable public queries or separately licensed query execution for chain-specific reconciliation and cash-flow analysis."
+      }
+    ],
+    "source_policy": [
+      "Use primary sources to establish ownership, liabilities, and claims; treat aggregators as discovery or corroboration unless their methodology and timestamp support the field.",
+      "Maintain a field-level data manifest with source URL, retrieval time, observation time, unit, currency, source tier, and verification status.",
+      "When sources conflict, preserve both values, resolve only after checking entity, time, unit, and ownership conventions, and expose unresolved conflict as a data gap.",
+      "Publicly accessible does not mean redistributable. Store raw vendor data privately and publish derived calculations, source citations, and licensed values only."
+    ]
+  },
+  "data_rights_and_redistribution": {
+    "required_prelaunch_control": "Maintain a source-rights registry that records each provider's permitted internal use, caching, display, attribution, redistribution, and commercial-use terms before including it in a paid report.",
+    "observed_constraints": [
+      {
+        "provider": "DefiLlama",
+        "source": "https://defillama.com/terms",
+        "constraint": "Its terms prohibit commercial exploitation, resale, and republication of its Content & Data without permission. Do not resell raw API responses or republish vendor data in customer JSON without written permission."
+      },
+      {
+        "provider": "CoinGecko",
+        "source": "https://www.coingecko.com/en/api_terms",
+        "constraint": "Its API terms permit products that incorporate the API but prohibit selling, renting, sublicensing, redistributing, or syndicating API access or part of it absent an executed agreement. Use derived output and citations, and obtain the appropriate commercial or redistribution license if raw values are delivered."
+      }
+    ],
+    "safe_delivery_default": "Deliver score outputs, calculated ratios, haircuts, evidence references, and a reproducible methodology. Do not expose raw bulk vendor payloads, provider keys, cached response bodies, or data beyond each provider's license."
+  },
+  "payment_gated_release": {
+    "principle": "Make public data acquisition and paid report delivery separate. A payment processor is the authority for entitlement; the agent is never the authority for payment verification.",
+    "state_machine": [
+      "requested",
+      "quoted",
+      "awaiting_payment",
+      "payment_verified",
+      "processing",
+      "quality_checked",
+      "ready",
+      "delivered",
+      "expired_or_refunded",
+      "failed"
+    ],
+    "required_flow": [
+      "Create a server-side order containing entity identifier, scoring profile version, currency, price, quote expiration, and an idempotency key.",
+      "Create a checkout or payment intent with a payment processor; never accept a client redirect, browser parameter, or client-side success flag as payment proof.",
+      "Verify the processor webhook signature; require a successful/captured event, amount and currency match, accepted order reference, and a previously unseen event ID.",
+      "Only after durable payment verification, enqueue a fresh scoring job. This keeps the report snapshot current and prevents unpaid compute from being treated as an entitlement.",
+      "Run deterministic calculations and an agentic evidence-collection step using a versioned prompt and source policy. Validate the JSON contract and store the output checksum, source manifest, and calculation version.",
+      "Issue an authenticated, time-limited download or API entitlement for the JSON. Do not put customer email, card data, processor event payloads, or vendor credentials into the report.",
+      "Use webhook retries and idempotent state transitions so duplicate payment events cannot create duplicate charges or duplicate reports."
+    ],
+    "release_condition": "payment_verified AND report_status=ready AND json_schema_validation=passed",
+    "recommended_customer_experience": "Show a quoted report preview before checkout, a processing status after verified payment, and the final signed JSON only after quality checks. Keep payment receipt and analysis report separate."
+  },
+  "paid_response_contract": {
+    "artifact": "tcs6_paid_response_schema_v1.json",
+    "required_characteristics": [
+      "Every numeric capital field is nullable; unknown must be null plus a data gap, never 0.",
+      "Every score includes its weight, status, rationale, evidence references, and confidence separate from score.",
+      "The report records hard-gate outcomes before the total score.",
+      "The response includes a capital-perimeter statement so user TVL and market capitalization cannot be mistaken for treasury capital.",
+      "The payment object contains an entitlement reference only, never customer payment data."
+    ]
+  },
+  "minimum_viable_product_plan": [
+    "Start with a curated entity registry rather than attempting to discover all treasury wallets autonomously. Require source links and an owner/control assertion for every registry record.",
+    "Cover one entity cohort first, preferably DeFi protocols or DAOs with transparent Safe/timelock treasuries. Do not compare them directly with public digital-asset treasury companies.",
+    "Build on-chain balance reconciliation, asset classification, price cache, haircut engine, and obligation ledger before using an agent for narrative synthesis.",
+    "Implement field-level provenance and coverage scoring. The agent should summarize evidence and identify gaps; deterministic code should calculate values, weights, and final scores.",
+    "Launch with derived analysis only and a licensed-source review. Add paid data vendors only where they improve a named metric enough to justify their licensing and cost."
+  ],
+  "limitations": [
+    "Public sources cannot reliably prove every off-chain bank balance, side letter, legal claim, market-making arrangement, or undisclosed liability.",
+    "A high score reflects the stated snapshot, public evidence, haircuts, and stress assumptions; it is not a solvency guarantee, valuation, or buy/sell recommendation.",
+    "Native-token reserves can look large at spot value but may have little realizable value under market-impact stress; the haircut engine is therefore central to the framework.",
+    "Scores should not be compared across cohorts without normalizing business model, entity perimeter, reporting cadence, and legal obligations."
+  ],
+  "reference_sources": [
+    {
+      "title": "DefiLlama API Documentation",
+      "url": "https://defillama.com/docs/api",
+      "retrieved_at": "2026-10-01T02:28:51Z"
+    },
+    {
+      "title": "DefiLlama Terms of Use",
+      "url": "https://defillama.com/terms",
+      "retrieved_at": "2026-10-01T02:29:28Z"
+    },
+    {
+      "title": "CoinGecko Keyless Public API",
+      "url": "https://docs.coingecko.com/docs/keyless-public-api",
+      "retrieved_at": "2026-10-01T02:28:31Z"
+    },
+    {
+      "title": "CoinGecko API Terms",
+      "url": "https://www.coingecko.com/en/api_terms",
+      "retrieved_at": "2026-10-01T02:29:32Z"
+    },
+    {
+      "title": "Safe Transaction Service API",
+      "url": "https://docs.safe.global/core-api/transaction-service-overview",
+      "retrieved_at": "2026-10-01T02:29:28Z"
+    },
+    {
+      "title": "Snapshot Hub GraphQL API",
+      "url": "https://docs.snapshot.box/tools/api",
+      "retrieved_at": "2026-10-01T02:29:30Z"
+    },
+    {
+      "title": "Token Terminal API Introduction",
+      "url": "https://tokenterminal.com/docs/api-reference/introduction",
+      "retrieved_at": "2026-10-01T02:28:31Z"
+    }
+  ]
+}

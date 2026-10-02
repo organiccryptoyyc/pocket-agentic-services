@@ -1,0 +1,603 @@
+{
+  "schema_version": "tcs-6-entity-registry/1.0",
+  "as_of": "2026-10-01T23:59:00Z",
+  "seeded_from": [
+    "defi_protocol_registry_additions_20261001.json (user-supplied research pass)",
+    "CLAUDE.md handoff decisions of 2026-10-01 (Balancer pending decision, Uniswap provisional, legacy-seed entities need first-time vetting)"
+  ],
+  "note": "Replace with tcs6_entity_registry_reconciled_v1.json once located; that file was not present in Downloads when this seed was written. scoreable=false entities are listed for discovery but always return analysis_status=insufficient_data. treasury_addresses: perimeter=include rows are holdings the collector values; control_only rows are control evidence (governors, executors, timelocks) not counted as capital; adjacent_excluded rows are tracked but outside the perimeter. Every row was checked on-chain 2026-10-01 unless onchain_check says not_checked.",
+  "entities": [
+    {
+      "entity_id": "aave",
+      "name": "Aave Protocol / Aave DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Network-specific Aave Collector contracts and approved operational Safes under Aave governance. Excludes Aave Labs corporate assets, user deposits, protocol TVL, and GHO/Umbrella/Safety Module assets unless separately consolidated.",
+      "notes": [
+        "April 2026 Kelp DAO exposure is historical and resolved: cite in D4 as a survived stress event, not a current risk."
+      ],
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3Ethereum.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract",
+          "note": "Shared by AaveV2Ethereum, AaveV3Ethereum, Lido and EtherFi instances: one exposure."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x25F2226B597E8F9514B3F68F00f494cF4f286491",
+          "role": "ecosystem_reserve",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/MiscEthereum.sol",
+          "verified_at": "2026-10-02",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0x053D55f9B5AF8694c503EB288a1B7E552f590710",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3Arbitrum.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "base",
+          "address": "0xBA9424d650A4F5c80a0dA641254d1AcCE2A37057",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3Base.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "polygon",
+          "address": "0xe8599F3cc5D38a9aD6F3684cd5CEa72f10Dbc383",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3Polygon.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "optimism",
+          "address": "0xB2289E329D2F85F1eD31Adbb30eA345278F21bcf",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3Optimism.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "avalanche",
+          "address": "0x5ba7fd868c40c16f7aDfAe6CF87121E13FC2F7a0",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3Avalanche.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "gnosis",
+          "address": "0x3e652E97ff339B73421f824F5b03d75b62F1Fb51",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3Gnosis.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "bnb",
+          "address": "0x25Ec457d1778b0E5316e7f38f3c22baF413F1A8C",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3BNB.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "linea",
+          "address": "0x86E2938daE289763D4e09a7e42c5cCcA62Cf9809",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3Linea.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "sonic",
+          "address": "0x1aB55bBdD5DF0782BBCf73553Af93BC6B29A286B",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3Sonic.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "plasma",
+          "address": "0x5E2d083417D12d4B0824E14Ecd48D26831F4Da7D",
+          "role": "collector",
+          "perimeter": "include",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/AaveV3Plasma.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "not_checked",
+          "note": "No public RPC reached during verification; check from the collector."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+          "role": "governance_executor_lvl1",
+          "perimeter": "control_only",
+          "source": "https://github.com/bgd-labs/aave-address-book/tree/main/src/GovernanceV3Ethereum.sol",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        }
+      ],
+      "sources": [
+        "https://aave.com/docs/resources/addresses",
+        "https://github.com/aave-dao/aave-address-book",
+        "https://aave.tokenlogic.xyz/financials"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-01"
+    },
+    {
+      "entity_id": "maker-sky",
+      "name": "Maker Protocol / Sky Protocol",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Liquid protocol treasury/operating cash, Sky Reserves, buyback inventories, protocol-held SKY, and identified agent allocations. Collateral backing DAI/USDS is reported as an obligation context, never as free treasury.",
+      "notes": [
+        "Scope conflict to resolve before publishing consolidated NRT."
+      ],
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "role": "pause_proxy",
+          "perimeter": "include",
+          "source": "https://chainlog.sky.money/api/mainnet/active.json#MCD_PAUSE_PROXY",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract",
+          "note": "Holds protocol-owned tokens and executes spells."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xA950524441892A31ebddF91d3cEEFa04Bf454466",
+          "role": "vow_surplus_buffer",
+          "perimeter": "include",
+          "source": "https://chainlog.sky.money/api/mainnet/active.json#MCD_VOW",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract",
+          "note": "Value is Vat.dai(vow) - Vat.sin(vow), not a token balance."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xbE286431454714F511008713973d3B053A2d38f3",
+          "role": "pause",
+          "perimeter": "control_only",
+          "source": "https://chainlog.sky.money/api/mainnet/active.json#MCD_PAUSE",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        }
+      ],
+      "sources": [
+        "https://chainlog.sky.money/",
+        "https://financial.skyeco.com/",
+        "https://vote.makerdao.com/"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-01"
+    },
+    {
+      "entity_id": "compound",
+      "name": "Compound Protocol / Compound DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Ethereum governance Timelock, v2/v3 reserve withdrawals, cross-chain local timelocks/receivers, and any separately verified Treasury Management Committee perimeter. Excludes Compound Labs/Foundation assets and market user deposits.",
+      "notes": [
+        "Scope conflict to resolve before publishing consolidated NRT."
+      ],
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x6d903f6003cca6255d85cca4d3b5e5146dc33925",
+          "role": "governance_timelock",
+          "perimeter": "include",
+          "source": "https://etherscan.io/address/0x6d903f6003cca6255d85cca4d3b5e5146dc33925",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract; delay()=172800s; admin()=0x309a862bbc1a00e45506cb8a802d1ff10004c8c0"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x309a862bbc1a00e45506cb8a802d1ff10004c8c0",
+          "role": "governor",
+          "perimeter": "control_only",
+          "source": "on-chain: Timelock.admin()",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xc3d688B66703497DAA19211EEdff47f25384cdc3",
+          "role": "comet_usdc_reserves",
+          "perimeter": "include",
+          "source": "https://github.com/compound-finance/comet/blob/main/deployments/mainnet/usdc/roots.json",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract; governor()=Timelock",
+          "note": "Value is getReserves() (can be negative); not user deposits."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x5D409e56D886231aDAf00c8775665AD0f9897b56",
+          "role": "comet_usds_reserves",
+          "perimeter": "include",
+          "source": "https://github.com/compound-finance/comet/blob/main/deployments/mainnet/usds/roots.json",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract; governor()=Timelock",
+          "note": "Value is getReserves() (can be negative); not user deposits."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3Afdc9BCA9213A35503b077a6072F3D0d5AB0840",
+          "role": "comet_usdt_reserves",
+          "perimeter": "include",
+          "source": "https://github.com/compound-finance/comet/blob/main/deployments/mainnet/usdt/roots.json",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract; governor()=Timelock",
+          "note": "Value is getReserves() (can be negative); not user deposits."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe85Dc543813B8c2CFEaAc371517b925a166a9293",
+          "role": "comet_wbtc_reserves",
+          "perimeter": "include",
+          "source": "https://github.com/compound-finance/comet/blob/main/deployments/mainnet/wbtc/roots.json",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract; governor()=Timelock",
+          "note": "Value is getReserves() (can be negative); not user deposits."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xA17581A9E3356d9A858b789D68B4d866e593aE94",
+          "role": "comet_weth_reserves",
+          "perimeter": "include",
+          "source": "https://github.com/compound-finance/comet/blob/main/deployments/mainnet/weth/roots.json",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract; governor()=Timelock",
+          "note": "Value is getReserves() (can be negative); not user deposits."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3D0bb1ccaB520A66e607822fC55BC921738fAFE3",
+          "role": "comet_wsteth_reserves",
+          "perimeter": "include",
+          "source": "https://github.com/compound-finance/comet/blob/main/deployments/mainnet/wsteth/roots.json",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract; governor()=Timelock",
+          "note": "Value is getReserves() (can be negative); not user deposits."
+        }
+      ],
+      "sources": [
+        "https://docs.compound.finance/governance/",
+        "https://etherscan.io/address/0x6d903f6003cca6255d85cca4d3b5e5146dc33925"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-01"
+    },
+    {
+      "entity_id": "lido",
+      "name": "Lido Protocol / Lido DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Lido DAO treasury/Agent and verified DAO-controlled committee, Easy Track, Safe, and timelock addresses. Excludes user stETH liabilities, staking deposits, and Lido Foundation assets.",
+      "notes": [],
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+          "role": "aragon_agent_treasury",
+          "perimeter": "include",
+          "source": "https://docs.lido.fi/deployed-contracts/",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x8B3f33234ABD88493c0Cd28De33D583B70beDe35",
+          "role": "reserve_fund",
+          "perimeter": "include",
+          "source": "https://docs.lido.fi/deployed-contracts/",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xa02FC823cCE0D016bD7e17ac684c9abAb2d6D647",
+          "role": "treasury_management_committee",
+          "perimeter": "include",
+          "source": "https://docs.lido.fi/deployed-contracts/",
+          "verified_at": "2026-10-01",
+          "onchain_check": "Safe 4-of-7"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2e59A20f205bB85a89C53f1936454680651E618e",
+          "role": "aragon_voting",
+          "perimeter": "control_only",
+          "source": "https://docs.lido.fi/deployed-contracts/",
+          "verified_at": "2026-10-01",
+          "onchain_check": "not_checked"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xCE0425301C85c5Ea2A0873A2dEe44d78E02D2316",
+          "role": "dual_governance_timelock",
+          "perimeter": "control_only",
+          "source": "https://docs.lido.fi/deployed-contracts/",
+          "verified_at": "2026-10-01",
+          "onchain_check": "not_checked"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xF0211b7660680B49De1A7E9f25C65660F0a13Fea",
+          "role": "easy_track",
+          "perimeter": "control_only",
+          "source": "https://docs.lido.fi/deployed-contracts/",
+          "verified_at": "2026-10-01",
+          "onchain_check": "not_checked"
+        }
+      ],
+      "sources": [
+        "https://docs.lido.fi/lido-dao",
+        "https://blog.lido.fi/lido-dao-treasury-fund/",
+        "https://etherscan.io/address/0x3e40d73eb977dc6a537af587d48316fee66e9c8c"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-01"
+    },
+    {
+      "entity_id": "curve",
+      "name": "Curve Finance / Curve DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Curve DAO Treasury contract, Community Fund (separate bucket), verified fee collectors, burners, and other DAO-controlled positions. Excludes LP deposits, user collateral, and veCRV-holder distributions.",
+      "notes": [],
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x6508ef65b0bd57eabd0f1d52685a70433b2d290b",
+          "role": "dao_treasury",
+          "perimeter": "include",
+          "source": "https://docs.curve.finance/user/dao/community-fund-treasury",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe3997288987e6297ad550a69b31439504f513267",
+          "role": "community_fund",
+          "perimeter": "include",
+          "source": "https://docs.curve.finance/user/dao/community-fund-treasury",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract",
+          "note": "Separate bucket per registry perimeter."
+        }
+      ],
+      "sources": [
+        "https://docs.curve.finance/user/dao/community-fund-treasury",
+        "https://etherscan.io/address/0x6508ef65b0bd57eabd0f1d52685a70433b2d290b"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-01"
+    },
+    {
+      "entity_id": "morpho",
+      "name": "Morpho Protocol / Morpho Governance",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Core DAO Governance Safe; rewards and contributor-grant Safes are adjacent buckets unless explicitly consolidated. Excludes Morpho Association assets and lending-market balances.",
+      "notes": [
+        "Governance Safe observed at 6-of-10 on 2026-10-01 (transition from 5-of-9 has executed). Always read live Safe state at collection time."
+      ],
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+          "role": "governance_safe",
+          "perimeter": "include",
+          "source": "https://docs.morpho.org/learn/governance/organization/",
+          "verified_at": "2026-10-01",
+          "onchain_check": "Safe 6-of-10 (docs still say 5/9)"
+        },
+        {
+          "chain": "base",
+          "address": "0xcBa28b38103307Ec8dA98377ffF9816C164f9AFa",
+          "role": "governance_safe",
+          "perimeter": "include",
+          "source": "https://docs.morpho.org/learn/governance/organization/",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xF057afeEc22E220f47AD4220871364e9E828b2e9",
+          "role": "rewards_safe",
+          "perimeter": "adjacent_excluded",
+          "source": "https://docs.morpho.org/learn/governance/organization/",
+          "verified_at": "2026-10-01",
+          "onchain_check": "Safe 3-of-7 (docs say 3/5)"
+        },
+        {
+          "chain": "base",
+          "address": "0x5Eb982bb1E620cC3927E5CF8A5D207e667643297",
+          "role": "rewards_safe",
+          "perimeter": "adjacent_excluded",
+          "source": "https://docs.morpho.org/learn/governance/organization/",
+          "verified_at": "2026-10-01",
+          "onchain_check": "not_checked"
+        }
+      ],
+      "sources": [
+        "https://docs.morpho.org/learn/governance/organization/",
+        "https://docs.morpho.org/get-started/resources/addresses/"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-01"
+    },
+    {
+      "entity_id": "yearn-finance",
+      "name": "Yearn Finance Protocol / Yearn Governance",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Yearn treasury, governance multisig, timelock, and verified chain-specific operational wallets. Excludes user vault TVL, strategy-held user assets, and contributor wallets.",
+      "notes": [],
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde",
+          "role": "treasury",
+          "perimeter": "include",
+          "source": "https://docs.yearn.fi/developers/addresses/core-contracts",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52",
+          "role": "governance_multisig_ychad",
+          "perimeter": "include",
+          "source": "https://docs.yearn.fi/developers/addresses/core-contracts",
+          "verified_at": "2026-10-01",
+          "onchain_check": "Safe 6-of-9"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x88Ba032be87d5EF1fbE87336B7090767F367BF73",
+          "role": "timelock",
+          "perimeter": "control_only",
+          "source": "https://docs.yearn.fi/developers/addresses/core-contracts",
+          "verified_at": "2026-10-01",
+          "onchain_check": "contract"
+        }
+      ],
+      "sources": [
+        "https://docs.yearn.fi/developers/addresses/core-contracts",
+        "https://docs.yearn.fi/developers/security/multisig"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-01"
+    },
+    {
+      "entity_id": "balancer",
+      "name": "Balancer DAO / Balancer Protocol",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "excluded_by_user_decision",
+      "scoreable": false,
+      "treasury_perimeter": "Treasury Safe, fee-collection and operational Safes, managed DeFi positions, self-insurance reserve.",
+      "notes": [
+        "BIP-928 orderly wind-down passed 2026-09-30. Excluded from the active cohort by user decision 2026-10-01."
+      ],
+      "treasury_addresses": [],
+      "sources": [
+        "https://forum.balancer.fi/t/bip-928-orderly-winddown-of-balancer-and-distribution-of-the-treasury/7107"
+      ]
+    },
+    {
+      "entity_id": "uniswap",
+      "name": "Uniswap Protocol / Uniswap Governance",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "unverified",
+      "eligibility": "provisional",
+      "scoreable": false,
+      "treasury_perimeter": "Governance Timelock identified; cross-chain treasury, fee-adapter, vesting, Foundation, and obligation perimeter not yet consolidated.",
+      "notes": [],
+      "treasury_addresses": [],
+      "sources": [
+        "https://developers.uniswap.org/docs/ecosystem/governance/technical-reference",
+        "https://gov.uniswap.org/t/uniswap-treasury-report/24978"
+      ]
+    },
+    {
+      "entity_id": "rocket-pool",
+      "name": "Rocket Pool Protocol / Rocket Pool pDAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "unverified",
+      "eligibility": "provisional",
+      "scoreable": false,
+      "treasury_perimeter": "pDAO treasury-spend authority documented; canonical treasury address set not yet consolidated.",
+      "notes": [],
+      "treasury_addresses": [],
+      "sources": [
+        "https://docs.rocketpool.net/pdao/overview"
+      ]
+    },
+    {
+      "entity_id": "pancakeswap",
+      "name": "PancakeSwap",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "unverified",
+      "eligibility": "needs_first_time_vetting",
+      "scoreable": false,
+      "treasury_perimeter": "Not yet established.",
+      "notes": [
+        "Carryover from the original watchlist; never formally vetted."
+      ],
+      "treasury_addresses": [],
+      "sources": []
+    },
+    {
+      "entity_id": "stargate-finance",
+      "name": "Stargate Finance",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "unverified",
+      "eligibility": "needs_first_time_vetting",
+      "scoreable": false,
+      "treasury_perimeter": "Not yet established.",
+      "notes": [
+        "Carryover from the original watchlist; never formally vetted."
+      ],
+      "treasury_addresses": [],
+      "sources": []
+    },
+    {
+      "entity_id": "machinex",
+      "name": "MachineX (peaq DEX)",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "unverified",
+      "eligibility": "needs_first_time_vetting",
+      "scoreable": false,
+      "treasury_perimeter": "Not yet established.",
+      "notes": [
+        "Carryover from the original watchlist; never formally vetted."
+      ],
+      "treasury_addresses": [],
+      "sources": []
+    }
+  ]
+}
