@@ -1470,12 +1470,14 @@
       "registry_status": "partially_verified",
       "eligibility": "pending_treasury_reconciliation",
       "scoreable": false,
-      "treasury_perimeter": "Alchemix dev (treasury) multisig on Ethereum. Optimism/Arbitrum multisigs (AIP-95a) not yet mapped (gap). Excludes alAsset backing and user deposits.",
+      "treasury_perimeter": "Alchemix DAO Safes on Ethereum, Optimism, Base and Arbitrum, the timelocked multisig and the Ecosystem Vault, as listed by Alchemix's treasury tracker (Octav). Excludes alAsset backing, user deposits and Alchemix Association assets not on the tracker. DeFi positions held by these Safes (e.g. Aera, StakeDAO) are not yet readable.",
       "notes": [
         "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort.",
-        "2026-10-03 (owner): spending approved for methodology purposes; live score pending treasury-address reconciliation (registry maps ~$0.14M liquid vs ~$3.9M liquid + ~$2.3M Association assets reported in AIP-121)."
+        "2026-10-03 (owner): spending approved for methodology purposes; live score pending treasury-address reconciliation (registry maps ~$0.14M liquid vs ~$3.9M liquid + ~$2.3M Association assets reported in AIP-121).",
+        "2026-10-03 (owner): 6 tracker addresses approved; alETH/alUSD classed as Alchemix's own liabilities; still held until DeFi positions are readable or a cited treasury total is published."
       ],
       "sources": [
+        "https://alchemix.octav.fi/app/alchemixtreasury",
         "https://etherscan.io/address/0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9",
         "https://forum.alchemix.fi/public/d/429-aip-95a-multichain-response-optimism-and-arbitrum"
       ],
@@ -1490,6 +1492,76 @@
           "verified_at": "2026-10-03",
           "onchain_check": "safe 3-of-7",
           "note": "Alchemix Dev Multisig (treasury operations)."
+        },
+        {
+          "chain": "optimism",
+          "address": "0xC224bf25Dcc99236F00843c7D8C4194abE8AA94a",
+          "role": "dao_multisig",
+          "perimeter": "include",
+          "source": "https://alchemix.octav.fi/app/alchemixtreasury",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-7",
+          "note": "Optimism DAO Safe (Alchemix treasury tracker); holds mostly alETH (Alchemix's own synthetic, classed as its liability). Owner-approved 2026-10-03."
+        },
+        {
+          "chain": "base",
+          "address": "0x24E9cbB9DdDa1247ae4b4eEEE3C569A2190ac401",
+          "role": "dao_multisig",
+          "perimeter": "include",
+          "source": "https://alchemix.octav.fi/app/alchemixtreasury",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-7",
+          "note": "Base DAO Safe (Alchemix treasury tracker). Owner-approved 2026-10-03."
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0x7e108711771DfdB10743F016D46d75A9379cA043",
+          "role": "dao_multisig",
+          "perimeter": "include",
+          "source": "https://alchemix.octav.fi/app/alchemixtreasury",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-7",
+          "note": "Arbitrum DAO Safe (Alchemix treasury tracker); Arbitrum v3 winding down (AIP-124). Owner-approved 2026-10-03."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x8392F6669292fA56123F71949B52d883aE57e225",
+          "role": "timelock_multisig",
+          "perimeter": "include",
+          "source": "https://alchemix.octav.fi/app/alchemixtreasury",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract MultiSigWalletWithTimeLock",
+          "note": "Timelocked multisig wallet (Alchemix treasury tracker); holds ALCX. Owner-approved 2026-10-03."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xB7C79b70900D04Ae7C5f18e9eB17178B437523c9",
+          "role": "ecosystem_vault",
+          "perimeter": "include",
+          "source": "https://alchemix.octav.fi/app/alchemixtreasury",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-6",
+          "note": "Alchemix Ecosystem Vault (treasury tracker). Owner-approved 2026-10-03."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3216D2A52f0094AA860ca090BC5C335dE36e6273",
+          "role": "sdt_controller",
+          "perimeter": "control_only",
+          "source": "https://alchemix.octav.fi/app/alchemixtreasury",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract TransparentUpgradeableProxy -> SDTController",
+          "note": "StakeDAO controller (treasury tracker); its positions are not readable as token balances (gap). Owner-approved 2026-10-03."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x41ab74824b4D1b196eeb62569B907Ef9A313DF18",
+          "role": "tracker_eoa",
+          "perimeter": "adjacent_excluded",
+          "source": "https://alchemix.octav.fi/app/alchemixtreasury",
+          "verified_at": "2026-10-03",
+          "onchain_check": "EOA, empty on 5 chains",
+          "note": "Listed by the treasury tracker; an EOA whose control cannot be verified on chain; not counted. Owner-approved 2026-10-03."
         }
       ]
     },
@@ -1499,11 +1571,12 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "partially_verified",
-      "eligibility": "confirmed",
-      "scoreable": true,
+      "eligibility": "pending_treasury_reconciliation",
+      "scoreable": false,
       "treasury_perimeter": "Origin DAO admin Safes (5-of-8 on Ethereum, Arbitrum, Base, Sonic) and the Buyback Operator Safe (1-of-3) holding DAO assets for buybacks, per Origin's contract registry. Excludes OUSD/OETH/OS product vault assets (user-owned) and strategist multisigs. Sonic balances not readable yet (gap).",
       "notes": [
-        "Registry expansion batch 2 (D9). Addresses supplied by owner 2026-10-03 from Origin's contract registry and verified on chain. Curated inputs not filled yet."
+        "Registry expansion batch 2 (D9). Addresses supplied by owner 2026-10-03 from Origin's contract registry and verified on chain. Curated inputs not filled yet.",
+        "2026-10-03 (owner): held until the Protocol NAV treasury addresses are mapped; no published DAO operating budget (partial)."
       ],
       "sources": [
         "https://docs.originprotocol.com/registry/contracts"
@@ -1656,6 +1729,14 @@
       "by": "Claude (owner decision 2026-10-03)",
       "changes": [
         "alchemix: held (scoreable false, pending_treasury_reconciliation) until Association-controlled addresses and other multisigs are mapped and verified."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decisions 2026-10-03)",
+      "changes": [
+        "alchemix: added 5 included rows (OP/Base/ARB Safes, timelock multisig, Ecosystem Vault), StakeDAO controller (control_only) and tracker EOA (adjacent_excluded); still held.",
+        "origin-protocol: held (pending_treasury_reconciliation)."
       ]
     }
   ]
