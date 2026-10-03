@@ -1468,11 +1468,12 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "partially_verified",
-      "eligibility": "confirmed",
-      "scoreable": true,
+      "eligibility": "pending_treasury_reconciliation",
+      "scoreable": false,
       "treasury_perimeter": "Alchemix dev (treasury) multisig on Ethereum. Optimism/Arbitrum multisigs (AIP-95a) not yet mapped (gap). Excludes alAsset backing and user deposits.",
       "notes": [
-        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort."
+        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort.",
+        "2026-10-03 (owner): spending approved for methodology purposes; live score pending treasury-address reconciliation (registry maps ~$0.14M liquid vs ~$3.9M liquid + ~$2.3M Association assets reported in AIP-121)."
       ],
       "sources": [
         "https://etherscan.io/address/0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9",
@@ -1648,6 +1649,13 @@
       "by": "Claude (owner decisions 2026-10-03)",
       "changes": [
         "maker-sky, compound: reconciliation complete (owner-approved perimeter and spending rules); scoreable again, eligibility confirmed. Beta first."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decision 2026-10-03)",
+      "changes": [
+        "alchemix: held (scoreable false, pending_treasury_reconciliation) until Association-controlled addresses and other multisigs are mapped and verified."
       ]
     }
   ]
