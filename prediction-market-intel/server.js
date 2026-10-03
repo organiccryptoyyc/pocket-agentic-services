@@ -21,7 +21,7 @@ const { createServer, ClientError } = require("./lib/http");
 const polymarket = require("./lib/polymarket");
 
 const SERVICE = "prediction-market-intel";
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 const VERSION_PATH = "/v1/version";
 const HEALTH_PATH = "/v1/health";
 
@@ -31,15 +31,15 @@ const MOMENTUM_FIELDS = { "1d": "price_change_1d", "1w": "price_change_1w", "1mo
 function clampInt(value, { min, max, def }) {
   if (value === undefined || value === null || value === "") return def;
   const n = Number(value);
-  if (!Number.isFinite(n) || !Number.isInteger(n)) throw new ClientError(422, "invalid_input", `expected an integer, got ${JSON.stringify(value)}`);
-  if (n < min || n > max) throw new ClientError(422, "invalid_input", `must be between ${min} and ${max}, got ${n}`);
+  if (!Number.isFinite(n) || !Number.isInteger(n)) throw new ClientError(400, "invalid_input", `expected an integer, got ${JSON.stringify(value)}`);
+  if (n < min || n > max) throw new ClientError(400, "invalid_input", `must be between ${min} and ${max}, got ${n}`);
   return n;
 }
 
 function requireEnum(value, allowed, def) {
   const v = value === undefined || value === null || value === "" ? def : value;
   if (!allowed.includes(v)) {
-    throw new ClientError(422, "invalid_input", `must be one of ${JSON.stringify(allowed)}, got ${JSON.stringify(value)}`);
+    throw new ClientError(400, "invalid_input", `must be one of ${JSON.stringify(allowed)}, got ${JSON.stringify(value)}`);
   }
   return v;
 }

@@ -78,9 +78,15 @@ function normalizeMarket(raw) {
   };
 }
 
+// A page of 300 markets is a bigger download than this repo's other
+// single-record lookups, so it gets a longer timeout than lib/net.js's
+// generic 8s default — still overridable via FETCH_TIMEOUT_MS like every
+// other call in this codebase, just with a higher floor.
+const SEED_TIMEOUT_MS = Number(process.env.FETCH_TIMEOUT_MS || 12_000);
+
 async function fetchSeedPage(order) {
   const url = `${GAMMA_BASE}/markets?limit=${SEED_PAGE_SIZE}&order=${encodeURIComponent(order)}&ascending=false&closed=false&active=true`;
-  const res = await withRetry(() => fetchJSON(url, undefined, 12_000));
+  const res = await withRetry(() => fetchJSON(url, undefined, SEED_TIMEOUT_MS));
   if (!res.ok) throw new UpstreamError(`Polymarket Gamma API /markets lookup failed: HTTP ${res.status}`);
   return Array.isArray(res.body) ? res.body : [];
 }

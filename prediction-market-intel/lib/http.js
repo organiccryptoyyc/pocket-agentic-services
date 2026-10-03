@@ -117,11 +117,11 @@ function createServer({ service, version, versionPath, healthPath, routes }) {
         return sendJson(res, e.status, { error: { code: e.code, message: sanitize(e.message) } });
       }
       // Any unexpected failure (including upstream Pocket-network errors with
-      // no cached fallback) is reported as a 422 with a plain-language reason,
+      // no cached fallback) is reported as a 400 with a plain-language reason,
       // never a 5xx: a 5xx is unpaid and penalized under the gateway rules,
       // and the caller still gets a JSON object it can read.
       const message = sanitize(String((e && e.message) || e).slice(0, 300));
-      return sendJson(res, 422, { error: { code: "upstream_unavailable", message } });
+      return sendJson(res, 400, { error: { code: "upstream_unavailable", message } });
     }
   });
 }

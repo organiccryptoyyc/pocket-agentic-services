@@ -119,7 +119,7 @@ bad-input probes both correctly returning 4xx+JSON, never HTML or 5xx);
 same as every other package in this repo, since the card's `description`
 is deliberately verbose for gateway/agent discoverability). A simulated
 total-upstream-failure run (`SIMULATED_UPSTREAM_FAILURE=1`, no cache
-warmed) confirmed the honest-degradation path: HTTP 422 with a JSON
+warmed) confirmed the honest-degradation path: HTTP 400 (422 before v1.0.1) with a JSON
 `upstream_unavailable` error, never a 5xx.
 
 **Not yet verified against the real, live Polymarket API from this
@@ -159,6 +159,7 @@ before relying on `lookback_hours` values near the 168h ceiling.
 ## Testing
 
 ```
+npm test                                 # contract tests: healthchecks, 200s, bad input -> 400 + JSON
 node -r ./test/stub-fetch.js server.js   # run against canned fixtures, no network needed
 npm start                                # needs real network access to gamma-api.polymarket.com
 ```

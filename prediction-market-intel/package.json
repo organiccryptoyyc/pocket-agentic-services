@@ -1,11 +1,12 @@
 {
   "name": "prediction-market-intel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Prediction Market Intelligence — a Pocket Network service backend. Live top-market ranking, momentum, rotation, and liquidity-quality signal over Polymarket's public data, served over REST.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test test/pmi.test.js"
   },
   "engines": {
     "node": ">=18"

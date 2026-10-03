@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Prediction Market Intelligence API",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "prediction-market-intel on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body. Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every field is fetched live from Polymarket's free, public Gamma API at request time (via a short cache). Independent project, not affiliated with, endorsed by, or sponsored by Polymarket."
   },
   "servers": [{ "url": "/" }],
@@ -26,7 +26,7 @@
             }
           }
         },
-        "responses": { "200": { "description": "Success" }, "422": { "$ref": "#/components/responses/ClientError" } }
+        "responses": { "200": { "description": "Success" }, "400": { "$ref": "#/components/responses/ClientError" } }
       }
     },
     "/v1/market-momentum": {
@@ -47,7 +47,7 @@
             }
           }
         },
-        "responses": { "200": { "description": "Success" }, "422": { "$ref": "#/components/responses/ClientError" } }
+        "responses": { "200": { "description": "Success" }, "400": { "$ref": "#/components/responses/ClientError" } }
       }
     },
     "/v1/rotation-diff": {
@@ -71,7 +71,7 @@
             "description": "Success. May report {\"insufficient_history\": true} instead of a diff if this backend has not been running long enough to have a snapshot far enough back — an honest degraded response, not an error.",
             "content": { "application/json": { "schema": { "type": "object" } } }
           },
-          "422": { "$ref": "#/components/responses/ClientError" }
+          "400": { "$ref": "#/components/responses/ClientError" }
         }
       }
     },
@@ -92,7 +92,7 @@
             }
           }
         },
-        "responses": { "200": { "description": "Success" }, "422": { "$ref": "#/components/responses/ClientError" } }
+        "responses": { "200": { "description": "Success" }, "400": { "$ref": "#/components/responses/ClientError" } }
       }
     }
   },
