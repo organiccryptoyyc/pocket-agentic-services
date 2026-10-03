@@ -1,6 +1,6 @@
 {
   "schema_version": "tcs-6-entity-registry/1.0",
-  "as_of": "2026-10-01T23:59:00Z",
+  "as_of": "2026-10-03T16:00:00Z",
   "seeded_from": [
     "defi_protocol_registry_additions_20261001.json (user-supplied research pass)",
     "CLAUDE.md handoff decisions of 2026-10-01 (Balancer pending decision, Uniswap provisional, legacy-seed entities need first-time vetting)"
@@ -17,7 +17,8 @@
       "scoreable": true,
       "treasury_perimeter": "Network-specific Aave Collector contracts and approved operational Safes under Aave governance. Excludes Aave Labs corporate assets, user deposits, protocol TVL, and GHO/Umbrella/Safety Module assets unless separately consolidated.",
       "notes": [
-        "April 2026 Kelp DAO exposure is historical and resolved: cite in D4 as a survived stress event, not a current risk."
+        "April 2026 rsETH / Kelp DAO incident: the DAO donated 25,000 ETH to the DeFi United recovery; owner judgment 2026-10-03 is that its exposure is capped at that amount. Not 'resolved': recovery-loan balances are unpublished (see curated/aave.json).",
+        "2026-10-03: registry perimeter check needed: on-chain stablecoins at registered addresses (~$12M) are well below the $52.36M disclosed on 2026-02-28; AFC and Ahab Safes are not registered yet."
       ],
       "treasury_addresses": [
         {
@@ -153,11 +154,12 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "partially_verified",
-      "eligibility": "confirmed",
-      "scoreable": true,
+      "eligibility": "pending_treasury_reconciliation",
+      "scoreable": false,
       "treasury_perimeter": "Liquid protocol treasury/operating cash, Sky Reserves, buyback inventories, protocol-held SKY, and identified agent allocations. Collateral backing DAI/USDS is reported as an obligation context, never as free treasury.",
       "notes": [
-        "Scope conflict to resolve before publishing consolidated NRT."
+        "Scope conflict to resolve before publishing consolidated NRT.",
+        "2026-10-03 owner decision: on hold (pending treasury reconciliation). The registered Vow surplus buffer reads negative on chain (Vat.dai - Vat.sin) while Sky reports Sky Reserves of $76.99M (Aug 2026). Reconcile wallets, accounting definitions, liabilities and any off-chain/excluded reserve assets before scoring."
       ],
       "treasury_addresses": [
         {
@@ -203,11 +205,13 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "partially_verified",
-      "eligibility": "confirmed",
-      "scoreable": true,
-      "treasury_perimeter": "Ethereum governance Timelock, v2/v3 reserve withdrawals, cross-chain local timelocks/receivers, and any separately verified Treasury Management Committee perimeter. Excludes Compound Labs/Foundation assets and market user deposits.",
+      "eligibility": "pending_treasury_reconciliation",
+      "scoreable": false,
+      "treasury_perimeter": "Ethereum governance Timelock, v2/v3 reserve withdrawals, cross-chain local timelocks/receivers, and any separately verified Treasury Management Committee perimeter. Excludes Compound Labs/Foundation assets and market user deposits. Since April 2026 also the TMC program: Treasury Escrow, TMC Safe, and the Aera and Avantgarde vaults owned by the Treasury Timelock.",
       "notes": [
-        "Scope conflict to resolve before publishing consolidated NRT."
+        "Scope conflict to resolve before publishing consolidated NRT.",
+        "2026-10-03 owner decision: on hold (pending treasury reconciliation) until the TMC-program addresses are collected, valued and reconciled; excluded from live comparative scoring meanwhile.",
+        "2026-10-03: governance dispute over TMC operations (COMP purchases, exchange withdrawals) is open on the forum: https://www.comp.xyz/t/aligning-treasury-delays-with-the-governance-process/8098. Record as a governance risk when scoring resumes."
       ],
       "treasury_addresses": [
         {
@@ -287,6 +291,76 @@
           "verified_at": "2026-10-01",
           "onchain_check": "contract; governor()=Timelock",
           "note": "Value is getReserves() (can be negative); not user deposits."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xDcB34b56842F853A69E86De5A0c22c49d97C130C",
+          "role": "treasury_escrow",
+          "perimeter": "include",
+          "source": "https://www.comp.xyz/t/tmc-transparency-thread/7917",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "note": "Treasury Escrow (CompoundTreasury.sol): liquid treasury under the TMC program; 2-day withdrawal cooldown; Governor Timelock retains admin (TMC transparency thread). ~$9.0M on 2026-10-03 (mostly WBTC)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x8BacCcA3e83843555867b3865d7689D099406567",
+          "role": "tmc_safe",
+          "perimeter": "include",
+          "source": "https://www.comp.xyz/t/tmc-transparency-thread/7917",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 4-of-6 (Safe Transaction Service)",
+          "note": "Treasury Management Committee Safe; initiates Escrow withdrawals. ~$5.7M on 2026-10-03 ($5.1M COMP)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3D6eEf6A92b15361697698695334E98C5db91D6b",
+          "role": "aera_vault",
+          "perimeter": "include",
+          "source": "https://www.comp.xyz/t/compound-treasury-consolidation-fund-sources-allocation-methodology-deployment-framework/7726",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract; owner() = Treasury Timelock 0xefeD08b7…",
+          "note": "Aera-managed vault; ownership moved from Governor Timelock to Treasury Timelock (April 2026). ~$4.3M on 2026-10-03 ($28.2M in April)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xeB6332bbB14b1488eFb3A395B8EBF6a6904C4241",
+          "role": "avantgarde_vault",
+          "perimeter": "include",
+          "source": "https://www.comp.xyz/t/tmc-transparency-thread/7917",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 1-of-1, sole owner Treasury Timelock; Zodiac Roles module 0xA071b3d5…",
+          "note": "Avantgarde-managed vault (covered calls / MYSO lending). No ERC-20 balance on 2026-10-03: positions sit in MYSO contracts the token list does not see (gap)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xefeD08b791423C7D7937507Cf840E86a7ddC11c1",
+          "role": "treasury_timelock",
+          "perimeter": "control_only",
+          "source": "https://www.comp.xyz/t/tmc-transparency-thread/7917",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract; getMinDelay() = 172800 (2 days)",
+          "note": "Owns the Aera and Avantgarde vaults; Governor Timelock holds admin."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xbbf3f1421D886E9b2c5D716B5192aC998af2012c",
+          "role": "community_multisig_pause_guardian",
+          "perimeter": "control_only",
+          "source": "https://www.comp.xyz/t/tmc-transparency-thread/7917",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe, threshold 5",
+          "note": "Can block, pause or cancel pending Escrow disbursements; CANCELLER on the Treasury Timelock."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x7CF0b194B1e47B8164F23dF2B67334B89f30807D",
+          "role": "foundation_operational_program_wallet",
+          "perimeter": "adjacent_excluded",
+          "source": "https://www.comp.xyz/t/tmc-transparency-thread/7917",
+          "verified_at": "2026-10-03",
+          "onchain_check": "EOA",
+          "note": "Compound Foundation V4 Operational Program wallet: disbursed budget, Foundation-controlled; excluded per perimeter (Foundation assets)."
         }
       ],
       "sources": [
@@ -598,6 +672,17 @@
       ],
       "treasury_addresses": [],
       "sources": []
+    }
+  ],
+  "change_log": [
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decisions 2026-10-03)",
+      "changes": [
+        "compound: added Treasury Escrow, TMC Safe, Aera vault, Avantgarde vault (include); Treasury Timelock, Community Multisig (control_only); Foundation operational wallet (adjacent_excluded). Each checked on chain 2026-10-03.",
+        "compound, maker-sky: scoreable=false, eligibility=pending_treasury_reconciliation (owner decision: no live comparative scoring until reconciled).",
+        "aave: Kelp note corrected (not resolved; exposure capped at 25,000 ETH donation per owner); perimeter-check note added."
+      ]
     }
   ]
 }
