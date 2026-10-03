@@ -41,3 +41,15 @@ protocol has its own):
 
 v1 reports carry one figure (`expected_12m_cash_uses_usd`, the base case) and state the conservative case in
 the cited note. `tcs-6-paid-response/2.0` adds both as separate fields.
+
+## 3. Spending paid in the protocol's own token
+
+Owner rule of 2026-10-03 (Curve; applied to CoW token grants and every protocol):
+
+- **Base runway** counts only stablecoin-denominated (cash-like) spending. Budgets paid in the protocol's
+  own token do not consume stablecoin-type liquid assets and are not charged against them.
+- **Disclose** native-token budgets separately as a token-denominated obligation and sell-pressure risk
+  (amount in tokens and approximate USD at proposal time).
+- **Keep** the D4 concentration penalty for native-token weight.
+- **Optional stress case:** a clearly labelled token-liquidation scenario (native costs met by selling into
+  stablecoins, with haircut / market-impact caveat). Never the primary runway figure.
