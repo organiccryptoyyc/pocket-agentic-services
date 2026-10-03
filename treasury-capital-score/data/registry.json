@@ -734,31 +734,59 @@
       "name": "Uniswap Protocol / Uniswap Governance",
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
-      "registry_status": "unverified",
-      "eligibility": "provisional",
-      "scoreable": false,
-      "treasury_perimeter": "Governance Timelock identified; cross-chain treasury, fee-adapter, vesting, Foundation, and obligation perimeter not yet consolidated.",
-      "notes": [],
-      "treasury_addresses": [],
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Uniswap governance Timelock on Ethereum (holds the DAO treasury, almost entirely UNI). Excludes Uniswap Labs and Foundation assets, the fee/burn contracts (UNIfication routes fees to UNI burns), vesting contracts and cross-chain receivers (not yet mapped).",
+      "notes": [
+        "2026-10-03: vetted for D1 (owner-approved). Spending is a 20M UNI/yr growth budget (native; disclosed)."
+      ],
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x1a9C8182C09F50C8318d769245beA52c32BE35BC",
+          "role": "governance_timelock",
+          "perimeter": "include",
+          "source": "https://developers.uniswap.org/docs/ecosystem/governance/technical-reference",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract Timelock; holds ~$2.37B UNI + 0.24 ETH (2026-10-03)"
+        }
+      ],
       "sources": [
         "https://developers.uniswap.org/docs/ecosystem/governance/technical-reference",
         "https://gov.uniswap.org/t/uniswap-treasury-report/24978"
-      ]
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03"
     },
     {
       "entity_id": "rocket-pool",
       "name": "Rocket Pool Protocol / Rocket Pool pDAO",
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
-      "registry_status": "unverified",
-      "eligibility": "provisional",
-      "scoreable": false,
-      "treasury_perimeter": "pDAO treasury-spend authority documented; canonical treasury address set not yet consolidated.",
-      "notes": [],
-      "treasury_addresses": [],
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Rocket Pool pDAO treasury: the rocketClaimDAO ledger entry in RocketVault (RPL), read via balanceOfToken. Excludes node-operator stake, rETH backing, committee multisig balances (not yet mapped) and Rocket Pool Ltd.",
+      "notes": [
+        "2026-10-03: vetted for D1 (owner-approved). Spending all RPL (IMC, GMC, dev team; native; disclosed)."
+      ],
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x3bDC69C4E5e13E52A65f5583c23EFB9636b469d6",
+          "role": "rocket_vault_balance",
+          "vault_key": "rocketClaimDAO",
+          "token": "0xD33526068D116cE69F19A9ee46F0bd304F21A51f",
+          "perimeter": "include",
+          "source": "https://docs.rocketpool.net/pdao/overview",
+          "verified_at": "2026-10-03",
+          "onchain_check": "RocketStorage getAddress(contract.address rocketVault) = this address; rocketClaimDAO = 0xFb2F2AB6…81aA; ledger 186,387 RPL (2026-10-03)"
+        }
+      ],
       "sources": [
         "https://docs.rocketpool.net/pdao/overview"
-      ]
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03"
     },
     {
       "entity_id": "pancakeswap",
@@ -1737,6 +1765,14 @@
       "changes": [
         "alchemix: added 5 included rows (OP/Base/ARB Safes, timelock multisig, Ecosystem Vault), StakeDAO controller (control_only) and tracker EOA (adjacent_excluded); still held.",
         "origin-protocol: held (pending_treasury_reconciliation)."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decision 2026-10-03)",
+      "changes": [
+        "uniswap: governance Timelock row; scoreable (D1 vetting).",
+        "rocket-pool: RocketVault rocketClaimDAO ledger row (new collector reader); scoreable (D1 vetting). Scored cohort reaches 20: D1 percentiles switch on."
       ]
     }
   ]
