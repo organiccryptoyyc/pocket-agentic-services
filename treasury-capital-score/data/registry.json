@@ -672,6 +672,446 @@
       ],
       "treasury_addresses": [],
       "sources": []
+    },
+    {
+      "entity_id": "cow-dao",
+      "name": "CoW Protocol / CoW DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "CoW DAO Safe, Core Treasury (kpk-managed) Safe under CIP-62, and the Legal Defense Reserve Safe (CIP-50, stewarded by the CoW Foundation under DAO mandate). Excludes the CoW TWAP Safe, GNO Validators Safe and residual Balancer safe (outside the Core Treasury Mandate per the DAO reports), solver bonds, and user funds.",
+      "notes": [
+        "Registry expansion batch 1 (D9), owner-approved 2026-10-03. Curated inputs not filled yet, so reports are insufficient_data until they are; NRT still counts toward the D1 cohort."
+      ],
+      "sources": [
+        "https://forum.cow.fi/t/cow-dao-treasury-august-2026-monthly-report/3573",
+        "https://forum.cow.fi/t/cip-62-core-treasury-team-mandate-and-funding/2770",
+        "https://forum.cow.fi/t/cip-50-establishing-a-legal-defense-reserve/2508"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0xcA771eda0c70aA7d053aB1B25004559B918FE662",
+          "role": "dao_safe",
+          "perimeter": "include",
+          "source": "https://forum.cow.fi/t/cip-62-core-treasury-team-mandate-and-funding/2770",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-5",
+          "note": "Main CoW DAO Safe; holds most of the DAO's COW (native)."
+        },
+        {
+          "chain": "gnosis",
+          "address": "0xcA771eda0c70aA7d053aB1B25004559B918FE662",
+          "role": "dao_safe",
+          "perimeter": "include",
+          "source": "https://forum.cow.fi/t/cip-62-core-treasury-team-mandate-and-funding/2770",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-5"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x616dE58c011F8736fa20c7Ae5352F7f6FB9F0669",
+          "role": "core_treasury_safe",
+          "perimeter": "include",
+          "source": "https://forum.cow.fi/t/cip-62-core-treasury-team-mandate-and-funding/2770",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-6",
+          "note": "kpk-managed Core Treasury (CIP-62): Aave, Morpho kpk USDC Prime vault, LSTs."
+        },
+        {
+          "chain": "gnosis",
+          "address": "0x616dE58c011F8736fa20c7Ae5352F7f6FB9F0669",
+          "role": "core_treasury_safe",
+          "perimeter": "include",
+          "source": "https://forum.cow.fi/t/cip-62-core-treasury-team-mandate-and-funding/2770",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-6"
+        },
+        {
+          "chain": "gnosis",
+          "address": "0x7F8987D6A8bee31bD7bE80E877732579E2582a28",
+          "role": "legal_defense_reserve",
+          "perimeter": "include",
+          "source": "https://forum.cow.fi/t/cip-50-establishing-a-legal-defense-reserve/2508",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-7",
+          "note": "Legal Defense Reserve (CIP-50), ~4.25M sDAI on 2026-10-03; restricted to legal defense (plus the CIP-86 one-off ex gratia grants).",
+          "haircut_flags": [
+            "legal_restriction"
+          ]
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x7F8987D6A8bee31bD7bE80E877732579E2582a28",
+          "role": "legal_defense_reserve",
+          "perimeter": "include",
+          "source": "https://forum.cow.fi/t/cip-50-establishing-a-legal-defense-reserve/2508",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-7",
+          "haircut_flags": [
+            "legal_restriction"
+          ]
+        }
+      ]
+    },
+    {
+      "entity_id": "1inch",
+      "name": "1inch Network / 1inch DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Primary 1inch DAO Treasury Safe (receives 100% of collected protocol fees; executes via SafeSnap). Excludes 1inch Labs/Foundation assets and the Governance Defense Safe.",
+      "notes": [
+        "Registry expansion batch 1 (D9), owner-approved 2026-10-03. Curated inputs not filled yet, so reports are insufficient_data until they are; NRT still counts toward the D1 cohort."
+      ],
+      "sources": [
+        "https://gov.1inch.network/t/979",
+        "https://gov.1inch.network/t/1006"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x7951c7ef839e26F63DA87a42C9a87986507f1c07",
+          "role": "dao_treasury_safe",
+          "perimeter": "include",
+          "source": "https://gov.1inch.network/t/979",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 7-of-12",
+          "note": "Primary DAO Treasury (protocol fee recipient)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xa62D2a75eb39C12e908e9F6BF50f189641692F2E",
+          "role": "reality_module",
+          "perimeter": "control_only",
+          "source": "https://gov.1inch.network/t/1006",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "note": "SafeSnap Reality Module executing Snapshot votes on the Treasury Safe."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xE10a1A873a780B5E69f7cD5DA5dA31a1fC528Eb8",
+          "role": "governance_defense_safe",
+          "perimeter": "adjacent_excluded",
+          "source": "https://gov.1inch.network/t/1006",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-3",
+          "note": "Governance Defense Safe (proposed 2026-09-24, ~2.5 ETH); operational, outside the treasury."
+        }
+      ]
+    },
+    {
+      "entity_id": "threshold-network",
+      "name": "Threshold Network / Threshold DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Threshold Committee treasury Safe (5-of-9 per TIP-110) and the Governor Bravo timelock (holds T; tBTC redemption fees accrue there). Excludes tLabs and Threshold Foundation operating assets, staked T, and assets at qualified custodians until disclosed.",
+      "notes": [
+        "Registry expansion batch 1 (D9), owner-approved 2026-10-03. Curated inputs not filled yet, so reports are insufficient_data until they are; NRT still counts toward the D1 cohort."
+      ],
+      "sources": [
+        "https://forum.threshold.network/t/tip-110-dao-and-committee-reorganization/1192",
+        "https://forum.threshold.network/t/1157"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x71E47a4429d35827e0312AA13162197C23287546",
+          "role": "committee_treasury_safe",
+          "perimeter": "include",
+          "source": "https://forum.threshold.network/t/tip-110-dao-and-committee-reorganization/1192",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 5-of-9",
+          "note": "Treasury multisig (5-of-9 per TIP-110); receives claimed tBTC redemption fees (TIP-107)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x87F005317692D05BAA4193AB0c961c69e175f45f",
+          "role": "governor_bravo_timelock",
+          "perimeter": "include",
+          "source": "https://forum.threshold.network/t/1157",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "note": "Governor Bravo timelock: holds T; unclaimed tBTC redemption fees sit here as a Bank balance (not an ERC-20, not read: gap)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x9F6e831c8F8939DC0C830C6e492e7cEf4f9C2F5f",
+          "role": "council_multisig",
+          "perimeter": "control_only",
+          "source": "https://forum.threshold.network/t/tip-110-dao-and-committee-reorganization/1192",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 6-of-9",
+          "note": "Protocol-upgrade multisig (6-of-9 per TIP-110)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xd101f2B25bCBF992BdF55dB67c104FE7646F5447",
+          "role": "tokenholder_governor",
+          "perimeter": "control_only",
+          "source": "https://forum.threshold.network/t/1157",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract"
+        }
+      ]
+    },
+    {
+      "entity_id": "inverse-finance",
+      "name": "Inverse Finance / Inverse DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Inverse Treasury (DOLA operator) and DAO working-group multisigs listed on the Inverse transparency portal. DOLA/sDOLA/DBR held are Inverse's own instruments (classed native_token). Excludes Fed-deployed DOLA supply, user deposits and FiRM collateral.",
+      "notes": [
+        "Registry expansion batch 1 (D9), owner-approved 2026-10-03. Curated inputs not filled yet, so reports are insufficient_data until they are; NRT still counts toward the D1 cohort."
+      ],
+      "sources": [
+        "https://www.inverse.finance/api/transparency/dao",
+        "https://docs.inverse.finance/inverse-finance/inverse-finance/technical/smart-contracts"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x926dF14a23BE491164dCF93f4c468A50ef659D5B",
+          "role": "treasury",
+          "perimeter": "include",
+          "source": "https://docs.inverse.finance/inverse-finance/inverse-finance/technical/smart-contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "note": "Inverse Treasury / DOLA operator."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x9D5Df30F475CEA915b1ed4C0CCa59255C897b61B",
+          "role": "twg_multisig",
+          "perimeter": "include",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-6"
+        },
+        {
+          "chain": "optimism",
+          "address": "0xa283139017a2f5BAdE8d8e25412C600055D318F8",
+          "role": "twg_multisig",
+          "perimeter": "include",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-6"
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0x233Ca46D4882609C53fcbD2FCFaAe92D2eA89538",
+          "role": "twg_multisig",
+          "perimeter": "include",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-4"
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0x23dEDab98D7828AFBD2B7Ab8C71089f2C517774a",
+          "role": "twg_multisig_2",
+          "perimeter": "include",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-5"
+        },
+        {
+          "chain": "polygon",
+          "address": "0x5D18b089e838DFFbb417A87874435175F3A9B000",
+          "role": "twg_multisig",
+          "perimeter": "include",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-5"
+        },
+        {
+          "chain": "base",
+          "address": "0x586CF50c2874f3e3997660c0FD0996B090FB9764",
+          "role": "twg_multisig",
+          "perimeter": "include",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-6"
+        },
+        {
+          "chain": "bnb",
+          "address": "0xF7Da4bC9B7A6bB3653221aE333a9d2a2C2d5BdA7",
+          "role": "twg_multisig",
+          "perimeter": "include",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-6"
+        },
+        {
+          "chain": "avalanche",
+          "address": "0x1A927B237a57421C414EB511a33C4B82C2718677",
+          "role": "twg_multisig",
+          "perimeter": "include",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-4"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6dB248100cF4908429AB671F33D105311ED7fEF8",
+          "role": "twg_leverage_multisig",
+          "perimeter": "include",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-6"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x87C37f2D588BD353A6334349cd86e471D0Ec75Bb",
+          "role": "twap_multisig",
+          "perimeter": "include",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-5"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xBeCCB6bb0aa4ab551966A7E4B97cec74bb359Bf6",
+          "role": "governor_mills",
+          "perimeter": "control_only",
+          "source": "https://docs.inverse.finance/inverse-finance/inverse-finance/technical/smart-contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x941c2699eC7E55a50Bde030d8E1e70649839259D",
+          "role": "governance_guardian",
+          "perimeter": "control_only",
+          "source": "https://docs.inverse.finance/inverse-finance/inverse-finance/technical/smart-contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4b6c63E6a94ef26E2dF60b89372db2d8e211F1B7",
+          "role": "policy_committee",
+          "perimeter": "control_only",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 4-of-7"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x8F97cCA30Dbe80e7a8B462F1dD1a51C32accDfC8",
+          "role": "fed_chair",
+          "perimeter": "control_only",
+          "source": "https://www.inverse.finance/api/transparency/dao",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-6"
+        }
+      ]
+    },
+    {
+      "entity_id": "shapeshift",
+      "name": "ShapeShift DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "ShapeShift DAO Safes on each EVM chain (the DAO's own list). Excludes non-EVM multisigs (Cosmos, THORChain) until readable, and workstream operating wallets.",
+      "notes": [
+        "Registry expansion batch 1 (D9), owner-approved 2026-10-03. Curated inputs not filled yet, so reports are insufficient_data until they are; NRT still counts toward the D1 cohort."
+      ],
+      "sources": [
+        "https://forum.shapeshift.com/t/dao-treasuries-and-multisigs/892"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x90A48D5CF7343B08dA12E067680B4C6dbfE551Be",
+          "role": "dao_safe",
+          "perimeter": "include",
+          "source": "https://forum.shapeshift.com/t/dao-treasuries-and-multisigs/892",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-3"
+        },
+        {
+          "chain": "base",
+          "address": "0x9c9aA90363630d4ab1D9dbF416cc3BBC8d3Ed502",
+          "role": "dao_safe",
+          "perimeter": "include",
+          "source": "https://forum.shapeshift.com/t/dao-treasuries-and-multisigs/892",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-3"
+        },
+        {
+          "chain": "optimism",
+          "address": "0x6268d07327f4fb7380732dc6d63d95F88c0E083b",
+          "role": "dao_safe",
+          "perimeter": "include",
+          "source": "https://forum.shapeshift.com/t/dao-treasuries-and-multisigs/892",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-3"
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0x38276553F8fbf2A027D901F8be45f00373d8Dd48",
+          "role": "dao_safe",
+          "perimeter": "include",
+          "source": "https://forum.shapeshift.com/t/dao-treasuries-and-multisigs/892",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-3"
+        },
+        {
+          "chain": "polygon",
+          "address": "0xB5F944600785724e31Edb90F9DFa16dBF01Af000",
+          "role": "dao_safe",
+          "perimeter": "include",
+          "source": "https://forum.shapeshift.com/t/dao-treasuries-and-multisigs/892",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-3"
+        },
+        {
+          "chain": "gnosis",
+          "address": "0xb0E3175341794D1dc8E5F02a02F9D26989EbedB3",
+          "role": "dao_safe",
+          "perimeter": "include",
+          "source": "https://forum.shapeshift.com/t/dao-treasuries-and-multisigs/892",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-3"
+        },
+        {
+          "chain": "avalanche",
+          "address": "0x74d63F31C2335b5b3BA7ad2812357672b2624cEd",
+          "role": "dao_safe",
+          "perimeter": "include",
+          "source": "https://forum.shapeshift.com/t/dao-treasuries-and-multisigs/892",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-3"
+        },
+        {
+          "chain": "bnb",
+          "address": "0x8b92b1698b57bEDF2142297e9397875ADBb2297E",
+          "role": "dao_safe",
+          "perimeter": "include",
+          "source": "https://forum.shapeshift.com/t/dao-treasuries-and-multisigs/892",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-3"
+        }
+      ]
     }
   ],
   "change_log": [
@@ -682,6 +1122,13 @@
         "compound: added Treasury Escrow, TMC Safe, Aera vault, Avantgarde vault (include); Treasury Timelock, Community Multisig (control_only); Foundation operational wallet (adjacent_excluded). Each checked on chain 2026-10-03.",
         "compound, maker-sky: scoreable=false, eligibility=pending_treasury_reconciliation (owner decision: no live comparative scoring until reconciled).",
         "aave: Kelp note corrected (not resolved; exposure capped at 25,000 ETH donation per owner); perimeter-check note added."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner approved D9 batch 1)",
+      "changes": [
+        "Added cow-dao, 1inch, threshold-network, inverse-finance, shapeshift: 37 address rows, each checked on chain 2026-10-03 (contract code + Safe threshold). CoW Legal Defense Reserve rows carry haircut_flags [legal_restriction]."
       ]
     }
   ]
