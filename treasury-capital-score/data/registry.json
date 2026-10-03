@@ -159,7 +159,8 @@
       "treasury_perimeter": "Liquid protocol treasury/operating cash, Sky Reserves, buyback inventories, protocol-held SKY, and identified agent allocations. Collateral backing DAI/USDS is reported as an obligation context, never as free treasury.",
       "notes": [
         "Scope conflict to resolve before publishing consolidated NRT.",
-        "2026-10-03 owner decision: on hold (pending treasury reconciliation). The registered Vow surplus buffer reads negative on chain (Vat.dai - Vat.sin) while Sky reports Sky Reserves of $76.99M (Aug 2026). Reconcile wallets, accounting definitions, liabilities and any off-chain/excluded reserve assets before scoring."
+        "2026-10-03 owner decision: on hold (pending treasury reconciliation). The registered Vow surplus buffer reads negative on chain (Vat.dai - Vat.sin) while Sky reports Sky Reserves of $76.99M (Aug 2026). Reconcile wallets, accounting definitions, liabilities and any off-chain/excluded reserve assets before scoring.",
+        "2026-10-03 owner rule: Sky spending = net external operating outflows; internal treasury movements and controlled-protocol reallocations are excluded. Stays pending until Sky reserve addresses are added and historical flows are recomputed under this rule."
       ],
       "treasury_addresses": [
         {
@@ -211,7 +212,8 @@
       "notes": [
         "Scope conflict to resolve before publishing consolidated NRT.",
         "2026-10-03 owner decision: on hold (pending treasury reconciliation) until the TMC-program addresses are collected, valued and reconciled; excluded from live comparative scoring meanwhile.",
-        "2026-10-03: governance dispute over TMC operations (COMP purchases, exchange withdrawals) is open on the forum: https://www.comp.xyz/t/aligning-treasury-delays-with-the-governance-process/8098. Record as a governance risk when scoring resumes."
+        "2026-10-03: governance dispute over TMC operations (COMP purchases, exchange withdrawals) is open on the forum: https://www.comp.xyz/t/aligning-treasury-delays-with-the-governance-process/8098. Record as a governance risk when scoring resumes.",
+        "2026-10-03 owner rule: Compound spending = funded or approved operating, grant, incentive and service-provider budgets; exclude internal treasury transfers and unfunded or merely proposed allocations. Stays pending until the treasury addresses are complete and historical flows are recomputed under this rule."
       ],
       "treasury_addresses": [
         {
@@ -874,7 +876,7 @@
       "registry_status": "partially_verified",
       "eligibility": "confirmed",
       "scoreable": true,
-      "treasury_perimeter": "Inverse Treasury (DOLA operator) and DAO working-group multisigs listed on the Inverse transparency portal. DOLA/sDOLA/DBR held are Inverse's own instruments (classed native_token). Excludes Fed-deployed DOLA supply, user deposits and FiRM collateral.",
+      "treasury_perimeter": "Inverse Treasury (DOLA operator) and DAO working-group multisigs listed on the Inverse transparency portal. DOLA/sDOLA held are Inverse's own USD stablecoin liability (classed fiat_stablecoin with issuer_own_stablecoin flag, owner decision 2026-10-03); DBR and INV are native_token. Excludes Fed-deployed DOLA supply, user deposits and FiRM collateral.",
       "notes": [
         "Registry expansion batch 1 (D9), owner-approved 2026-10-03. Curated inputs not filled yet, so reports are insufficient_data until they are; NRT still counts toward the D1 cohort."
       ],
@@ -1129,6 +1131,14 @@
       "by": "Claude (owner approved D9 batch 1)",
       "changes": [
         "Added cow-dao, 1inch, threshold-network, inverse-finance, shapeshift: 37 address rows, each checked on chain 2026-10-03 (contract code + Safe threshold). CoW Legal Defense Reserve rows carry haircut_flags [legal_restriction]."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decisions 2026-10-03)",
+      "changes": [
+        "inverse-finance: DOLA/sDOLA reclassified from native_token to issuer stablecoin liability.",
+        "maker-sky, compound: spending rules recorded; both remain pending_treasury_reconciliation."
       ]
     }
   ]
