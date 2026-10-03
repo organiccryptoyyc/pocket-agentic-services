@@ -1349,6 +1349,102 @@
           "note": "Alchemix Dev Multisig (treasury operations)."
         }
       ]
+    },
+    {
+      "entity_id": "origin-protocol",
+      "name": "Origin Protocol / Origin DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Origin DAO admin Safes (5-of-8 on Ethereum, Arbitrum, Base, Sonic) and the Buyback Operator Safe (1-of-3) holding DAO assets for buybacks, per Origin's contract registry. Excludes OUSD/OETH/OS product vault assets (user-owned) and strategist multisigs. Sonic balances not readable yet (gap).",
+      "notes": [
+        "Registry expansion batch 2 (D9). Addresses supplied by owner 2026-10-03 from Origin's contract registry and verified on chain. Curated inputs not filled yet."
+      ],
+      "sources": [
+        "https://docs.originprotocol.com/registry/contracts"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0xbe2AB3d3d8F6a32b96414ebbd865dBD276d3d899",
+          "role": "admin_safe",
+          "perimeter": "include",
+          "source": "https://docs.originprotocol.com/registry/contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 5-of-8",
+          "note": "Admin (5 of 8 Safe) per Origin registry: primary governance/treasury-control Safe."
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0xfD1383fb4eE74ED9D83F2cbC67507bA6Eac2896a",
+          "role": "admin_safe",
+          "perimeter": "include",
+          "source": "https://docs.originprotocol.com/registry/contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 5-of-8"
+        },
+        {
+          "chain": "base",
+          "address": "0x92A19381444A001d62cE67BaFF066fA1111d7202",
+          "role": "admin_safe",
+          "perimeter": "include",
+          "source": "https://docs.originprotocol.com/registry/contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 5-of-8"
+        },
+        {
+          "chain": "sonic",
+          "address": "0xAdDEA7933Db7d83855786EB43a238111C69B00b6",
+          "role": "admin_safe",
+          "perimeter": "include",
+          "source": "https://docs.originprotocol.com/registry/contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "note": "Sonic: no token-list explorer configured; only native balance read (gap)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xBB077E716A5f1F1B63ed5244eBFf5214E50fec8c",
+          "role": "buyback_operator",
+          "perimeter": "include",
+          "source": "https://docs.originprotocol.com/registry/contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 1-of-3",
+          "note": "Buyback Operator (1 of 3 Safe) per Origin registry; operates DAO assets for OGN buybacks."
+        },
+        {
+          "chain": "base",
+          "address": "0xBB077E716A5f1F1B63ed5244eBFf5214E50fec8c",
+          "role": "buyback_operator",
+          "perimeter": "include",
+          "source": "https://docs.originprotocol.com/registry/contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 1-of-3"
+        },
+        {
+          "chain": "sonic",
+          "address": "0xBB077E716A5f1F1B63ed5244eBFf5214E50fec8c",
+          "role": "buyback_operator",
+          "perimeter": "include",
+          "source": "https://docs.originprotocol.com/registry/contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "note": "Sonic: not readable yet (gap)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x35918cDE7233F2dD33fA41ae3Cb6aE0e42E0e69F",
+          "role": "timelock",
+          "perimeter": "control_only",
+          "source": "https://docs.originprotocol.com/registry/contracts",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "note": "Ethereum Timelock per Origin registry."
+        }
+      ]
     }
   ],
   "change_log": [
@@ -1381,6 +1477,13 @@
       "by": "Claude (owner approved D9 batch 2)",
       "changes": [
         "Added gmx, synthetix, euler, gearbox, badger, silo-finance, alchemix (9 rows, each checked on chain 2026-10-03). Not added: notional (DAO treasury ~$0.13M, all NOTE, appears inactive), sushi (DAO Safes ~$0.2M; the ~$40M sits in a Sushi Labs-managed vault outside the DAO perimeter), origin (DAO treasury address not found in Origin's own sources yet). Owner to decide replacements."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decisions 2026-10-03)",
+      "changes": [
+        "Added origin-protocol (8 rows from Origin's contract registry, verified on chain). Notional and Sushi dropped from D9 per owner."
       ]
     }
   ]
