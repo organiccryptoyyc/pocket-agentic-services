@@ -154,24 +154,25 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "partially_verified",
-      "eligibility": "pending_treasury_reconciliation",
-      "scoreable": false,
-      "treasury_perimeter": "Liquid protocol treasury/operating cash, Sky Reserves, buyback inventories, protocol-held SKY, and identified agent allocations. Collateral backing DAI/USDS is reported as an obligation context, never as free treasury.",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Sky Aggregate Backstop Capital per the Sky Atlas (A.3.5.3): Genesis Capital held in each Genesis Agent SubProxy (capped at the Atlas eligible amount) minus Allocated Genesis Capital (= the negative Vow surplus buffer, booked as an obligation), plus the Core Council Buffer. Excludes agents' own capital above Genesis Capital, Prime/Star operating assets, PSM and vault collateral, and user funds. Pause Proxy holdings of affiliated Star tokens (SPK, GROVE) are disclosed as related-party holdings, not counted.",
       "notes": [
         "Scope conflict to resolve before publishing consolidated NRT.",
         "2026-10-03 owner decision: on hold (pending treasury reconciliation). The registered Vow surplus buffer reads negative on chain (Vat.dai - Vat.sin) while Sky reports Sky Reserves of $76.99M (Aug 2026). Reconcile wallets, accounting definitions, liabilities and any off-chain/excluded reserve assets before scoring.",
-        "2026-10-03 owner rule: Sky spending = net external operating outflows; internal treasury movements and controlled-protocol reallocations are excluded. Stays pending until Sky reserve addresses are added and historical flows are recomputed under this rule."
+        "2026-10-03 owner rule: Sky spending = net external operating outflows; internal treasury movements and controlled-protocol reallocations are excluded. Stays pending until Sky reserve addresses are added and historical flows are recomputed under this rule.",
+        "2026-10-03: treasury reconciled to the Atlas definition (Aggregate Backstop Capital ≈ $85.5M on chain vs $77.0M reported Aug 31; timing). Owner approved perimeter. Still pending until Beta + owner OK."
       ],
       "treasury_addresses": [
         {
           "chain": "ethereum",
           "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
           "role": "pause_proxy",
-          "perimeter": "include",
+          "perimeter": "adjacent_excluded",
           "source": "https://chainlog.sky.money/api/mainnet/active.json#MCD_PAUSE_PROXY",
           "verified_at": "2026-10-01",
           "onchain_check": "contract",
-          "note": "Holds protocol-owned tokens and executes spells."
+          "note": "Holds protocol-owned tokens and executes spells. Owner decision 2026-10-03: excluded from the reserve figure (not part of Sky's Aggregate Backstop Capital). Holds affiliated Star tokens (SPK, GROVE), disclosed as a related-party holding."
         },
         {
           "chain": "ethereum",
@@ -191,11 +192,140 @@
           "source": "https://chainlog.sky.money/api/mainnet/active.json#MCD_PAUSE",
           "verified_at": "2026-10-01",
           "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3300f198988e4C9C63F75dF86De36421f06af8c4",
+          "role": "genesis_agent_subproxy",
+          "perimeter": "include",
+          "source": "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.3%20-%20The-Stability-Scope.md",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "count_only": {
+            "USDS": 25000000
+          },
+          "note": "spark SubProxy. Counts only Genesis Capital: USDS up to the Atlas eligible amount (25,000,000 USDS, A.3.7.1.6.6.1; Genesis Capital = min(eligible, agent capital), A.3.7.1.6.6). Agent's own capital above that is excluded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x1369f7b2b38c76B6478c0f0E66D94923421891Ba",
+          "role": "genesis_agent_subproxy",
+          "perimeter": "include",
+          "source": "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.3%20-%20The-Stability-Scope.md",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "count_only": {
+            "USDS": 25000000
+          },
+          "note": "grove SubProxy. Counts only Genesis Capital: USDS up to the Atlas eligible amount (25,000,000 USDS, A.3.7.1.6.6.1; Genesis Capital = min(eligible, agent capital), A.3.7.1.6.6). Agent's own capital above that is excluded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x8be042581f581E3620e29F213EA8b94afA1C8071",
+          "role": "genesis_agent_subproxy",
+          "perimeter": "include",
+          "source": "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.3%20-%20The-Stability-Scope.md",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "count_only": {
+            "USDS": 21000000
+          },
+          "note": "obex SubProxy. Counts only Genesis Capital: USDS up to the Atlas eligible amount (21,000,000 USDS, A.3.7.1.6.6.1; Genesis Capital = min(eligible, agent capital), A.3.7.1.6.6). Agent's own capital above that is excluded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x08978E3700859E476201c1D7438B3427e3C81140",
+          "role": "genesis_agent_subproxy",
+          "perimeter": "include",
+          "source": "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.3%20-%20The-Stability-Scope.md",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "count_only": {
+            "USDS": 15000000
+          },
+          "note": "skybase SubProxy. Counts only Genesis Capital: USDS up to the Atlas eligible amount (15,000,000 USDS, A.3.7.1.6.6.1; Genesis Capital = min(eligible, agent capital), A.3.7.1.6.6). Agent's own capital above that is excluded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x64a2b7CfA832fE83BE6a7C1a67521B350519B9c1",
+          "role": "genesis_agent_subproxy",
+          "perimeter": "include",
+          "source": "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.3%20-%20The-Stability-Scope.md",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "count_only": {
+            "USDS": 25000000
+          },
+          "note": "core-council-executor-agent-1 SubProxy. Counts only Genesis Capital: USDS up to the Atlas eligible amount (25,000,000 USDS, A.3.7.1.6.6.1; Genesis Capital = min(eligible, agent capital), A.3.7.1.6.6). Agent's own capital above that is excluded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x355CD90Ecb1b409Fdf8b64c4473C3B858dA2c310",
+          "role": "genesis_agent_subproxy",
+          "perimeter": "include",
+          "source": "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.3%20-%20The-Stability-Scope.md",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "count_only": {
+            "USDS": 10000000
+          },
+          "note": "keel SubProxy. Counts only Genesis Capital: USDS up to the Atlas eligible amount (10,000,000 USDS, A.3.7.1.6.6.1; Genesis Capital = min(eligible, agent capital), A.3.7.1.6.6). Agent's own capital above that is excluded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x24fdcd3bFA5C2553e05B2f9AD0365EBC296278D3",
+          "role": "genesis_agent_subproxy",
+          "perimeter": "include",
+          "source": "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.3%20-%20The-Stability-Scope.md",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "count_only": {
+            "USDS": 10500000
+          },
+          "note": "osero SubProxy. Counts only Genesis Capital: USDS up to the Atlas eligible amount (10,500,000 USDS, A.3.7.1.6.6.1; Genesis Capital = min(eligible, agent capital), A.3.7.1.6.6). Agent's own capital above that is excluded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xF33B14329e7115dD0B40DBb2985E1A0Df10E3fAa",
+          "role": "genesis_agent_subproxy",
+          "perimeter": "include",
+          "source": "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.3%20-%20The-Stability-Scope.md",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "count_only": {
+            "USDS": 25000000
+          },
+          "note": "amatsu SubProxy. Counts only Genesis Capital: USDS up to the Atlas eligible amount (25,000,000 USDS, A.3.7.1.6.6.1; Genesis Capital = min(eligible, agent capital), A.3.7.1.6.6). Agent's own capital above that is excluded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x9FE628BFc33f0352Bb1f93168881a9Ef93C8d2CF",
+          "role": "genesis_agent_subproxy",
+          "perimeter": "include",
+          "source": "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.3%20-%20The-Stability-Scope.md",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "count_only": {
+            "USDS": 25000000
+          },
+          "note": "ozone SubProxy. Counts only Genesis Capital: USDS up to the Atlas eligible amount (25,000,000 USDS, A.3.7.1.6.6.1; Genesis Capital = min(eligible, agent capital), A.3.7.1.6.6). Agent's own capital above that is excluded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x210CFcF53d1f9648C1c4dcaEE677f0Cb06914364",
+          "role": "core_council_buffer",
+          "perimeter": "include",
+          "source": "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.2%20-%20The-Support-Scope.md",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 5-of-6",
+          "note": "Core Council Buffer multisig (Atlas A.2.3.1.2.2.2.1.1, 5/6); part of the Aggregate Capital Buffer. Owner-approved 2026-10-03."
         }
       ],
       "sources": [
         "https://chainlog.sky.money/",
         "https://financial.skyeco.com/",
+        "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.2%20-%20The-Support-Scope.md",
+        "https://github.com/sky-ecosystem/next-gen-atlas/blob/main/content/A.3%20-%20The-Stability-Scope.md",
         "https://vote.makerdao.com/"
       ],
       "address_inventory_status": "initial_verified_2026-10-01"
@@ -206,8 +336,8 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "partially_verified",
-      "eligibility": "pending_treasury_reconciliation",
-      "scoreable": false,
+      "eligibility": "confirmed",
+      "scoreable": true,
       "treasury_perimeter": "Ethereum governance Timelock, v2/v3 reserve withdrawals, cross-chain local timelocks/receivers, and any separately verified Treasury Management Committee perimeter. Excludes Compound Labs/Foundation assets and market user deposits. Since April 2026 also the TMC program: Treasury Escrow, TMC Safe, and the Aera and Avantgarde vaults owned by the Treasury Timelock.",
       "notes": [
         "Scope conflict to resolve before publishing consolidated NRT.",
@@ -1503,6 +1633,21 @@
       "by": "Claude (owner decision 2026-10-03)",
       "changes": [
         "gearbox: added fee-receiver multisig 0x3E96...715e5F (GIP-287; Safe 5-of-10 on chain)."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decisions 2026-10-03)",
+      "changes": [
+        "maker-sky: added 9 Genesis Agent SubProxies (count_only USDS caps from Atlas A.3.7.1.6.6.1) and the Core Council Buffer Safe; perimeter redefined as Aggregate Backstop Capital. Eligibility stays pending_treasury_reconciliation until Beta + owner OK.",
+        "maker-sky: Pause Proxy set to adjacent_excluded (owner 2026-10-03); SPK/GROVE disclosed as related-party holdings."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decisions 2026-10-03)",
+      "changes": [
+        "maker-sky, compound: reconciliation complete (owner-approved perimeter and spending rules); scoreable again, eligibility confirmed. Beta first."
       ]
     }
   ]
