@@ -1231,13 +1231,15 @@
       "registry_status": "partially_verified",
       "eligibility": "confirmed",
       "scoreable": true,
-      "treasury_perimeter": "Gearbox DAO Treasury multisig (Treasury Guard). Excludes contributor vesting and protocol pools.",
+      "treasury_perimeter": "Gearbox DAO Treasury multisig (Treasury Guard, mostly GEAR) and the fee-receiver multisig that holds the DAO's consolidated spendable funds (GIP-287). Excludes contributor vesting and protocol pools.",
       "notes": [
-        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort."
+        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort.",
+        "Fee-receiver multisig added 2026-10-03 (owner-approved): GIP-287 consolidation target."
       ],
       "sources": [
         "https://docs.gearbox.finance/about-gearbox/governance-and-operations/v3.0-operational-multisigs",
-        "https://etherscan.io/address/0x7b065Fcb0760dF0CEA8CFd144e08554F3CeA73D1"
+        "https://etherscan.io/address/0x7b065Fcb0760dF0CEA8CFd144e08554F3CeA73D1",
+        "https://snapshot.org/#/s:gearbox.eth/proposal/0x7d7ecd6ca4414278d4ac52c0f225b3924bceb9ba6cb0e56e22df48b77ee02bc7"
       ],
       "address_inventory_status": "initial_verified_2026-10-03",
       "treasury_addresses": [
@@ -1250,6 +1252,16 @@
           "verified_at": "2026-10-03",
           "onchain_check": "safe 5-of-10",
           "note": "Treasury Guard multisig (docs: 5/10); observed 5-of-10. Holds almost only GEAR."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3E965117A51186e41c2BB58b729A1e518A715e5F",
+          "role": "fee_receiver_multisig",
+          "perimeter": "include",
+          "source": "https://snapshot.org/#/s:gearbox.eth/proposal/0x7d7ecd6ca4414278d4ac52c0f225b3924bceb9ba6cb0e56e22df48b77ee02bc7",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 5-of-10",
+          "note": "Fee-receiver multisig; GIP-287 (passed 2026-06-29) consolidated the DAO's spendable funds here; ETH converted to sfrxETH under GIP-289. Owner-approved 2026-10-03."
         }
       ]
     },
@@ -1484,6 +1496,13 @@
       "by": "Claude (owner decisions 2026-10-03)",
       "changes": [
         "Added origin-protocol (8 rows from Origin's contract registry, verified on chain). Notional and Sushi dropped from D9 per owner."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decision 2026-10-03)",
+      "changes": [
+        "gearbox: added fee-receiver multisig 0x3E96...715e5F (GIP-287; Safe 5-of-10 on chain)."
       ]
     }
   ]
