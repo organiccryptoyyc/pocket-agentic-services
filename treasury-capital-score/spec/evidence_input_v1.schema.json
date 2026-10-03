@@ -1,0 +1,417 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tcs-6-evidence-input/1.0",
+  "title": "TCS-6 evidence bundle (Pi collector -> ingest), v1",
+  "description": "Input contract for tcs-6/1.0 scoring. Mirrors EVIDENCE.md. Extra fields are allowed (ignored by scoring) so the collector can add metadata without a contract change; every field listed here is read by the engine.",
+  "type": "object",
+  "required": [
+    "entity_id",
+    "collected_at",
+    "holdings",
+    "obligations",
+    "sources"
+  ],
+  "properties": {
+    "entity_id": {
+      "type": "string",
+      "description": "Registry id (^[a-z0-9][a-z0-9-]{0,63}$)."
+    },
+    "collected_at": {
+      "type": "string",
+      "description": "RFC 3339; becomes the report as_of."
+    },
+    "collector": {
+      "type": "object"
+    },
+    "holdings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/holding"
+      }
+    },
+    "obligations": {
+      "$ref": "#/$defs/obligations"
+    },
+    "cash_uses_12m": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "flows_12m": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "recurring_treasury_inflows_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "controllable_cash_uses_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "repeatable": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "governance": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "penalties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "points",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "points": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "field",
+          "reason"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "remediation": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "perimeter_gaps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    }
+  },
+  "$defs": {
+    "holding": {
+      "type": "object",
+      "required": [
+        "asset_id",
+        "asset_class",
+        "control",
+        "bucket",
+        "holdings_observed_at"
+      ],
+      "properties": {
+        "asset_id": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "chain": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bucket": {
+          "type": "string",
+          "enum": [
+            "onchain",
+            "offchain"
+          ]
+        },
+        "asset_class": {
+          "type": "string",
+          "enum": [
+            "cash_equivalent",
+            "fiat_stablecoin",
+            "major_crypto",
+            "liquid_alt",
+            "lp_position",
+            "native_token",
+            "locked_unverifiable"
+          ]
+        },
+        "control": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "unverified"
+          ]
+        },
+        "quantity": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "fair_value_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "holdings_observed_at": {
+          "type": "string"
+        },
+        "prices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "source_ref",
+              "usd",
+              "observed_at"
+            ],
+            "properties": {
+              "source_ref": {
+                "type": "string"
+              },
+              "usd": {
+                "type": "number"
+              },
+              "observed_at": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "haircut_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "haircut_severity": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "realization_path_evidenced": {
+          "type": "boolean"
+        },
+        "correlation_group": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exposure_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "obligations": {
+      "type": "object",
+      "required": [
+        "visibility"
+      ],
+      "properties": {
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "adequate",
+            "partial",
+            "unknown"
+          ]
+        },
+        "bounded": {
+          "type": "boolean"
+        },
+        "material_unresolved_claim": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "usd"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "debt",
+                  "payable",
+                  "pledge",
+                  "distribution",
+                  "contingency"
+                ]
+              },
+              "usd": {
+                "type": "number"
+              },
+              "probability": {
+                "type": "number"
+              },
+              "source_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "source_ref",
+        "title",
+        "publisher",
+        "url",
+        "retrieved_at",
+        "source_tier",
+        "rights_status"
+      ],
+      "properties": {
+        "source_ref": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "retrieved_at": {
+          "type": "string"
+        },
+        "observation_time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_tier": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        "rights_status": {
+          "type": "string",
+          "enum": [
+            "permitted_for_derived_output",
+            "licensed_for_display",
+            "internal_only",
+            "pending_review"
+          ]
+        }
+      }
+    }
+  }
+}

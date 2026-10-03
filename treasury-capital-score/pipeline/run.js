@@ -7,6 +7,10 @@
 // entity's NRT, then score each entity against its cohort's NRTs. A report
 // only replaces the cached one after it passes schema validation; a failure
 // leaves the previous report in place and is recorded in pipeline-state.json.
+//
+// TCS6_SNAPSHOTS=1 also records every scored bundle and its report in the snapshot history store
+// (lib/snapshots.js, <TCS6_DATA_DIR>/snapshots.db). Off by default; it never changes a report, and
+// a store failure is recorded in pipeline-state.json without blocking scoring.
 "use strict";
 
 const S = require("../lib/scoring");
@@ -15,11 +19,24 @@ const { validateReport } = require("../lib/schema");
 const store = require("../lib/store");
 
 const MAX_EVIDENCE_AGE_H = Number(process.env.TCS6_MAX_EVIDENCE_AGE_HOURS || 24);
+const SPEC_VERSION = "tcs-6/1.0";
+const WEIGHTS_VERSION = "blueprint-v1";
+
+function openSnapshots(results) {
+  if (process.env.TCS6_SNAPSHOTS !== "1") return null;
+  try {
+    return require("../lib/snapshots").open(store.DATA_DIR);
+  } catch (e) {
+    results.snapshot_errors.push(`open: ${String(e && e.message)}`);
+    return null;
+  }
+}
 
 function runOnce(now = new Date()) {
   store.ensureDirs();
   const entities = store.loadRegistry().filter((e) => e.scoreable);
-  const results = { started_at: now.toISOString(), scored: [], skipped: [], failed: [] };
+  const results = { started_at: now.toISOString(), scored: [], skipped: [], failed: [], snapshot_errors: [] };
+  const snaps = openSnapshots(results);
 
   const prepared = [];
   for (const entity of entities) {
@@ -46,12 +63,30 @@ function runOnce(now = new Date()) {
         continue;
       }
       store.writeJsonAtomic(store.paths.report(p.entity.entity_id), report);
-      results.scored.push({ entity_id: p.entity.entity_id, analysis_status: report.analysis_status, score: report.overall_score.score });
+      const scored = { entity_id: p.entity.entity_id, analysis_status: report.analysis_status, score: report.overall_score.score };
+      if (snaps) {
+        try {
+          scored.snapshot_id = snaps.putSnapshot(p.bundle);
+          snaps.putReport({ snapshot_id: scored.snapshot_id, spec_version: SPEC_VERSION, weights_version: WEIGHTS_VERSION, report, peer_nrts: peers });
+        } catch (e) {
+          results.snapshot_errors.push(`${p.entity.entity_id}: ${String(e && e.message)}`);
+        }
+      }
+      results.scored.push(scored);
     } catch (e) {
       results.failed.push({ entity_id: p.entity.entity_id, errors: [String(e && e.message)] });
     }
   }
 
+  if (snaps) {
+    try {
+      snaps.backupIfDue(now);
+      results.snapshots = { ...snaps.counts(), ...snaps.sizeStatus() };
+    } catch (e) {
+      results.snapshot_errors.push(`backup: ${String(e && e.message)}`);
+    }
+    snaps.close();
+  }
   results.finished_at = new Date().toISOString();
   store.writeJsonAtomic(store.paths.state(), results);
   return results;

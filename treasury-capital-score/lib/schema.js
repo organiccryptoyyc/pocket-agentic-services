@@ -39,11 +39,11 @@ function typeOk(v, t) {
   }
 }
 
-function check(node, v, at, errors) {
+function check(node, v, at, errors, root = SCHEMA) {
   for (const k of Object.keys(node)) if (!KNOWN.has(k)) throw new Error(`schema keyword '${k}' at ${at} is not supported by lib/schema.js`);
   if (node.$ref) {
     const name = node.$ref.replace(/^#\/\$defs\//, "");
-    return check(SCHEMA.$defs[name], v, at, errors);
+    return check(root.$defs[name], v, at, errors, root);
   }
   if (node.type) {
     const types = Array.isArray(node.type) ? node.type : [node.type];
@@ -55,11 +55,11 @@ function check(node, v, at, errors) {
     for (const r of node.required || []) if (!(r in v)) errors.push(`${at}: missing '${r}'`);
     const props = node.properties || {};
     for (const [k, val] of Object.entries(v)) {
-      if (props[k]) check(props[k], val, `${at}.${k}`, errors);
+      if (props[k]) check(props[k], val, `${at}.${k}`, errors, root);
       else if (node.additionalProperties === false) errors.push(`${at}: unexpected property '${k}'`);
     }
   }
-  if (Array.isArray(v) && node.items) v.forEach((x, i) => check(node.items, x, `${at}[${i}]`, errors));
+  if (Array.isArray(v) && node.items) v.forEach((x, i) => check(node.items, x, `${at}[${i}]`, errors, root));
 }
 
 function scanText(v, at, errors) {
@@ -82,4 +82,11 @@ function validateReport(report) {
   return { ok: errors.length === 0, errors };
 }
 
-module.exports = { validateReport, SCHEMA };
+// Same keyword subset, any schema (e.g. spec/evidence_input_v1.schema.json).
+function validate(schema, value) {
+  const errors = [];
+  check(schema, value, "$", errors, schema);
+  return { ok: errors.length === 0, errors };
+}
+
+module.exports = { validateReport, validate, SCHEMA };

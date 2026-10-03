@@ -8,7 +8,7 @@
     "start": "node server.js",
     "pipeline": "node pipeline/run.js",
     "pipeline:loop": "node pipeline/run.js --loop",
-    "test": "node --test test/tcs6.test.js"
+    "test": "node --test test/tcs6.test.js test/golden.test.js test/snapshots.test.js"
   },
   "engines": {
     "node": ">=18"
