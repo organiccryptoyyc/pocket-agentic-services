@@ -1600,15 +1600,17 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "partially_verified",
-      "eligibility": "pending_treasury_reconciliation",
-      "scoreable": false,
-      "treasury_perimeter": "Origin DAO admin Safes (5-of-8 on Ethereum, Arbitrum, Base, Sonic) and the Buyback Operator Safe (1-of-3) holding DAO assets for buybacks, per Origin's contract registry. Excludes OUSD/OETH/OS product vault assets (user-owned) and strategist multisigs. Sonic balances not readable yet (gap).",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Origin Protocol NAV treasury: the NAV Safe (Ethereum, Base), the buyback operator Safe and the admin Safes, per Origin's Protocol NAV dashboard and contract registry. Excludes user deposits in OETH/OUSD/ARM products, staked OGN and Origin Labs assets.",
       "notes": [
         "Registry expansion batch 2 (D9). Addresses supplied by owner 2026-10-03 from Origin's contract registry and verified on chain. Curated inputs not filled yet.",
-        "2026-10-03 (owner): held until the Protocol NAV treasury addresses are mapped; no published DAO operating budget (partial)."
+        "2026-10-03 (owner): held until the Protocol NAV treasury addresses are mapped; no published DAO operating budget (partial).",
+        "2026-10-03 (owner): NAV Safe 0x4ff1…1971 added; hold lifted (partial: no published DAO operating budget). OETH/wOETH/superOETHb and OUSD held in treasury classed as Origin's own liabilities (DOLA/alETH rule)."
       ],
       "sources": [
-        "https://docs.originprotocol.com/registry/contracts"
+        "https://docs.originprotocol.com/registry/contracts",
+        "https://grafana.originprotocol.com/public-dashboards/6cb233ad52ae42ec8f5fd3484e2b78af"
       ],
       "address_inventory_status": "initial_verified_2026-10-03",
       "treasury_addresses": [
@@ -1688,6 +1690,26 @@
           "verified_at": "2026-10-03",
           "onchain_check": "contract",
           "note": "Ethereum Timelock per Origin registry."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4FF1b9D9ba8558F5EAfCec096318eA0d8b541971",
+          "role": "protocol_nav_safe",
+          "perimeter": "include",
+          "source": "https://grafana.originprotocol.com/public-dashboards/6cb233ad52ae42ec8f5fd3484e2b78af",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-8",
+          "note": "Listed on Origin's Protocol NAV dashboard (cited in Origin's Snapshot proposal on OGN price support); holds OETH/wOETH (Ethereum). Owner-approved 2026-10-03."
+        },
+        {
+          "chain": "base",
+          "address": "0x4FF1b9D9ba8558F5EAfCec096318eA0d8b541971",
+          "role": "protocol_nav_safe",
+          "perimeter": "include",
+          "source": "https://grafana.originprotocol.com/public-dashboards/6cb233ad52ae42ec8f5fd3484e2b78af",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-8",
+          "note": "Listed on Origin's Protocol NAV dashboard (cited in Origin's Snapshot proposal on OGN price support); holds OETH/wOETH (Ethereum). Owner-approved 2026-10-03."
         }
       ]
     }
@@ -1781,6 +1803,13 @@
       "by": "Claude (owner decision 2026-10-03)",
       "changes": [
         "alchemix: hold lifted (scoreable, confirmed); DeFi positions from the treasury tracker booked as cited disclosures (LP / locked), no double counting."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decisions 2026-10-03)",
+      "changes": [
+        "origin-protocol: added Protocol NAV Safe (Ethereum, Base); hold lifted (partial)."
       ]
     }
   ]
