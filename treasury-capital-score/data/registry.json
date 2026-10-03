@@ -1114,6 +1114,241 @@
           "onchain_check": "safe 2-of-3"
         }
       ]
+    },
+    {
+      "entity_id": "gmx",
+      "name": "GMX / GMX DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "GMX DAO Treasury contract and the protocol-owned-liquidity (POL) multisig on Arbitrum, as listed in the GMX docs. Excludes GLV/GM pool assets (LP-owned), staking rewards and contributor vesting.",
+      "notes": [
+        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort."
+      ],
+      "sources": [
+        "https://docs.gmx.io/docs/tokenomics/gmx-token/"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "arbitrum",
+          "address": "0x4bd1cdAab4254fC43ef6424653cA2375b4C94C0E",
+          "role": "dao_treasury",
+          "perimeter": "include",
+          "source": "https://docs.gmx.io/docs/tokenomics/gmx-token/",
+          "verified_at": "2026-10-03",
+          "onchain_check": "contract",
+          "note": "DAO Treasury (receives treasury share of fees; holds POL Uniswap V3 NFTs)."
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0xc6378dDF536410c14666DC59BC92b5EBC0F2F79E",
+          "role": "pol_multisig",
+          "perimeter": "include",
+          "source": "https://docs.gmx.io/docs/tokenomics/gmx-token/",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 4-of-6",
+          "note": "POL multisig."
+        }
+      ]
+    },
+    {
+      "entity_id": "synthetix",
+      "name": "Synthetix / Synthetix DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Treasury Council Safe (SR-2 elected council's treasury seat). Excludes the Grants Council budget Safe, staking/debt-pool collateral and the sUSD-to-SNX conversion locks.",
+      "notes": [
+        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort."
+      ],
+      "sources": [
+        "https://blog.synthetix.io/the-inuagural-treasury-council/",
+        "https://etherscan.io/address/0x99f4176ee457afedffcb1839c7ab7a030a5e4a92"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x99F4176EE457afedFfCB1839c7aB7A030a5e4A92",
+          "role": "treasury_council_safe",
+          "perimeter": "include",
+          "source": "https://etherscan.io/address/0x99f4176ee457afedffcb1839c7ab7a030a5e4a92",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-3",
+          "note": "Treasury Council Safe (address via public Etherscan label; role per Synthetix governance). Observed 3-of-3 on 2026-10-03."
+        }
+      ]
+    },
+    {
+      "entity_id": "euler",
+      "name": "Euler / Euler DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Euler DAO Treasury and Legacy Treasury listed in the Euler docs (Foundation-administered under DAO multisig policy). Excludes Euler Labs assets and user vault deposits.",
+      "notes": [
+        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort."
+      ],
+      "sources": [
+        "https://docs.euler.finance/euler-dao/treasury/"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0xC7C5aFDB61e08BE3e2FB09098412b5706EB5c550",
+          "role": "dao_treasury",
+          "perimeter": "include",
+          "source": "https://docs.euler.finance/euler-dao/treasury/",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 4-of-7",
+          "note": "DAO Treasury (migrated Nov 2025)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x25Aa4a183800EcaB962d84ccC7ada58d4e126992",
+          "role": "legacy_treasury",
+          "perimeter": "include",
+          "source": "https://docs.euler.finance/euler-dao/treasury/",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 4-of-8",
+          "note": "Legacy Treasury: receives annual EUL mint (EUL treasury())."
+        }
+      ]
+    },
+    {
+      "entity_id": "gearbox",
+      "name": "Gearbox Protocol / Gearbox DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Gearbox DAO Treasury multisig (Treasury Guard). Excludes contributor vesting and protocol pools.",
+      "notes": [
+        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort."
+      ],
+      "sources": [
+        "https://docs.gearbox.finance/about-gearbox/governance-and-operations/v3.0-operational-multisigs",
+        "https://etherscan.io/address/0x7b065Fcb0760dF0CEA8CFd144e08554F3CeA73D1"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x7b065Fcb0760dF0CEA8CFd144e08554F3CeA73D1",
+          "role": "treasury_multisig",
+          "perimeter": "include",
+          "source": "https://docs.gearbox.finance/about-gearbox/governance-and-operations/v3.0-operational-multisigs",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 5-of-10",
+          "note": "Treasury Guard multisig (docs: 5/10); observed 5-of-10. Holds almost only GEAR."
+        }
+      ]
+    },
+    {
+      "entity_id": "badger",
+      "name": "Badger DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Badger DAO treasury vault multisig from the DAO's own multisig registry. Excludes vault user deposits and eBTC system collateral.",
+      "notes": [
+        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort."
+      ],
+      "sources": [
+        "https://github.com/Badger-Finance/badger-multisig"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0xD0A7A8B98957b9CD3cFB9c0425AbE44551158e9e",
+          "role": "treasury_vault_multisig",
+          "perimeter": "include",
+          "source": "https://github.com/Badger-Finance/badger-multisig",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 5-of-8",
+          "note": "treasury_vault_multisig in Badger-Finance/badger-multisig."
+        }
+      ]
+    },
+    {
+      "entity_id": "silo-finance",
+      "name": "Silo Finance / Silo DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Silo DAO Treasury Safe (Silo docs, Contracts & Wallets). Excludes user deposits and the development fund. Sonic-chain treasury not readable yet (gap).",
+      "notes": [
+        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort."
+      ],
+      "sources": [
+        "https://resources.silo.finance/governance/contracts-and-wallets"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0xDfF2aeA378e41632E45306A6dE26A7E0Fd93AB07",
+          "role": "treasury",
+          "perimeter": "include",
+          "source": "https://resources.silo.finance/governance/contracts-and-wallets",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-4",
+          "note": "Treasury Safe."
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0xDfF2aeA378e41632E45306A6dE26A7E0Fd93AB07",
+          "role": "treasury",
+          "perimeter": "include",
+          "source": "https://resources.silo.finance/governance/contracts-and-wallets",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 2-of-3"
+        }
+      ]
+    },
+    {
+      "entity_id": "alchemix",
+      "name": "Alchemix / Alchemix DAO",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "Alchemix dev (treasury) multisig on Ethereum. Optimism/Arbitrum multisigs (AIP-95a) not yet mapped (gap). Excludes alAsset backing and user deposits.",
+      "notes": [
+        "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort."
+      ],
+      "sources": [
+        "https://etherscan.io/address/0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9",
+        "https://forum.alchemix.fi/public/d/429-aip-95a-multichain-response-optimism-and-arbitrum"
+      ],
+      "address_inventory_status": "initial_verified_2026-10-03",
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0x9e2b6378ee8ad2A4A95Fe481d63CAba8FB0EBBF9",
+          "role": "dev_multisig",
+          "perimeter": "include",
+          "source": "https://etherscan.io/address/0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9",
+          "verified_at": "2026-10-03",
+          "onchain_check": "safe 3-of-7",
+          "note": "Alchemix Dev Multisig (treasury operations)."
+        }
+      ]
     }
   ],
   "change_log": [
@@ -1139,6 +1374,13 @@
       "changes": [
         "inverse-finance: DOLA/sDOLA reclassified from native_token to issuer stablecoin liability.",
         "maker-sky, compound: spending rules recorded; both remain pending_treasury_reconciliation."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner approved D9 batch 2)",
+      "changes": [
+        "Added gmx, synthetix, euler, gearbox, badger, silo-finance, alchemix (9 rows, each checked on chain 2026-10-03). Not added: notional (DAO treasury ~$0.13M, all NOTE, appears inactive), sushi (DAO Safes ~$0.2M; the ~$40M sits in a Sushi Labs-managed vault outside the DAO perimeter), origin (DAO treasury address not found in Origin's own sources yet). Owner to decide replacements."
       ]
     }
   ]
