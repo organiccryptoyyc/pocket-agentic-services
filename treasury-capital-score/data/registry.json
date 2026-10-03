@@ -1496,13 +1496,14 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "partially_verified",
-      "eligibility": "pending_treasury_reconciliation",
-      "scoreable": false,
+      "eligibility": "confirmed",
+      "scoreable": true,
       "treasury_perimeter": "Alchemix DAO Safes on Ethereum, Optimism, Base and Arbitrum, the timelocked multisig and the Ecosystem Vault, as listed by Alchemix's treasury tracker (Octav). Excludes alAsset backing, user deposits and Alchemix Association assets not on the tracker. DeFi positions held by these Safes (e.g. Aera, StakeDAO) are not yet readable.",
       "notes": [
         "Registry expansion batch 2 (D9), owner-approved 2026-10-03. Curated inputs not filled yet (insufficient_data until they are); NRT joins the D1 cohort.",
         "2026-10-03 (owner): spending approved for methodology purposes; live score pending treasury-address reconciliation (registry maps ~$0.14M liquid vs ~$3.9M liquid + ~$2.3M Association assets reported in AIP-121).",
-        "2026-10-03 (owner): 6 tracker addresses approved; alETH/alUSD classed as Alchemix's own liabilities; still held until DeFi positions are readable or a cited treasury total is published."
+        "2026-10-03 (owner): 6 tracker addresses approved; alETH/alUSD classed as Alchemix's own liabilities; still held until DeFi positions are readable or a cited treasury total is published.",
+        "2026-10-03 (owner): hold lifted. DeFi positions booked from Alchemix's treasury tracker (cited disclosures, net of positions read on chain); gross $8.53M reconciles to tracker $8.54M."
       ],
       "sources": [
         "https://alchemix.octav.fi/app/alchemixtreasury",
@@ -1773,6 +1774,13 @@
       "changes": [
         "uniswap: governance Timelock row; scoreable (D1 vetting).",
         "rocket-pool: RocketVault rocketClaimDAO ledger row (new collector reader); scoreable (D1 vetting). Scored cohort reaches 20: D1 percentiles switch on."
+      ]
+    },
+    {
+      "date": "2026-10-03",
+      "by": "Claude (owner decision 2026-10-03)",
+      "changes": [
+        "alchemix: hold lifted (scoreable, confirmed); DeFi positions from the treasury tracker booked as cited disclosures (LP / locked), no double counting."
       ]
     }
   ]
