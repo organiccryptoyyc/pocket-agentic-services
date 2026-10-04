@@ -2,7 +2,7 @@
   "_comment": "One file per on-chain service. Related verticals are bundled into one service so they share one registration fee and one container. Member scores: when a member's own polarity matches (or no 'direction' is set) the hub's composite_score is used; when 'direction' differs from the hub's polarity (for example a neutral price series read as cost pressure), the pack scores it from the percentile in that direction. Neutral members without a direction are reported under 'watch', not averaged.",
   "service_id": "pmic-macro-signals",
   "display_name": "PMIC Macro and Markets Signals",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "category": "finance",
   "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, and an 8-country comparison. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
   "default_horizon": "90d",

@@ -2,7 +2,7 @@
   "_comment": "Company verticals take an entity_id (lower-case ticker). Members are expanded per company from the metric list; metrics a company does not report are left out of that company's score rather than counted as missing.",
   "service_id": "pmic-company-signals",
   "display_name": "PMIC Company Fundamentals and Filing Risk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "category": "finance",
   "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, and a filing risk score from 8-K items, 13D filings and insider Form 4 activity. Every input carries its SEC citation.",
   "default_horizon": "365d",

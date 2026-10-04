@@ -1,6 +1,9 @@
 // openFDA drug endpoints. Count series use the `count=<date field>` aggregation (one request
 // returns daily buckets for the whole window) and are summed into complete Monday-start weeks.
-// Recalls and original NDA/BLA approvals also become events. openFDA answers 404
+// Recalls and original NDA/BLA approvals also become events. FAERS lags: the FDA loads reports in
+// batches, so the newest weeks read low or zero until they arrive. FAERS series therefore stop at
+// the last complete week that has reports, and empty weeks are left out rather than stored as 0.
+// openFDA answers 404
 // {"error":{"code":"NOT_FOUND"}} when nothing matches; that is a valid zero, not a failure.
 "use strict";
 
@@ -12,6 +15,10 @@ const RECALL_SEVERITY = { "Class I": "high", "Class II": "medium", "Class III": 
 function q(s) {
   // openFDA wants spaces as '+', and quotes/brackets literal.
   return encodeURIComponent(s).replace(/%20/g, "+").replace(/%22/g, '"').replace(/%5B/g, "[").replace(/%5D/g, "]").replace(/%3A/g, ":");
+}
+
+function addDays(isoDate, n) {
+  return ymd(new Date(Date.parse(`${isoDate}T00:00:00Z`) + n * 86400000));
 }
 
 function withKey(url, key) {
@@ -30,13 +37,18 @@ function bodyOrEmpty(r, what) {
   return body;
 }
 
-async function countSeries(ctx, s, endpoint, search, field, key) {
+async function countSeries(ctx, s, endpoint, search, field, key, { lagged = false } = {}) {
   const since = ctx.since(s);
   const cite = `${BASE}/${endpoint}.json?search=${q(search)}&count=${field}`;
   const r = await ctx.get(`openfda:${s.series_id}`, withKey(cite, key), {}, { allowStatus: [404] });
   const body = bodyOrEmpty(r, `openfda ${s.series_id}`);
   const daily = body.results.map((b) => [fromCompact(b.time), Number(b.count) || 0]).filter(([d]) => d);
-  return weeklyCounts(daily, since, ctx.now).map(([w, n]) => ({
+  let weeks = weeklyCounts(daily, since, ctx.now);
+  if (lagged) {
+    const last = daily.filter(([, n]) => n > 0).map(([d]) => d).sort().pop();
+    weeks = last ? weeks.filter(([w, n]) => n > 0 && addDays(w, 6) <= last) : [];
+  }
+  return weeks.map(([w, n]) => ({
     series_id: s.series_id,
     observation_time: w,
     period: `week of ${w}`,
@@ -132,23 +144,36 @@ async function collect(series, ctx) {
   };
   for (const [feed, [endpoint, search, field]] of Object.entries(plain)) {
     const s = byFeed.get(feed);
-    if (s) await run([s.series_id], async () => out.observations.push(...(await countSeries(ctx, s, endpoint, search(s), field, key))));
+    if (s) await run([s.series_id], async () => out.observations.push(...(await countSeries(ctx, s, endpoint, search(s), field, key, { lagged: feed === "faers" }))));
   }
-  for (const s of series.filter((x) => x.params.feed === "recalls_firm")) {
-    await run([s.series_id], async () => out.observations.push(...(await countSeries(ctx, s, "enforcement", `${range("report_date", ctx.since(s), ctx.now)} AND recalling_firm:"${s.params.firm}"`, "report_date", key))));
+  const firm = {
+    recalls_firm: (s) => ["enforcement", `${range("report_date", ctx.since(s), ctx.now)} AND recalling_firm:"${s.params.firm}"`, "report_date"],
+    faers_firm: (s) => ["event", `${range("receivedate", ctx.since(s), ctx.now)} AND patient.drug.openfda.manufacturer_name:"${s.params.firm}"`, "receivedate"],
+    labels_firm: (s) => ["label", `${range("effective_time", ctx.since(s), ctx.now)} AND openfda.manufacturer_name:"${s.params.firm}"`, "effective_time"],
+  };
+  for (const s of series.filter((x) => firm[x.params.feed])) {
+    const [endpoint, search, field] = firm[s.params.feed](s);
+    await run([s.series_id], async () => out.observations.push(...(await countSeries(ctx, s, endpoint, search, field, key, { lagged: s.params.feed === "faers_firm" }))));
   }
 
   const nda = byFeed.get("approvals_nda_bla");
   const anda = byFeed.get("approvals_anda");
-  if (nda || anda) {
-    const ids = [nda, anda].filter(Boolean).map((s) => s.series_id);
+  const firmApprovals = series.filter((x) => x.params.feed === "approvals_firm");
+  if (nda || anda || firmApprovals.length) {
+    const ids = [nda, anda, ...firmApprovals].filter(Boolean).map((s) => s.series_id);
     await run(ids, async () => {
-      const since = [nda, anda].filter(Boolean).map((s) => ctx.since(s)).sort()[0];
+      const since = [nda, anda, ...firmApprovals].filter(Boolean).map((s) => ctx.since(s)).sort()[0];
       const { found, sha } = await approvals(ctx, key, since);
       const cite = `${BASE}/drugsfda.json?search=${q(`submissions.submission_type:"ORIG" AND submissions.submission_status:"AP"`)}`;
       for (const [s, isGeneric] of [[nda, false], [anda, true]]) {
         if (!s) continue;
         const daily = found.filter((f) => /^ANDA/.test(f.app.application_number || "") === isGeneric).map((f) => [f.date, 1]);
+        for (const [w, n] of weeklyCounts(daily, ctx.since(s), ctx.now)) {
+          out.observations.push({ series_id: s.series_id, observation_time: w, period: `week of ${w}`, value: n, source_url: cite, raw_sha256: sha });
+        }
+      }
+      for (const s of firmApprovals) {
+        const daily = found.filter((f) => firmEntity(ctx, f.app.sponsor_name) === s.entity_id).map((f) => [f.date, 1]);
         for (const [w, n] of weeklyCounts(daily, ctx.since(s), ctx.now)) {
           out.observations.push({ series_id: s.series_id, observation_time: w, period: `week of ${w}`, value: n, source_url: cite, raw_sha256: sha });
         }

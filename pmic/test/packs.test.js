@@ -66,7 +66,7 @@ function checkBrief(b, bundle) {
 
 test("probes: version, health and the PSM healthz path", async () => {
   for (const b of BUNDLES) {
-    assert.deepEqual((await call(b, "GET", "/v1/version")).json, { service: b, version: "0.1.0" });
+    assert.deepEqual((await call(b, "GET", "/v1/version")).json, { service: b, version: "0.2.0" });
     for (const p of ["/v1/health", "/healthz"]) {
       const h = await call(b, "GET", p);
       assert.equal(h.status, 200);
@@ -97,6 +97,10 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
   const rates = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "rates" })).json;
   assert.equal(typeof rates.curve.inverted, "boolean");
   assert.ok(rates.inputs.some((m) => m.scoring === "percentile_inverted"), "neutral rate series are read as tightness");
+  for (const m of rates.inputs.filter((x) => x.scoring && x.scoring.startsWith("percentile"))) {
+    assert.ok(m.summary.includes(`Scored ${m.score}/100 in this brief`), `${m.series_id}: text must quote the brief's score, not the hub's`);
+    assert.ok(!/Composite \d+\/100/.test(m.summary), `${m.series_id}: hub composite left in the text`);
+  }
   const commodities = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "commodities" })).json;
   assert.ok(commodities.watch.some((m) => m.series_id === "fred:IQ"), "neutral members without a direction are watch items");
   const de = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "global-compare", countries: ["us", "de"] })).json;
@@ -140,6 +144,9 @@ test("pharma bundle: market and company briefs", async () => {
   checkBrief((await call("pmic-pharma-signals", "POST", "/v1/brief", { vertical: "drug-market" })).json, "pmic-pharma-signals");
   const c = (await call("pmic-pharma-signals", "POST", "/v1/brief", { vertical: "company-safety", entity_id: "lly" })).json;
   checkBrief(c, "pmic-pharma-signals");
+  const ids = c.inputs.map((m) => m.series_id).sort();
+  assert.deepEqual(ids, ["openfda:LLY:adverse_event_reports_weekly", "openfda:LLY:approvals_weekly", "openfda:LLY:drug_recalls_weekly"], "recalls, adverse events and approvals are scored");
+  assert.deepEqual(c.watch.map((m) => m.series_id), ["openfda:LLY:label_updates_weekly"]);
   assert.ok(Array.isArray(c.recent_events));
   assert.equal((await call("pmic-pharma-signals", "POST", "/v1/brief", { vertical: "company-safety", entity_id: "aapl" })).json.error.code, "unknown_entity");
 });

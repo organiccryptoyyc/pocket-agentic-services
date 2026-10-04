@@ -55,13 +55,23 @@ function scoreMember(cfg, current, previous) {
   if (current.status !== "ok") return { ...base, role: dir === 0 ? "watch" : "input", scoring: null, score: null, previous_score: null };
   if (dir === 0) return { ...base, role: "watch", scoring: "hub_unusualness", score: current.composite_score, previous_score: previous ? previous.composite_score : null };
   if (dir === hubPolarity) return { ...base, role: "input", scoring: "hub_composite", score: current.composite_score, previous_score: previous ? previous.composite_score : null };
+  const score = fromPercentile(current.percentile, dir);
   return {
     ...base,
+    // The hub's text quotes its own composite in its own direction; restate it in this vertical's.
+    summary: restate(base.summary, score, dir),
     role: "input",
     scoring: dir > 0 ? "percentile" : "percentile_inverted",
-    score: fromPercentile(current.percentile, dir),
+    score,
     previous_score: previous ? fromPercentile(previous.percentile, dir) : null,
   };
+}
+
+function restate(summary, score, dir) {
+  if (typeof summary !== "string") return summary;
+  const note = `Scored ${score}/100 in this brief (${dir > 0 ? "a higher reading" : "a lower reading"} scores higher here).`;
+  const out = summary.replace(/Composite \d+\/100 \([^)]*\)\./, note);
+  return out === summary ? `${summary} ${note}` : out;
 }
 
 function weightedMean(items, key) {

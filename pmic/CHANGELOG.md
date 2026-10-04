@@ -12,6 +12,20 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## 0.2.0 packs and collector (2026-10-04, from the first paid relay answers)
+
+- Driver text now matches the driver score. When a vertical reads a series in the other direction
+  from the hub (import prices as cost pressure, for example), the text used to quote the hub's
+  composite. It now says "Scored N/100 in this brief".
+- Pharma `company-safety` scores four per-company openFDA series instead of one: recalls naming the
+  firm, FAERS adverse event reports for its products, original approvals (NDA, BLA, ANDA) and, as a
+  watch item, label changes. The catalog grows from 312 to 321 series (`openfda.company_feeds`).
+- FAERS lag: the FDA loads adverse event reports in batches, so the newest weeks read 0 and scored as
+  "calm". FAERS series now stop at the last complete week with reports. Migration 004 deletes the
+  zero weeks already stored on the Pi and the hub.
+- Deploy: Pi rebuild (collector), then PSM Deploy for `pmic-hub` and the three packs. No
+  re-registration and no POKT.
+
 ## Packs batch 1 (2026-10-04)
 
 - `packs/`: 10 verticals bundled into 3 paid services to save registration fees (3,000 POKT instead
@@ -35,7 +49,7 @@
   `pmic-company-app` (tx `82281EE093DE55C0A420FABA4DEE9BF6B9F29A464F14C77372A5C1B99BF1174F`),
   `pmic-pharma-app` (tx `5E949A689D60135FC705E97B585B61E1F09DCC303D07BB9A0B9201B8067BEE04`).
 - Known data quirk: openFDA FAERS counts for the latest weeks read near 0 because of reporting lag,
-  which lifts the drug-market score. To fix in a later version.
+  which lifts the drug-market score. Fixed in 0.2.0.
 
 ## 0.1.0 (2026-10-04, branch `market-intel-collector`, draft PR #1)
 

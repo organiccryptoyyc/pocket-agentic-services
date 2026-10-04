@@ -120,6 +120,13 @@
       { "feed": "approvals_anda", "metric_name": "approvals_anda_weekly", "label": "Original ANDA (generic) approvals, weekly", "polarity": 1 },
       { "feed": "faers", "metric_name": "adverse_event_reports_weekly", "label": "FAERS adverse event reports received, weekly", "polarity": -1 },
       { "feed": "labels", "metric_name": "label_updates_weekly", "label": "Drug label (SPL) versions effective, weekly", "polarity": 0 }
+    ],
+    "_company_feeds_comment": "Per-company series for SEC companies with fda_firm ({firm} is that name). FAERS and label counts match openfda.manufacturer_name, so they cover the firm's labeled products, not subsidiaries named differently.",
+    "company_feeds": [
+      { "feed": "recalls_firm", "metric_name": "drug_recalls_weekly", "label": "Drug recalls naming {firm}, weekly", "polarity": -1 },
+      { "feed": "faers_firm", "metric_name": "adverse_event_reports_weekly", "label": "FAERS adverse event reports for {firm} products, weekly", "polarity": -1 },
+      { "feed": "approvals_firm", "metric_name": "approvals_weekly", "label": "Original FDA approvals (NDA, BLA, ANDA) for {firm}, weekly", "polarity": 1 },
+      { "feed": "labels_firm", "metric_name": "label_updates_weekly", "label": "Drug label (SPL) versions effective for {firm} products, weekly", "polarity": 0 }
     ]
   }
 }
