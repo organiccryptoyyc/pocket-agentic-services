@@ -13,6 +13,7 @@
 //   POST /v1/events    {entity_id?, event_type?, severity?, since?, limit?}   (company and pharma bundles)
 //   POST /v1/inflation/adjust {amount, from: "YYYY-MM", to?: "YYYY-MM"}     (macro bundle)
 //   GET  /v1/version, /v1/health, /healthz
+//   GET  /v1/selftest                                       every vertical end to end; 200 only if all pass
 "use strict";
 
 const path = require("path");
@@ -316,6 +317,26 @@ if (PACK.events_scope) {
   });
 }
 if ((PACK.extra_routes || []).includes("inflation_adjust")) routes.set("POST /v1/inflation/adjust", async (raw) => wrap(await inflationAdjust(obj(raw))));
+
+// Every vertical end to end through the hub. 200 only if each one answers status ok with a score,
+// so a deploy probed at /v1/selftest proves the service on the server without a shell there.
+async function selftest() {
+  const entity = (PACK.entities || []).includes("pfe") ? "pfe" : (PACK.entities || [])[0];
+  const results = await Promise.all(PACK.verticals.map(async (v) => {
+    try {
+      const b = await brief(v, { horizon: PACK.default_horizon, entity: needsEntity(v) ? entity : null, countries: null });
+      const score = typeof b.score === "number" ? b.score : (b.country_scores || []).find((c) => typeof c.score === "number")?.score ?? null;
+      return { vertical: v.id, ...(needsEntity(v) ? { entity_id: entity } : {}), status: b.status, score, pass: b.status === "ok" && score !== null };
+    } catch (e) {
+      // Only the error code: hub messages can name internal hosts, and this route is public.
+      return { vertical: v.id, status: "error", code: e instanceof ClientError ? e.code : "unavailable", pass: false };
+    }
+  }));
+  const out = { service: PACK.service_id, pack_version: PACK.version, pass: results.every((r) => r.pass), results };
+  if (!out.pass) throw new ClientError(400, "selftest_failed", results.filter((r) => !r.pass).map((r) => `${r.vertical}: ${r.code || r.status}`).join("; "));
+  return out;
+}
+routes.set("GET /v1/selftest", selftest);
 
 function health() {
   return { service: PACK.service_id, version: PACK.version, verticals: PACK.verticals.map((v) => v.id), hub: HUB.replace(/\/\/[^@]*@/, "//") };
