@@ -275,3 +275,26 @@ test("query layer: marketplace answer shape, filters, explain, bad input", async
   assert.throws(() => Q.signals(db, { horizon: "2d" }), /horizon/);
   assert.throws(() => Q.series(db, {}), /series_id/);
 });
+
+test("outliers: only new observations are checked, ordinary lumpy steps are not flagged, backfill flags are cleared", () => {
+  const { outlierScore } = require("../lib/qc");
+  const dir = tmp();
+  const db = dbLib.open({ dataDir: dir });
+  dbLib.syncCatalog(db, catalog);
+  const s = catalog.series.find((x) => x.series_id === "fred:DGS10");
+  const ins = db.prepare(`INSERT INTO observations (source_id, series_id, entity_id, metric_name, metric_value, unit, observation_time, fetch_time, source_url,
+    transform_version, retention_class, confidence_score, qc_flags, updated_at) VALUES ('fred', ?, 'us', ?, ?, 'percent', ?, '2026-10-01', 'https://x', 't', 'standard', 90, ?, '2026-10-01')`);
+  for (let i = 0; i < 20; i++) ins.run(s.series_id, s.metric_name, 4 + (i % 2 ? 0.01 : -0.01) + i * 0.001, `2026-09-${String(i + 5).padStart(2, "0")}`, "[]");
+  const now = "2026-10-01T00:00:00Z";
+  assert.ok(Math.abs(outlierScore(db, s, "2026-09-30", 9, now)) > 8, "a recent huge jump is flagged");
+  assert.equal(outlierScore(db, s, "2026-09-30", 4.05, now), null, "a step within twice the largest recent step is not");
+  assert.equal(outlierScore(db, s, "2026-09-30", 9, "2028-01-01T00:00:00Z"), null, "old data is never checked");
+
+  // Migration 002 on a store that already carries backfill flags.
+  ins.run(s.series_id, s.metric_name, 1, "2020-04-01", '["outlier"]');
+  dbLib.raiseAlert(db, { kind: "outlier", series_id: s.series_id, detail: "2020-04-01: 1 is a step", key: "outlier|x|2020-04-01" });
+  dbLib.raiseAlert(db, { kind: "outlier", series_id: s.series_id, detail: `${new Date().toISOString().slice(0, 10)}: 9 is a step`, key: "outlier|x|recent" });
+  db.exec(fs.readFileSync(path.join(__dirname, "..", "migrations", "002_clear_backfill_outliers.sql"), "utf8"));
+  assert.equal(db.prepare("SELECT qc_flags FROM observations WHERE observation_time = '2020-04-01'").get().qc_flags, "[]");
+  assert.equal(count(db, "SELECT COUNT(*) n FROM alerts WHERE kind = 'outlier' AND resolved_at IS NULL"), 1);
+});

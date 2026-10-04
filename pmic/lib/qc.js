@@ -9,6 +9,13 @@ const { raiseAlert } = require("./db");
 
 const TRANSFORM_VERSION = "pmic-ingest/1.0";
 const OUTLIER_ROBUST_Z = 8;
+// Only new data is checked: a historical backfill is what the source published, and real shocks
+// (2020 GDP, a winter gas spike, a bond issue) are not errors. "New" = within one period plus the
+// usual publication lag of the series' frequency.
+const OUTLIER_RECENT_DAYS = { daily: 10, weekly: 30, monthly: 120, quarterly: 270, annual: 1000 };
+// A step must also be at least this many times the largest step in the recent window, so lumpy
+// series with a tiny median step (debt, filings) are not flagged for an ordinary jump.
+const OUTLIER_MAX_STEP_MULT = 2;
 
 function impossible(series, v) {
   if (!Number.isFinite(v)) return "value is not a finite number";
@@ -37,7 +44,9 @@ function median(xs) {
 }
 
 // Robust z of this observation's step from its predecessor, against the series' recent steps.
-function outlierScore(db, series, obsTime, v) {
+function outlierScore(db, series, obsTime, v, nowIso = new Date().toISOString()) {
+  const recentDays = OUTLIER_RECENT_DAYS[series.frequency] || 30;
+  if (Date.parse(nowIso) - Date.parse(`${obsTime.slice(0, 10)}T00:00:00Z`) > recentDays * 86400000) return null;
   const prior = db.prepare(`SELECT metric_value FROM observations WHERE series_id = ? AND observation_time < ?
     ORDER BY observation_time DESC LIMIT 25`).all(series.series_id, obsTime).map((r) => r.metric_value).reverse();
   if (prior.length < 13) return null;
@@ -46,7 +55,9 @@ function outlierScore(db, series, obsTime, v) {
   const med = median(steps);
   const mad = median(steps.map((x) => Math.abs(x - med)));
   if (!(mad > 0)) return null;
-  return (v - prior[prior.length - 1] - med) / (1.4826 * mad);
+  const step = v - prior[prior.length - 1];
+  if (Math.abs(step) < OUTLIER_MAX_STEP_MULT * Math.max(...steps.map(Math.abs))) return null;
+  return (step - med) / (1.4826 * mad);
 }
 
 function baseConfidence(source, flags) {
@@ -94,7 +105,7 @@ function ingestObservation(db, ctx, series, rec) {
     return "revised";
   }
 
-  const z = outlierScore(db, series, rec.observation_time, rec.value);
+  const z = outlierScore(db, series, rec.observation_time, rec.value, now);
   if (z !== null && Math.abs(z) >= OUTLIER_ROBUST_Z) {
     flags.add("outlier");
     raiseAlert(db, { kind: "outlier", source_id: series.source_id, series_id: series.series_id, entity_id: series.entity_id,
@@ -124,4 +135,4 @@ function ingestEvent(db, ctx, ev) {
   return Number(r.changes) > 0;
 }
 
-module.exports = { ingestObservation, ingestEvent, impossible, outlierScore, median, TRANSFORM_VERSION, OUTLIER_ROBUST_Z };
+module.exports = { ingestObservation, ingestEvent, impossible, outlierScore, median, TRANSFORM_VERSION, OUTLIER_ROBUST_Z, OUTLIER_RECENT_DAYS };

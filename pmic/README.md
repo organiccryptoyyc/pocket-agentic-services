@@ -10,7 +10,7 @@ built-in `node:sqlite`), JSON-object responses, inputs in the POST body, 4xx + J
 input, never a 5xx.
 
 **Status:** code-complete for the first build and tested against recorded response shapes
-(21 tests). Not yet run against the live APIs: this build environment's network policy blocks
+(22 tests). Not yet run against the live APIs: this build environment's network policy blocks
 every upstream host, so the first live pass happens on the Pi. Nothing is registered, staked or
 deployed.
 
@@ -151,7 +151,7 @@ payloads), plus the collector's alert status.
 npm test
 ```
 
-`test/collector.test.js` (14) runs the whole pipeline against `test/stub-upstream.js`, which
+`test/collector.test.js` (15) runs the whole pipeline against `test/stub-upstream.js`, which
 answers in each API's documented response shape: FRED CSV with `.` gaps and both header styles,
 BLS footnotes and M13 rows, BEA's two `Results` shapes and comma-formatted values, SEC frames
 with duplicate comparatives and concept switches, openFDA's 404 NOT_FOUND for zero matches, World
