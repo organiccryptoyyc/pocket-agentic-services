@@ -1,7 +1,7 @@
 # TCS-6: listing request for the Pocket partner channel / portal@pokt.foundation
 
 Send from the owner's own account. Attach `sage-service.yaml` and `portal-descriptor.json` (both in this folder).
-Replace https://github.com/pokt-network/pocket-network-resources/pull/8 once the health-check PR is open (see GATEWAY_LISTING.md, section 1).
+Health-check PR: https://github.com/pokt-network/pocket-network-resources/pull/8. Sent by email to portal@pokt.foundation on 2026-10-03.
 
 ---
 
