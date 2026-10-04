@@ -105,7 +105,10 @@ function syncCatalog(db, catalog, now = new Date().toISOString()) {
     // Series dropped from config stop being collected and served; their history ages out under retention.
     const ids = new Set(catalog.series.map((s) => s.series_id));
     for (const r of db.prepare("SELECT series_id FROM series WHERE enabled = 1").all()) {
-      if (!ids.has(r.series_id)) db.prepare("UPDATE series SET enabled = 0, updated_at = ? WHERE series_id = ?").run(now, r.series_id);
+      if (!ids.has(r.series_id)) {
+        db.prepare("UPDATE series SET enabled = 0, updated_at = ? WHERE series_id = ?").run(now, r.series_id);
+        db.prepare("UPDATE alerts SET resolved_at = ? WHERE series_id = ? AND resolved_at IS NULL").run(now, r.series_id);
+      }
     }
   });
 }

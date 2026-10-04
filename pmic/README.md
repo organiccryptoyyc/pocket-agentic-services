@@ -39,14 +39,14 @@ Pi 5 / Umbrel                                         Pocket server (agentic.org
 
 ## What it collects (first build: spec step 1)
 
-339 series across 27 entities, all in [`config/`](config):
+318 series across 27 entities, all in [`config/`](config):
 
 | Source | What | Series | Key |
 |---|---|---|---|
 | FRED | CPI, core CPI, PPI, payrolls, unemployment, participation, JOLTS, 2y/10y yields, curve slope, fed funds, retail sales, real GDP, industrial production, bank deposits and loans, card and mortgage delinquency, WTI, Henry Hub, copper, freight index, import/export prices | 24 | optional `FRED_API_KEY` (falls back to the public CSV) |
 | BLS | Unemployment, payrolls, CPI-U, JOLTS, PPI final demand, hourly earnings (cross-checked against FRED) | 6 | optional `BLS_API_KEY` |
 | BEA | Real GDP growth; value added for manufacturing, information, finance, health care, education | 6 | **`BEA_API_KEY` required** (free) |
-| SEC EDGAR | 14 companies: revenue, operating and net income, operating cash flow (quarterly and FY), cash, debt, current assets/liabilities, total assets, operating/net margin, current ratio; weekly Form 4 counts; 10-K/10-Q/8-K/Form 4/13D/13G filing events | 238 | **`PMIC_SEC_USER_AGENT` required** (name + email, SEC fair access) |
+| SEC EDGAR | 14 companies: revenue, operating and net income, operating cash flow (quarterly and FY), cash, debt, current assets/liabilities, total assets, operating/net margin, current ratio; weekly Form 4 counts; 10-K/10-Q/8-K/Form 4/13D/13G filing events | 217 | **`PMIC_SEC_USER_AGENT` required** (name + email, SEC fair access) |
 | openFDA | Weekly recalls (all and Class I), original NDA/BLA and ANDA approvals, FAERS reports, label updates; per-company recall counts for PFE/LLY/JNJ; recall and approval events | 9 | optional `OPENFDA_API_KEY` |
 | World Bank | 8 countries × GDP growth, inflation, unemployment, education and health spending, government expense, tertiary enrollment | 56 | none |
 

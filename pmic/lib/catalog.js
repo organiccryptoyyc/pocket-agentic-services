@@ -45,7 +45,9 @@ function load() {
     const entity_id = co.ticker.toLowerCase();
     entities.push({ entity_id, entity_type: "company", name: co.name, ticker: co.ticker, cik: co.cik, geography: "US", industry: co.industry });
     const base = { source_id: "sec", entity_id, category: "market", industry: co.industry, transform: "level", params: { cik: co.cik, ticker: co.ticker } };
+    const skip = new Set(co.skip_metrics || []);
     for (const m of cfg.sec.metrics) {
+      if (skip.has(m.metric_name)) continue;
       if (m.kind === "duration") {
         series.push({ ...base, series_id: `sec:${co.ticker}:${m.metric_name}_q`, metric_name: `${m.metric_name}_q`, label: `${m.label}, quarterly`, unit: m.unit, frequency: "quarterly", polarity: m.polarity, transform: "yoy_pct" });
         series.push({ ...base, series_id: `sec:${co.ticker}:${m.metric_name}_fy`, metric_name: `${m.metric_name}_fy`, label: `${m.label}, fiscal year`, unit: m.unit, frequency: "annual", polarity: m.polarity, transform: "yoy_pct" });
@@ -54,6 +56,7 @@ function load() {
       }
     }
     for (const r of cfg.sec.ratios) {
+      if (skip.has(r.metric_name) || skip.has(r.numerator) || skip.has(r.denominator)) continue;
       series.push({ ...base, series_id: `sec:${co.ticker}:${r.metric_name}`, metric_name: r.metric_name, label: r.label, unit: r.unit, frequency: "quarterly", polarity: r.polarity });
     }
     series.push({ ...base, series_id: `sec:${co.ticker}:insider_form4_weekly`, metric_name: "insider_form4_weekly", label: "Insider transaction filings (Form 4), weekly", unit: "count", frequency: "weekly", polarity: 0, category: "market" });

@@ -79,3 +79,4 @@ output into the PMIC thread: any `schema_change` or `api_failure` there is somet
 - Update to new code: `cd ~/pmic-src && git pull && cd pmic && docker compose up -d --build`
 - Stop: `docker compose down` (data stays in the `pmic-data` volume).
 - CSV export: `docker exec pmic-api node bin/export.js scores > scores.csv`
+- Open alerts, summarised: `docker exec pmic-api node bin/export.js alerts | head -40`

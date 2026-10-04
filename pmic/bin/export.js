@@ -3,6 +3,7 @@
 //   node bin/export.js scores                 latest score per series
 //   node bin/export.js observations fred:UNRATE
 //   node bin/export.js events [entity_id]
+//   node bin/export.js alerts                 open alerts, grouped by kind and source, then each one
 // Writes to stdout.
 "use strict";
 
@@ -32,8 +33,12 @@ if (what === "scores") {
   rows = d.prepare("SELECT series_id, observation_time, period, metric_value, unit, fetch_time, source_url, raw_sha256, qc_flags, revision FROM observations WHERE series_id = ? ORDER BY observation_time").all(arg);
 } else if (what === "events") {
   rows = d.prepare("SELECT source_id, entity_id, event_type, event_time, severity, title, source_url FROM events WHERE (? IS NULL OR entity_id = ?) ORDER BY event_time DESC").all(arg || null, arg || null);
+} else if (what === "alerts") {
+  const summary = d.prepare("SELECT kind, source_id, COUNT(*) n FROM alerts WHERE resolved_at IS NULL GROUP BY kind, source_id ORDER BY n DESC").all();
+  process.stdout.write(csv(summary) + "\n");
+  rows = d.prepare("SELECT kind, source_id, series_id, count, last_seen, detail FROM alerts WHERE resolved_at IS NULL ORDER BY kind, series_id").all();
 } else {
-  console.error("usage: export.js scores | observations <series_id> | events [entity_id]");
+  console.error("usage: export.js scores | observations <series_id> | events [entity_id] | alerts");
   process.exit(2);
 }
 process.stdout.write(csv(rows));
