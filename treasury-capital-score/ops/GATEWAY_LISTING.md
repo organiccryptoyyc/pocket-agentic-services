@@ -30,11 +30,14 @@ dimensions, five hard gates, cited sources).
 - Not a blockchain service, so no sync_check / sync_allowance
 - Checks mirror the on-chain card's serving.healthcheck: GET /v1/version (identity),
   GET /v1/health (readiness), POST /v1/tcs6/entities {} (deterministic functional check)
-- Verified via MainNet relays with pocket-ap on 2026-10-02: all three return 200 with the
-  expected strings
+- Verified via MainNet relays with pocket-ap on 2026-10-02 and again on 2026-10-03: all three
+  return 200 with the expected strings
 ```
 
 ## 2. Message: SAGE gateway config (Pocket partner channel)
+
+**Current version (2026-10-03): use [`PARTNER_REQUEST.md`](PARTNER_REQUEST.md)** and attach `sage-service.yaml` + `portal-descriptor.json`.
+The Agentic Portal (agent.pocket.network) is curated by PNF (contact portal@pokt.foundation); the text below is the original 2026-10-02 draft.
 
 Attach [`sage-service.yaml`](sage-service.yaml) and post:
 

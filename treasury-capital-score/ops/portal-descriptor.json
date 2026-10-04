@@ -1,0 +1,65 @@
+{
+  "serviceId": "treasury-capital-score",
+  "displayName": "TCS-6 Crypto Treasury Capital Score",
+  "description": "Treasury-strength reports for DeFi protocols and DAOs (Aave, Sky, Compound, Lido, Uniswap, Yearn, GMX and more): net realizable treasury after realization haircuts, liquid runway against approved spending, obligations, stress resilience, peer ranking and governance controls, with every figure cited. POST /v1/tcs6/score with an {entity_id} and get the full report as one JSON object; POST /v1/tcs6/entities lists the covered protocols. Deterministic between 12-hour refreshes. Research score, not investment advice. Pay per request in USDC; no account, no API key.",
+  "category": "finance",
+  "protocols": [
+    "rest"
+  ],
+  "inputSchema": {
+    "type": "object",
+    "description": "The protocol to score.",
+    "properties": {
+      "entity_id": {
+        "type": "string",
+        "description": "Registry id from POST /v1/tcs6/entities, e.g. compound, maker-sky, aave."
+      }
+    },
+    "required": [
+      "entity_id"
+    ]
+  },
+  "outputSchema": {
+    "type": "object",
+    "description": "For POST /v1/tcs6/score, a JSON object (schema tcs-6-paid-response/1.0) with analysis_status, headline (gross and net realizable treasury), overall_score, six dimensions with metrics and rationale, hard_gates, risks, data_gaps and a source_manifest. POST /v1/tcs6/entities returns {service, method_version, count, entities[]} with each protocol's latest score. Errors return a JSON object with an error field (HTTP 400 for unknown entity_id or malformed input). Published schema: https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/treasury-capital-score/openapi.json"
+  },
+  "methods": {
+    "GET /v1/health": "read",
+    "GET /v1/version": "read",
+    "POST /v1/tcs6/score": "read",
+    "POST /v1/tcs6/entities": "read"
+  },
+  "example": {
+    "method": "POST",
+    "path": "/v1/tcs6/score",
+    "request": {
+      "entity_id": "compound"
+    },
+    "responseSummary": {
+      "schema_version": "tcs-6-paid-response/1.0",
+      "analysis_status": "provisional",
+      "overall_score": {
+        "score": 86,
+        "status": "provisional"
+      },
+      "headline": {
+        "net_realizable_treasury_usd": 55010622.61
+      },
+      "note": "Abridged; captured on Pocket MainNet 2026-10-03. Full sample: https://github.com/organiccryptoyyc/pocket-agentic-services (treasury-capital-score)"
+    }
+  },
+  "pocket": {
+    "network": "mainnet",
+    "serviceId": "treasury-capital-score",
+    "computeUnitsPerRelay": 100000,
+    "supplierOperator": "pokt1a0e9xlhmrpsw44upzmxqj7ct6eh7enqr7tzysx",
+    "supplierEndpoint": "https://agentic.organiccryptoyyc.com",
+    "owner": "pokt16cqt2tjzec6gsxdncl0v6k2aa7awya0wghevlw",
+    "registrationTx": "AC7998B289936BA666D770B59EAC3778F9FF55E1FAD955C5FA40D01366830B35",
+    "healthChecks": [
+      "GET /v1/version contains \"treasury-capital-score\"",
+      "GET /v1/health contains \"status\":\"ok\"",
+      "POST /v1/tcs6/entities {} contains \"method_version\":\"tcs-6/1.0\""
+    ]
+  }
+}
