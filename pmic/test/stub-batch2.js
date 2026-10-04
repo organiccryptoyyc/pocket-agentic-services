@@ -86,21 +86,6 @@ function batch2(u, init, now, json) {
       for (const [d, v] of [["2019-09-18", -0.5], ["2024-06-12", 3.75], ["2025-06-11", 2.0]]) if (d >= since) lines.push(`${flow}.${key},B,U2,${d},${v},A,"Policy rate, test"`);
       return text(lines.join("\n") + "\n", "text/csv");
     }
-    // HICP: the 2025 key stops in December; the wildcard search also has the new all-items series.
-    if (flow === "ICP") {
-      const rows = (k, title, stop) => {
-        for (let t = Date.parse(`${since}T00:00:00Z`), i = 0; t < Math.min(stop, now.getTime() - 35 * DAY); t += 31 * DAY, i++) lines.push(`ICP.${k},M,U2,${ymd(t).slice(0, 7)},${(2 + 0.1 * i).toFixed(2)},A,"${title}"`);
-      };
-      const stop = Date.parse("2026-01-01T00:00:00Z");
-      if (key === "M.U2.N.000000.4.ANR") rows(key, "HICP - Overall index", stop);
-      else {
-        rows("M.U2.N.000000.4.ANR", "HICP - Overall index", stop);
-        rows("M.U2.N.TOTAL.4.ANR", "HICP - All-items", Infinity);
-        rows("M.U2.N.TOTXNRG.4.ANR", "HICP - All-items excluding energy", Infinity);
-        rows("M.U2.N.CP01.4.ANR", "HICP - Food and non-alcoholic beverages", Infinity);
-      }
-      return text(lines.join("\n") + "\n", "text/csv");
-    }
     let i = 0;
     for (let t = Date.parse(`${since}T00:00:00Z`); t < now.getTime() - DAY; t += monthly ? 30 * DAY : DAY) {
       const d = new Date(t);

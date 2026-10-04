@@ -157,7 +157,7 @@ test("LDA falls back to lda.gov when lda.senate.gov fails; FDIC falls back to it
   assert.ok(summary.sources.every((s) => s.failed.length > 0));
 });
 
-test("ECB policy rates are carried forward daily; stale HICP falls back to the fresh all-items series", async () => {
+test("ECB policy rates are carried forward daily; HICP reads the 2026 HICP dataflow", async () => {
   const { db, summary } = await run(["ecb"]);
   const ecb = summary.sources.find((s) => s.source_id === "ecb");
   assert.equal(ecb.failed.length, 0, JSON.stringify(ecb.failed[0]));
@@ -165,9 +165,7 @@ test("ECB policy rates are carried forward daily; stale HICP falls back to the f
   assert.ok(dfr.n > 200, `weekday values, got ${dfr.n}`);
   assert.equal(dfr.t, "2026-10-02");
   assert.equal(db.prepare("SELECT metric_value v FROM observations WHERE series_id = 'ecb:FM.B.U2.EUR.4F.KR.DFR.LEV' ORDER BY observation_time LIMIT 1").get().v, 2);
-  const h = db.prepare("SELECT MAX(observation_time) t FROM observations WHERE series_id = 'ecb:ICP.M.U2.N.000000.4.ANR'").get();
-  assert.ok(h.t > "2026-06-01", `fresh HICP, got ${h.t}`);
-  assert.ok(ecb.notes.some((n) => n.includes("M.U2.N.TOTAL.4.ANR")), ecb.notes.join(" | "));
+  assert.ok(db.prepare("SELECT COUNT(*) n FROM fetch_logs WHERE url LIKE '%/service/data/HICP/M.U2.N.000000.4D0.ANR?%'").get().n === 1);
   assert.deepEqual(stepDaily([["2026-01-05", 1], ["2026-01-08", 2]], "2026-01-06", new Date("2026-01-10T12:00:00Z")), [["2026-01-06", 1], ["2026-01-07", 1], ["2026-01-08", 2], ["2026-01-09", 2]]);
 });
 

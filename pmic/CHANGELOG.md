@@ -17,10 +17,10 @@
 Probe fixes (after the first live run on the Pi):
 - ClinicalTrials.gov: ask for StartDateType and CompletionDateType, without which starts and completions were always 0.
 - Wikipedia edits: stop at the last month Wikimedia has published (about a month behind) instead of counting unpublished weeks as 0.
-- ECB: policy rates (deposit, main refi) list only change dates, so the rate in force is carried forward to every weekday. HICP falls back to the freshest all-items series when the 2025 key goes stale (new classification in 2026).
+- ECB: policy rates (deposit, main refi) list only change dates, so the rate in force is carried forward to every weekday.
 - FEC: a 429 keeps the months already read and finishes on later passes. A free api.data.gov key in FEC_API_KEY avoids the shared DEMO_KEY limit.
 - Fetch errors now include the underlying reason (DNS, refused, TLS), to diagnose the USAspending failures on the Pi.
-- Second probe on the Pi: all 95 series ok (FEC with its api.data.gov key). Every ECB HICP series ends at 2025-12 (ops/find-ecb.sh), so euro area inflation is left out of the global-rates-fx score until the ECB publishes it again; the series keeps collecting.
+- Second probe on the Pi: all 95 series ok (FEC with its api.data.gov key). The ECB moved HICP to a new HICP dataflow in 2026 (the old ICP one is frozen at 2025-12), so euro area inflation now reads ecb:HICP.M.U2.N.000000.4D0.ANR, plus core HICP ecb:HICP.M.U2.N.XEF000.4D0.ANR (headline 3.8% and core 2.5% for September 2026, checked live).
 
 - New collectors, all free official data with no paid license: ECB Data Portal (policy rates, euro
   STR, HICP, five euro reference rates), FDIC BankFind (bank failures), CFPB complaint database,

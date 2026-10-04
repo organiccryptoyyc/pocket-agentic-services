@@ -3,15 +3,13 @@
 // Daily periods are YYYY-MM-DD, monthly YYYY-MM (stored as the first of the month).
 //
 // params.step: the key lists only the dates a rate changed (ECB policy rates), so the rate in force
-// is carried forward to every weekday. params.fallback_key: a wildcard key searched when the main
-// key has gone stale (HICP moved to a new classification in 2026); the freshest series whose TITLE
-// matches params.pick_title is used, and the probe/notes name it.
+// is carried forward to every weekday. HICP moved from the ICP dataflow (frozen at 2025-12) to
+// the HICP dataflow in 2026, with data provider 4D0.
 "use strict";
 
 const { SchemaError, num, csvObjects, ymd } = require("./common");
 
 const DAY = 86400000;
-const STALE_DAYS = { M: 120, Q: 200, D: 14, B: 14 };
 
 const BASE = "https://data-api.ecb.europa.eu/service/data";
 
@@ -38,28 +36,6 @@ async function fetchRows(ctx, flow, key, start) {
   return { rows: r.status === 404 ? [] : parse(r.text, `ecb ${flow}.${key}`), sha: r.sha256 };
 }
 
-const latestOf = (rows) => rows.map((x) => periodDate(x.TIME_PERIOD)).filter(Boolean).sort().pop() || null;
-
-// Rows of the freshest series in a wildcard answer whose title matches.
-function pickSeries(rows, titleRe) {
-  const groups = new Map();
-  for (const x of rows) {
-    const title = `${x.TITLE || ""} ${x.TITLE_COMPL || ""}`;
-    if (titleRe && !titleRe.test(title)) continue;
-    const k = x.KEY || "";
-    if (!groups.has(k)) groups.set(k, []);
-    groups.get(k).push(x);
-  }
-  // Freshest wins; on a tie the shortest title ("Overall index" over "Overall index excluding energy").
-  let best = null;
-  for (const [k, g] of groups) {
-    const t = latestOf(g);
-    const len = String(g[0].TITLE || "").length;
-    if (t && (!best || t > best.latest || (t === best.latest && len < best.len))) best = { key: k, rows: g, latest: t, len };
-  }
-  return best;
-}
-
 // Rate in force on each weekday from `since` to yesterday, from a list of change dates.
 function stepDaily(points, since, now) {
   const sorted = points.slice().sort((a, b) => (a[0] < b[0] ? -1 : 1));
@@ -83,22 +59,8 @@ async function collect(series, ctx) {
     try {
       // Change-date series: read ten years back so the rate in force at `since` is known.
       const start = s.params.step ? ymd(new Date(Date.parse(`${since}T00:00:00Z`) - 3650 * DAY)) : since;
-      let { rows, sha } = await fetchRows(ctx, flow, key, start);
-      let usedKey = key;
-      const freq = key.split(".")[0];
-      const stale = (t) => !t || Date.parse(`${t}T00:00:00Z`) < ctx.now.getTime() - (STALE_DAYS[freq] || 120) * DAY;
-      const mainLatest = latestOf(rows);
-      if (s.params.fallback_key && stale(mainLatest)) {
-        const alt = await fetchRows(ctx, flow, s.params.fallback_key, since);
-        const best = pickSeries(alt.rows, s.params.pick_title ? new RegExp(s.params.pick_title, "i") : null);
-        if (best && !stale(best.latest)) {
-          rows = best.rows;
-          sha = alt.sha;
-          usedKey = best.key.replace(new RegExp(`^${flow}\\.`), "");
-          ctx.note("ecb", `${s.series_id}: ${flow}.${key} stops at ${mainLatest || "nothing"}; using ${flow}.${usedKey} (latest ${best.latest})`);
-        }
-      }
-      const cite = `https://data.ecb.europa.eu/data/datasets/${flow}/${flow}.${usedKey}`;
+      const { rows, sha } = await fetchRows(ctx, flow, key, start);
+      const cite = `https://data.ecb.europa.eu/data/datasets/${flow}/${flow}.${key}`;
       const points = rows.map((x) => [periodDate(x.TIME_PERIOD), num(x.OBS_VALUE), x.TIME_PERIOD]).filter(([d, v]) => d && v !== null);
       if (s.params.step) {
         for (const [d, v] of stepDaily(points, since, ctx.now)) out.observations.push({ series_id: s.series_id, observation_time: d, period: d, value: v, source_url: cite, raw_sha256: sha });
@@ -115,4 +77,4 @@ async function collect(series, ctx) {
   return out;
 }
 
-module.exports = { collect, periodDate, parse, stepDaily, pickSeries };
+module.exports = { collect, periodDate, parse, stepDaily };
