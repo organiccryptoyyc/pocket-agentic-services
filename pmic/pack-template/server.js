@@ -1,7 +1,7 @@
 // Service pack template: a paid Pocket service that answers from the PMIC hub.
 //
 // Every pack is this file plus a pack.json. The pack never fetches public sources itself; it asks
-// the hub (http://pmic-hub:8088 on the pocket-supplier network) with its fixed scope merged in,
+// the hub (http://pmic-hub-backend:8080 on the pocket-supplier network) with its fixed scope merged in,
 // caches answers for cache_seconds, and serves the last good answer if the hub is briefly away.
 //
 //   POST /v1/signals  {horizon?, sort?, direction?, min_confidence?, limit?, entity_id?, industry?, geography?}
@@ -17,7 +17,7 @@ const { createServer, ClientError } = require("./lib/http");
 const { fetchJSON, cached } = require("./lib/net");
 
 const PACK = require(path.join(__dirname, process.env.PACK_FILE || "pack.json"));
-const HUB = (process.env.PMIC_HUB_URL || "http://pmic-hub:8088").replace(/\/$/, "");
+const HUB = (process.env.PMIC_HUB_URL || "http://pmic-hub-backend:8080").replace(/\/$/, "");
 const TOKEN = process.env.PMIC_API_TOKEN || "";
 const PORT = Number(process.env.PORT || 8080);
 const TTL = (PACK.cache_seconds || 300) * 1000;

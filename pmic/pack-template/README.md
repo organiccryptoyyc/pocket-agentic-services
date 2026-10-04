@@ -13,7 +13,7 @@ data itself.
    `sage-service.template.yaml` → `ops/sage-service.yaml`, `portal-descriptor.template.json` →
    `ops/portal-descriptor.json`. Check the service id is free on Beta and MainNet first.
 4. Run against a hub: `PMIC_HUB_URL=http://localhost:8088 PMIC_API_TOKEN=... node server.js`.
-5. Deploy on the `pocket-supplier` network next to `pmic-hub`, with the pack container as its own
+5. Deploy on the `pocket-supplier` network next to `pmic-hub-backend` (the hub, see `docs/HUB_SETUP.md`), with the pack container as its own
    RelayMiner backend, and add it to the supplier's stake (same gated steps as TCS-6's RUNBOOK).
 
 A pack that needs more than a filtered view (for example a composite across several series) adds

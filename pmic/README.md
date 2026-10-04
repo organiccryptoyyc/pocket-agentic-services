@@ -21,9 +21,9 @@ Same shape as TCS-6: collect on the Pi, push to the Pocket server, serve from a 
 ```
 Pi 5 / Umbrel                                         Pocket server (agentic.organiccryptoyyc.com)
 ┌──────────────────────────────────────┐              ┌────────────────────────────────────────────┐
-│ pmic-collector  (bin/collect.js --loop)│  HTTPS+bearer │ pmic-hub :8091 /ingest/sync (private)      │
+│ pmic-collector  (bin/collect.js --loop)│  HTTPS+bearer │ pmic-hub-backend :8091 /ingest/sync        │
 │  FRED BLS BEA SEC openFDA WorldBank   │ ────────────► │   same SQLite schema, rescored on arrival  │
-│  raw/*.jsonl.gz + pmic.db (SQLite)    │  observations │ pmic-hub :8088 query API ◄── service pack 1 │
+│  raw/*.jsonl.gz + pmic.db (SQLite)    │  observations │ hub API :8080           ◄── service pack 1 │
 │ pmic-api :8088 (LAN, read-only)       │  + events     │                         ◄── service pack 2 │
 └──────────────────────────────────────┘              │                         ◄── ... pack 50    │
                                                        └───────────────▲────────────────────────────┘
@@ -139,11 +139,13 @@ backups; drop SEC submissions to weekly cadence in `config/` if the card is smal
 
 ## Hub on the Pocket server
 
-[`ops/docker-compose.hub.yaml`](ops/docker-compose.hub.yaml): one container on the
-`pocket-supplier` network, ingest on 8091 (expose to the Pi through Caddy on its own route, as with
-`/tcs6-ingest`), query API on 8088 for the packs. On the Pi set `PMIC_PUSH_URL` and
-`PMIC_PUSH_TOKEN`; every pass then pushes new and revised observations and events (never raw
-payloads), plus the collector's alert status.
+Deployed through Pocket Service Manager on the Hetzner supplier server, like TCS-6. Step by step:
+[`docs/HUB_SETUP.md`](docs/HUB_SETUP.md). `node pmic/ops/package-psm.js` builds the PSM folder
+(`backend/`, `deploy/docker-compose.yaml`, `deploy/routes.json`) with tokens from the gitignored
+`.secrets/hub.env`. The container `pmic-hub-backend` sits on the `pocket-supplier` network: query
+API on 8080 for the packs, ingest on 8091 behind the PSM route `/pmic-ingest`. On the Pi set
+`PMIC_PUSH_URL` and `PMIC_PUSH_TOKEN`; every pass then pushes new and revised observations and
+events (never raw payloads), plus the collector's alert status. Nothing here touches the chain.
 
 ## Verify locally
 

@@ -46,7 +46,7 @@ Fill in at least:
 - `PMIC_API_TOKEN=` the value from `openssl rand -hex 32`
 
 Optional, same day or later: `FRED_API_KEY` (https://fredaccount.stlouisfed.org/apikeys), `BLS_API_KEY` (https://data.bls.gov/registrationEngine/), `OPENFDA_API_KEY` (https://open.fda.gov/apis/authentication/).
-Leave `PMIC_PUSH_URL` and `PMIC_PUSH_TOKEN` empty until the hub on the Pocket server exists.
+Leave `PMIC_PUSH_URL` and `PMIC_PUSH_TOKEN` empty until the hub on the Pocket server exists (see `HUB_SETUP.md`).
 
 Save in nano with Ctrl+O, Enter, then Ctrl+X.
 
