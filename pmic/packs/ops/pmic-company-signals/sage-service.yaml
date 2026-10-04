@@ -27,4 +27,13 @@ gateway_config:
             expected_status_code: 200
             reputation_signal: major_error
             timeout: 5s
+          - name: verticals
+            type: rest
+            method: POST
+            path: /v1/verticals
+            body: '{}'
+            expected_status_code: 200
+            expected_response_contains: '"service":"pmic-company-signals"'
+            reputation_signal: major_error
+            timeout: 5s
         # No sync_check / sync_allowance: not a blockchain service.

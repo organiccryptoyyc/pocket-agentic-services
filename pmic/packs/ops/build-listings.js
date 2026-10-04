@@ -3,6 +3,7 @@
 //   ops/<service_id>/portal-descriptor.json  Agentic Portal listing (agent.pocket.network)
 //   ops/<service_id>/sage-service.yaml       SAGE gateway entry (send to the Pocket partner channel)
 //   ops/<service_id>/openapi.json            request and response shapes for agents
+//   ops/pocket-health-checks-entry.yaml      entries for pocket-network-resources/pocket-health-checks.yaml
 //
 //   node pmic/packs/ops/build-listings.js
 // Re-run after editing a bundle. registrationTx comes from REGISTRATION_TX below (placeholder until registered).
@@ -14,6 +15,9 @@ const REGISTRATION_TX = {
   "pmic-company-signals": "76013FFEACCA53888EE67ACD08C2D26B4BA08CA1C649A0945975C8A2BD2F074F",
   "pmic-pharma-signals": "F5ABC787554042422697E628E834592EA280E2D416B41B3794A1B440F276667E"
 };
+
+// Live MainNet relay captures used as each listing's example (POST /v1/brief).
+const SAMPLES = {};
 
 const fs = require("fs");
 const path = require("path");
@@ -94,7 +98,7 @@ function portal(b) {
       description: "{service, vertical, title, status, score (0-100), label, trend, trend_basis, summary, drivers[], risk_flags[], confidence{score,label}, coverage, inputs[], watch[], citations[{url}], method}. Errors return a JSON object with an error field (HTTP 400).",
     },
     methods,
-    example: { method: "POST", path: "/v1/brief", request: example(b), responseSummary: { service: b.service_id, note: "Fill from a live MainNet capture." } },
+    example: { method: "POST", path: "/v1/brief", request: example(b), responseSummary: SAMPLES[b.service_id] || { service: b.service_id, note: "Fill from a live MainNet capture." } },
     pocket: {
       network: "mainnet",
       serviceId: b.service_id,
@@ -136,6 +140,15 @@ gateway_config:
             method: GET
             path: /v1/health
             expected_status_code: 200
+            reputation_signal: major_error
+            timeout: 5s
+          - name: verticals
+            type: rest
+            method: POST
+            path: /v1/verticals
+            body: '{}'
+            expected_status_code: 200
+            expected_response_contains: '"service":"${b.service_id}"'
             reputation_signal: major_error
             timeout: 5s
         # No sync_check / sync_allowance: not a blockchain service.
@@ -187,8 +200,45 @@ function openapi(b) {
   };
 }
 
-for (const f of fs.readdirSync(path.join(ROOT, "bundles")).filter((x) => x.endsWith(".json"))) {
+function healthEntry(b) {
+  return `- service_id: ${b.service_id}
+  # ${b.display_name}: an agentic REST service (not a blockchain), so no sync_check or
+  # sync_allowance. Identity, readiness and one functional check, matching the service card.
+  check_interval: 30s
+  enabled: true
+  checks:
+    - name: version
+      type: rest
+      method: GET
+      path: /v1/version
+      expected_status_code: 200
+      expected_response_contains: '"${b.service_id}"'
+      timeout: 5s
+      reputation_signal: critical_error
+    - name: health
+      type: rest
+      method: GET
+      path: /v1/health
+      expected_status_code: 200
+      expected_response_contains: '"status":"ok"'
+      timeout: 5s
+      reputation_signal: major_error
+    - name: verticals
+      type: rest
+      method: POST
+      path: /v1/verticals
+      body: '{}'
+      expected_status_code: 200
+      expected_response_contains: '"service":"${b.service_id}"'
+      timeout: 5s
+      reputation_signal: major_error
+`;
+}
+
+const entries = [];
+for (const f of fs.readdirSync(path.join(ROOT, "bundles")).filter((x) => x.endsWith(".json")).sort()) {
   const b = JSON.parse(fs.readFileSync(path.join(ROOT, "bundles", f), "utf8"));
+  entries.push(healthEntry(b));
   const dir = path.join(ROOT, "ops", b.service_id);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "card.json"), JSON.stringify(card(b), null, 2) + "\n");
@@ -198,3 +248,4 @@ for (const f of fs.readdirSync(path.join(ROOT, "bundles")).filter((x) => x.endsW
   const size = Buffer.byteLength(JSON.stringify(card(b)));
   console.log(JSON.stringify({ service_id: b.service_id, card_bytes: size, routes: routesOf(b).length }));
 }
+fs.writeFileSync(path.join(ROOT, "ops", "pocket-health-checks-entry.yaml"), entries.join(""));
