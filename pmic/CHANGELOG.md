@@ -14,6 +14,14 @@
 
 ## Packs batch 2, phase 2 (2026-10-04): 8 verticals, 11 new sources, one new service
 
+LIVE on MainNet 2026-10-04:
+- Hub redeployed (316,416 bytes, 536 series). Pi first push after the upgrade: 8,059 observations, 790 events.
+- macro, company and pharma packs redeployed at 0.3.0; paid self-tests pass 24/24 verticals.
+- Card updates (gas only): macro 6CFE0E8F0D9BCA5D11359733572B00E2DEE2F8ED30648D85F006E2FD071D3687, company 86757EC32A559922760484598DAAE36DA5788B436E931A8B68FAB201675CD69C (block 950580), pharma E5B5A65FA30C1695E324BCD560884A34649AC97035C8318B54785049E08E674B (block 950582).
+- pmic-public-sector-signals 0.1.0 deployed (server /v1/selftest passes 3/3), registered at 100,000 compute units per relay: 1D5981C858E740D2712F04D190E0E03F298BA1435268625B3FF8F84E71EB689B (fee 1,000 POKT).
+- Supplier restake 8BC2F212971CA01BE632DE887B86C0FEACCD67A9CF54E8B9BA55B5683843AC9C (block 950585): 60,000 POKT, six services (prediction-market-intel, treasury-capital-score, pmic-macro-signals, pmic-company-signals, pmic-pharma-signals, pmic-public-sector-signals), active from block 950601. pmic-hub is not on chain.
+- Owner wallet 5,053.6 -> 4,052.5 POKT.
+
 Probe fixes (after the first live run on the Pi):
 - ClinicalTrials.gov: ask for StartDateType and CompletionDateType, without which starts and completions were always 0.
 - Wikipedia edits: stop at the last month Wikimedia has published (about a month behind) instead of counting unpublished weeks as 0.
