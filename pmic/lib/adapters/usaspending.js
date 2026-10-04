@@ -2,12 +2,16 @@
 // the whole window; months come back as fiscal year + fiscal month, October = 1), and obligations
 // by awarding agency from spending_by_category, one POST per month. Agency months already read are
 // kept; the latest four are re-read, since agencies (Defense especially) report late.
+// Recent months fill in as agencies report, so a month is only stored once SETTLE_DAYS have passed
+// since it ended (params.settle_days overrides: Defense publishes procurement 90 days late).
+// Before this rule, September 2026 read $129B against about $300B in a normal month.
 "use strict";
 
 const { SchemaError, parseJson, pad, ymd, completeMonths, addMonths } = require("./common");
 
 const BASE = "https://api.usaspending.gov/api/v2";
 const REFRESH_MONTHS = 4;
+const SETTLE_DAYS = 45;
 
 // Fiscal year 2026, fiscal month 1 -> 2025-10-01.
 function fiscalToMonth(fy, fm) {
@@ -22,6 +26,11 @@ function lastDay(m) {
   return new Date(Date.parse(`${addMonths(m, 1)}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
 }
 
+// Months whose end is at least `days` before now.
+function settled(months, now, days = SETTLE_DAYS) {
+  return months.filter((m) => Date.parse(`${lastDay(m)}T00:00:00Z`) + days * 86400000 <= now.getTime());
+}
+
 const post = (body) => ({ method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
 
 async function collect(series, ctx) {
@@ -33,7 +42,7 @@ async function collect(series, ctx) {
   if (total) {
     try {
       const since = ctx.since(total);
-      const months = new Set(completeMonths(since, ctx.now));
+      const months = new Set(settled(completeMonths(since, ctx.now), ctx.now, total.params.settle_days));
       const r = await ctx.get("usaspending:over_time", `${BASE}/search/spending_over_time/`, post({ group: "month", filters: { time_period: [{ start_date: since, end_date: ymd(ctx.now) }] } }));
       const body = parseJson(r.text, "usaspending spending_over_time");
       if (!Array.isArray(body.results)) throw new SchemaError(`usaspending spending_over_time: ${body.detail || "no results array"}`);
@@ -71,7 +80,7 @@ async function collect(series, ctx) {
           ctx.fail([s.series_id], new SchemaError(`usaspending: agency '${s.params.agency}' not among the top 50 awarding agencies`), { kind: "empty_response" });
           continue;
         }
-        for (const m of months) {
+        for (const m of settled(months, ctx.now, s.params.settle_days)) {
           if (!cache[m]) continue;
           const hit = Object.entries(cache[m]).find(([k]) => k.toLowerCase() === want);
           out.observations.push({ series_id: s.series_id, observation_time: m, period: m.slice(0, 7), value: hit ? hit[1] : 0, source_url: cite, raw_sha256: sha });
@@ -84,4 +93,4 @@ async function collect(series, ctx) {
   return out;
 }
 
-module.exports = { collect, fiscalToMonth };
+module.exports = { collect, fiscalToMonth, settled };

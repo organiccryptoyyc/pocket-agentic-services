@@ -16,7 +16,7 @@ const { readSheet } = require("../lib/xlsx");
 const { pricesFrom } = require("../lib/adapters/pinksheet");
 const { monthCounts } = require("../lib/adapters/cfpb");
 const { units } = require("../lib/adapters/cpsc");
-const { fiscalToMonth } = require("../lib/adapters/usaspending");
+const { fiscalToMonth, settled } = require("../lib/adapters/usaspending");
 const { periodDate, stepDaily } = require("../lib/adapters/ecb");
 const { studyOf } = require("../lib/adapters/ctgov");
 const { form4Values, form4XmlUrl } = require("../lib/adapters/sec");
@@ -131,6 +131,10 @@ test("batch 2 sources: every series collects and events land on their sector ent
   assert.equal(db.prepare("SELECT MAX(observation_time) m FROM observations WHERE series_id = 'wikimedia:AAPL:edits_weekly'").get().m, "2026-08-24");
   // ClinicalTrials.gov only sends the ACTUAL/ESTIMATED date types when they are asked for.
   assert.ok(db.prepare("SELECT COUNT(*) n FROM fetch_logs WHERE url LIKE '%clinicaltrials.gov%StartDateType%CompletionDateType%'").get().n > 0);
+  // USAspending months are stored only once settled: 45 days after the month ends, 100 for Defense.
+  assert.equal(db.prepare("SELECT MAX(observation_time) m FROM observations WHERE series_id = 'usaspending:obligations_monthly'").get().m, "2026-07-01");
+  assert.equal(db.prepare("SELECT MAX(observation_time) m FROM observations WHERE series_id = 'usaspending:obligations_dod_monthly'").get().m, "2026-05-01");
+  assert.deepEqual(settled(["2026-07-01", "2026-08-01", "2026-09-01"], NOW), ["2026-07-01"]);
   // The Pink Sheet link is read from the page, not the fallback.
   assert.ok(db.prepare("SELECT COUNT(*) n FROM fetch_logs WHERE url LIKE '%test-0090012026%'").get().n === 1);
 });
