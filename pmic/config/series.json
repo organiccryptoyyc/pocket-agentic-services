@@ -72,7 +72,7 @@
   },
 
   "sec": {
-    "_comment": "One company facts pull and one submissions pull per company per day. skip_metrics lists concepts a company does not report (confirmed on the first live run, 2026-10-04: banks have no operating income or current assets/liabilities; XOM, PFE, LLY and JNJ do not tag OperatingIncomeLoss; JPM has no framed long-term debt); ratios built on a skipped metric are skipped too. Metrics come from XBRL frames (CYyyyyQn for quarters, CYyyyy for fiscal years, ...I for instants) so every value is the one SEC deduplicated across filings. concepts lists fallbacks in order.",
+    "_comment": "One company facts pull and one submissions pull per company per day. skip_metrics lists concepts a company does not report (confirmed on the first live run, 2026-10-04: banks have no operating income or current assets/liabilities; XOM, PFE, LLY and JNJ do not tag OperatingIncomeLoss; JPM has no framed long-term debt and XOM none after 2017); ratios built on a skipped metric are skipped too. Metrics come from XBRL frames (CYyyyyQn for quarters, CYyyyy for fiscal years, ...I for instants) so every value is the one SEC deduplicated across filings. concepts lists fallbacks in order.",
     "companies": [
       { "ticker": "AAPL", "cik": "0000320193", "name": "Apple Inc.", "industry": "technology" },
       { "ticker": "MSFT", "cik": "0000789019", "name": "Microsoft Corp.", "industry": "technology" },
@@ -81,7 +81,7 @@
       { "ticker": "WMT", "cik": "0000104169", "name": "Walmart Inc.", "industry": "retail" },
       { "ticker": "JPM", "cik": "0000019617", "name": "JPMorgan Chase & Co.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current", "long_term_debt"] },
       { "ticker": "BAC", "cik": "0000070858", "name": "Bank of America Corp.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current"] },
-      { "ticker": "XOM", "cik": "0000034088", "name": "Exxon Mobil Corp.", "industry": "energy", "skip_metrics": ["operating_income"] },
+      { "ticker": "XOM", "cik": "0000034088", "name": "Exxon Mobil Corp.", "industry": "energy", "skip_metrics": ["operating_income", "long_term_debt"] },
       { "ticker": "PFE", "cik": "0000078003", "name": "Pfizer Inc.", "industry": "pharma", "fda_firm": "Pfizer", "skip_metrics": ["operating_income"] },
       { "ticker": "LLY", "cik": "0000059478", "name": "Eli Lilly and Co.", "industry": "pharma", "fda_firm": "Eli Lilly", "skip_metrics": ["operating_income"] },
       { "ticker": "JNJ", "cik": "0000200406", "name": "Johnson & Johnson", "industry": "pharma", "fda_firm": "Johnson & Johnson", "skip_metrics": ["operating_income"] },
