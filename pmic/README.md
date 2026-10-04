@@ -1,5 +1,7 @@
 # PMIC: Public Market Intelligence Collection
 
+Version notes and standing rules (including: never register or stake `pmic-hub`): [`CHANGELOG.md`](CHANGELOG.md).
+
 The data layer under the planned ~50 Pocket API service packs. It pulls official public
 datasets on a schedule, keeps every raw payload, normalizes them into SQLite, runs quality
 control, scores every series 0-100 with a rationale and citation, and serves it all through a

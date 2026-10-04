@@ -1,0 +1,25 @@
+# PMIC version notes
+
+## Standing rules (carry into every version)
+
+- **Never use Register service, Suppliers or staking for `pmic-hub`.** The hub is private: it is the
+  data layer under the PMIC service packs, not a paid service. It is only ever deployed through PSM's
+  **Deploy service** page. Only the individual service packs are registered and staked.
+- The hub push token (`PMIC_INGEST_TOKEN`) lives only in `pmic\.secrets\hub.env` on the packaging
+  PC, in the generated PSM compose file, and in the Pi's `.env`. Never paste it into chat or commit it.
+  If it leaks, delete `hub.env`, re-run `node pmic/ops/package-psm.js`, redeploy `pmic-hub` and update the Pi.
+- Never merge to `main` without the owner's go-ahead.
+
+## 0.1.0 (2026-10-04, branch `market-intel-collector`, draft PR #1)
+
+First build: FRED, BLS, BEA, SEC EDGAR, openFDA and World Bank on a Raspberry Pi 5 (`muttb`).
+
+- Collector, scoring (`pmic-derive/1.0`), QC, retention and the query API, with zero npm dependencies.
+- Verified live on the Pi: every source parses real responses. The catalog is now 312 series after
+  switching off concepts the companies or countries don't report (JPM and XOM long-term debt, JNJ
+  operating income, China government expense, and others listed in `config/series.json`).
+- The outlier check now runs only on recent data. Migrations 002 and 003 cleared the false alarms
+  from the first backfill. The Pi ran with zero open alerts on 2026-10-04.
+- Hub: `node pmic/ops/package-psm.js` builds `Downloads\pmic-hub` for PSM. It deploys to
+  `hetzner-mainnet` as container `pmic-hub-backend` (API 8080, ingest 8091 behind the route
+  `/pmic-ingest`). Steps are in `docs/HUB_SETUP.md`. The packager doesn't print the token.
