@@ -26,6 +26,10 @@ const SAMPLES = {
     request: { vertical: "filing-risk", entity_id: "nvda" },
     response: { service: "pmic-company-signals", vertical: "filing-risk", entity: "NVIDIA", status: "ok", score: 45, label: "active", horizon: "365d", high_severity_8k: 0, medium_severity_8k: 6, other_8k: 7, watch: "insider Form 4 unusualness 64", citations: "SEC EDGAR link per filing" },
   },
+  "pmic-pharma-signals": {
+    request: { vertical: "company-safety", entity_id: "lly", horizon: "365d" },
+    response: { service: "pmic-pharma-signals", vertical: "company-safety", entity: "Eli Lilly and Co.", status: "ok", score: 52, label: "normal", inputs: ["drug recalls naming Eli Lilly", "FAERS adverse event reports (scored 30)", "original FDA approvals (scored 98, ONSWIK BLA761408 approved 2026-09-23)"], watch: ["label updates"], recent_events: "FDA approvals and SEC filings with source links", citations: "openFDA link per input" },
+  },
 };
 
 const fs = require("fs");

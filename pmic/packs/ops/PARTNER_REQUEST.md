@@ -37,7 +37,8 @@ treasury-capital-score.
    Registered: tx F5ABC787554042422697E628E834592EA280E2D416B41B3794A1B440F276667E
    openFDA drug-market safety and approvals brief, and per-company safety briefs for Pfizer,
    Eli Lilly and Johnson & Johnson (recalls, adverse event reports, approvals, label changes).
-   Example: {{PHARMA_EXAMPLE}}
+   Example: POST /v1/brief {"vertical":"company-safety","entity_id":"lly","horizon":"365d"}
+   -> 52/100 "normal" (approvals strong after the ONSWIK approval, adverse event reports elevated).
 
 Every answer is one JSON object: a 0-100 score with label, trend, the inputs that drive it, risk
 flags, confidence and a source link for every input. Data is free official public data only.

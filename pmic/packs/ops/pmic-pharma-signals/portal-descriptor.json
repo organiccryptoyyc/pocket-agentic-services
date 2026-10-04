@@ -62,11 +62,27 @@
     "method": "POST",
     "path": "/v1/brief",
     "request": {
-      "vertical": "drug-market"
+      "vertical": "company-safety",
+      "entity_id": "lly",
+      "horizon": "365d"
     },
     "responseSummary": {
       "service": "pmic-pharma-signals",
-      "note": "Fill from a live MainNet capture."
+      "vertical": "company-safety",
+      "entity": "Eli Lilly and Co.",
+      "status": "ok",
+      "score": 52,
+      "label": "normal",
+      "inputs": [
+        "drug recalls naming Eli Lilly",
+        "FAERS adverse event reports (scored 30)",
+        "original FDA approvals (scored 98, ONSWIK BLA761408 approved 2026-09-23)"
+      ],
+      "watch": [
+        "label updates"
+      ],
+      "recent_events": "FDA approvals and SEC filings with source links",
+      "citations": "openFDA link per input"
     }
   },
   "pocket": {
