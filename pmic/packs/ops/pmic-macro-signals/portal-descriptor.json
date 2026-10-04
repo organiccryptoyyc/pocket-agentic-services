@@ -72,7 +72,7 @@
     "supplierOperator": "pokt1a0e9xlhmrpsw44upzmxqj7ct6eh7enqr7tzysx",
     "supplierEndpoint": "https://agentic.organiccryptoyyc.com",
     "owner": "pokt16cqt2tjzec6gsxdncl0v6k2aa7awya0wghevlw",
-    "registrationTx": "{{REGISTRATION_TX}}",
+    "registrationTx": "13C220122C7865E33430599E3EFCDE8CE1B76784A1CBCB5BC8915F8BF53B568C",
     "healthChecks": [
       "GET /v1/version contains \"service\":\"pmic-macro-signals\"",
       "GET /v1/health contains \"status\":\"ok\"",

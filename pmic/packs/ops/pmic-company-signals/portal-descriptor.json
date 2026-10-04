@@ -88,7 +88,7 @@
     "supplierOperator": "pokt1a0e9xlhmrpsw44upzmxqj7ct6eh7enqr7tzysx",
     "supplierEndpoint": "https://agentic.organiccryptoyyc.com",
     "owner": "pokt16cqt2tjzec6gsxdncl0v6k2aa7awya0wghevlw",
-    "registrationTx": "{{REGISTRATION_TX}}",
+    "registrationTx": "76013FFEACCA53888EE67ACD08C2D26B4BA08CA1C649A0945975C8A2BD2F074F",
     "healthChecks": [
       "GET /v1/version contains \"service\":\"pmic-company-signals\"",
       "GET /v1/health contains \"status\":\"ok\"",

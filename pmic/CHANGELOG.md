@@ -21,7 +21,16 @@
   citation per input (method `pmic-vertical/1.0`, in `packs/README.md`).
 - Listings are generated per service (card, portal descriptor, SAGE yaml, OpenAPI). PSM folders
   are built by `node pmic/packs/ops/package-psm.js`.
-- Not yet deployed, registered or staked.
+- Live on MainNet 2026-10-04. Deployed on `hetzner-mainnet` (containers `<id>-backend`, relayer
+  health `/healthz`); server test passed for all three. Beta was skipped by the owner's choice.
+- Registered at 1,000 POKT each, 100,000 compute units per relay:
+  `pmic-macro-signals` tx `13C220122C7865E33430599E3EFCDE8CE1B76784A1CBCB5BC8915F8BF53B568C`,
+  `pmic-company-signals` tx `76013FFEACCA53888EE67ACD08C2D26B4BA08CA1C649A0945975C8A2BD2F074F`,
+  `pmic-pharma-signals` tx `F5ABC787554042422697E628E834592EA280E2D416B41B3794A1B440F276667E` (block 950342).
+- Supplier re-staked (tx `8FD22819F5E842E567E47E009050A5012E7D0592771DAC9BCA6AA86AD8E37622`, block 950343),
+  stake unchanged at 60,000 POKT, five REST services active from block 950361. `pmic-hub` is not on chain.
+- Known data quirk: openFDA FAERS counts for the latest weeks read near 0 because of reporting lag,
+  which lifts the drug-market score. To fix in a later version.
 
 ## 0.1.0 (2026-10-04, branch `market-intel-collector`, draft PR #1)
 

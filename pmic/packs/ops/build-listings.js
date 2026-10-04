@@ -5,8 +5,15 @@
 //   ops/<service_id>/openapi.json            request and response shapes for agents
 //
 //   node pmic/packs/ops/build-listings.js
-// Re-run after editing a bundle. registrationTx stays a placeholder until PSM registers the service.
+// Re-run after editing a bundle. registrationTx comes from REGISTRATION_TX below (placeholder until registered).
 "use strict";
+
+// MainNet registration txs (2026-10-04, 1,000 POKT each).
+const REGISTRATION_TX = {
+  "pmic-macro-signals": "13C220122C7865E33430599E3EFCDE8CE1B76784A1CBCB5BC8915F8BF53B568C",
+  "pmic-company-signals": "76013FFEACCA53888EE67ACD08C2D26B4BA08CA1C649A0945975C8A2BD2F074F",
+  "pmic-pharma-signals": "F5ABC787554042422697E628E834592EA280E2D416B41B3794A1B440F276667E"
+};
 
 const fs = require("fs");
 const path = require("path");
@@ -95,7 +102,7 @@ function portal(b) {
       supplierOperator: SUPPLIER,
       supplierEndpoint: ENDPOINT,
       owner: OWNER,
-      registrationTx: "{{REGISTRATION_TX}}",
+      registrationTx: REGISTRATION_TX[b.service_id] || "{{REGISTRATION_TX}}",
       healthChecks: [`GET /v1/version contains "service":"${b.service_id}"`, 'GET /v1/health contains "status":"ok"', `POST /v1/verticals {} contains "service":"${b.service_id}"`],
     },
   };

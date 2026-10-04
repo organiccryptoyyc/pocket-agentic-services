@@ -76,7 +76,7 @@
     "supplierOperator": "pokt1a0e9xlhmrpsw44upzmxqj7ct6eh7enqr7tzysx",
     "supplierEndpoint": "https://agentic.organiccryptoyyc.com",
     "owner": "pokt16cqt2tjzec6gsxdncl0v6k2aa7awya0wghevlw",
-    "registrationTx": "{{REGISTRATION_TX}}",
+    "registrationTx": "F5ABC787554042422697E628E834592EA280E2D416B41B3794A1B440F276667E",
     "healthChecks": [
       "GET /v1/version contains \"service\":\"pmic-pharma-signals\"",
       "GET /v1/health contains \"status\":\"ok\"",
