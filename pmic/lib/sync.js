@@ -28,6 +28,29 @@ async function push(db, { url, token, fetchImpl = fetch, statusExtra = {} } = {}
   if (!url || !token) throw new Error("PMIC_PUSH_URL and PMIC_PUSH_TOKEN are required to push");
   const cur = kvGet(db, "push_cursor") || { obs: { t: "", id: 0 }, evt: { t: "", id: 0 } };
   let sent = { observations: 0, events: 0, requests: 0 };
+  // Series the hub didn't know yet (its catalog lagged the Pi's) are resent from scratch on every
+  // push until the hub accepts them, since the cursor has already moved past their rows.
+  const post = async (body) => {
+    const res = await fetchImpl(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`hub answered HTTP ${res.status}: ${text.slice(0, 300)}`);
+    sent.requests++;
+    let r = {};
+    try { r = JSON.parse(text); } catch { r = {}; }
+    return Array.isArray(r.unknown_series) ? r.unknown_series : [];
+  };
+  const unknown = new Set(kvGet(db, "push_unknown_series") || []);
+  if (unknown.size) {
+    const ids = [...unknown];
+    const rows = db.prepare(`SELECT id, ${OBS_COLS.join(", ")} FROM observations WHERE series_id IN (${ids.map(() => "?").join(",")}) ORDER BY id`).all(...ids);
+    const still = new Set();
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const chunk = rows.slice(i, i + BATCH);
+      for (const id of await post({ pushed_at: new Date().toISOString(), observations: chunk.map(({ id, ...r }) => r), revisions: [], events: [], collector_status: null })) still.add(id);
+      sent.observations += chunk.length;
+    }
+    kvSet(db, "push_unknown_series", [...still]);
+  }
   for (;;) {
     const obs = page(db, "observations", OBS_COLS, cur.obs);
     const evt = page(db, "events", EVT_COLS, cur.evt);
@@ -45,10 +68,8 @@ async function push(db, { url, token, fetchImpl = fetch, statusExtra = {} } = {}
       collector_status: last ? { last_collect: kvGet(db, "last_collect"), maintenance_last: kvGet(db, "maintenance_last"), open_alerts: db.prepare("SELECT kind, source_id, series_id, detail, last_seen, count FROM alerts WHERE resolved_at IS NULL ORDER BY last_seen DESC LIMIT 200").all(), ...statusExtra } : null,
     };
     if (!obs.length && !evt.length && sent.requests > 0) break;
-    const res = await fetchImpl(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
-    const text = await res.text();
-    if (!res.ok) throw new Error(`hub answered HTTP ${res.status}: ${text.slice(0, 300)}`);
-    sent.requests++;
+    const missing = await post(body);
+    if (missing.length) kvSet(db, "push_unknown_series", [...new Set([...(kvGet(db, "push_unknown_series") || []), ...missing])]);
     sent.observations += obs.length;
     sent.events += evt.length;
     if (obs.length) cur.obs = { t: obs[obs.length - 1].updated_at, id: obs[obs.length - 1].id };
@@ -67,10 +88,12 @@ function apply(db, catalog, body, now = new Date()) {
   const knownEntities = new Set(catalog.entities.map((e) => e.entity_id));
   const touched = new Set();
   let skipped = 0;
+  const unknownSeries = new Set();
   tx(db, () => {
     const upObs = db.prepare(`INSERT INTO observations (${OBS_COLS.join(", ")}) VALUES (${OBS_COLS.map(() => "?").join(", ")})
       ON CONFLICT (source_id, entity_id, observation_time, metric_name) DO UPDATE SET ${OBS_COLS.filter((c) => !["source_id", "entity_id", "observation_time", "metric_name"].includes(c)).map((c) => `${c}=excluded.${c}`).join(", ")}`);
     for (const o of body.observations) {
+      if (!known.has(o.series_id)) unknownSeries.add(o.series_id);
       if (!known.has(o.series_id) || typeof o.metric_value !== "number") { skipped++; continue; }
       upObs.run(...OBS_COLS.map((c) => (o[c] === undefined ? null : o[c])));
       touched.add(o.series_id);
@@ -88,7 +111,7 @@ function apply(db, catalog, body, now = new Date()) {
     kvSet(db, "last_sync", { at: now.toISOString(), observations: body.observations.length, events: body.events.length, skipped });
   });
   const rescored = touched.size ? rescoreAll(db, catalog, { now, seriesIds: [...touched] }) : 0;
-  return { accepted_observations: body.observations.length - skipped, events: body.events.length, skipped, rescored };
+  return { accepted_observations: body.observations.length - skipped, events: body.events.length, skipped, rescored, ...(unknownSeries.size ? { unknown_series: [...unknownSeries] } : {}) };
 }
 
 function tokenOk(header, token) {

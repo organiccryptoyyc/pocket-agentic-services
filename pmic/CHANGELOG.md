@@ -26,6 +26,10 @@
 - Inputs the hub knows but has never collected are listed under `pending_inputs` (flag
   `inputs_pending`) and left out of coverage, so a newly added input doesn't blank a brief's score
   before the collector backfills it.
+- Push fix: when the Pi pushes series the hub doesn't know yet (Pi upgraded before the hub), the hub
+  now names them in `unknown_series` and the Pi resends their rows on every push until accepted.
+  Before, the cursor moved past them and they never arrived (2026-10-04: fixed by hand by resetting
+  `push_cursor`). Takes effect after the next Pi rebuild and hub deploy.
 - Deploy: Pi rebuild (collector), then PSM Deploy for `pmic-hub` and the three packs. No
   re-registration and no POKT.
 
