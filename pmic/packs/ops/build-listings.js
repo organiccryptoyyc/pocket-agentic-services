@@ -16,8 +16,17 @@ const REGISTRATION_TX = {
   "pmic-pharma-signals": "F5ABC787554042422697E628E834592EA280E2D416B41B3794A1B440F276667E"
 };
 
-// Live MainNet relay captures used as each listing's example (POST /v1/brief).
-const SAMPLES = {};
+// Live MainNet relay captures (2026-10-04, pack 0.2.0) used as each listing's example.
+const SAMPLES = {
+  "pmic-macro-signals": {
+    request: { vertical: "inflation" },
+    response: { service: "pmic-macro-signals", vertical: "inflation", status: "ok", score: 59, label: "steady", trend: "steady", previous_score: 56, inputs: 6, confidence: 93, risk_flags: ["mixed_signals", "extreme_level"], strongest_input: "Core CPI +2.45% y/y, low for its history (scored 94)", weakest_input: "Import prices +6.95% y/y, top of range (scored 0)", citations: "FRED and BLS link per input" },
+  },
+  "pmic-company-signals": {
+    request: { vertical: "filing-risk", entity_id: "nvda" },
+    response: { service: "pmic-company-signals", vertical: "filing-risk", entity: "NVIDIA", status: "ok", score: 45, label: "active", horizon: "365d", high_severity_8k: 0, medium_severity_8k: 6, other_8k: 7, watch: "insider Form 4 unusualness 64", citations: "SEC EDGAR link per filing" },
+  },
+};
 
 const fs = require("fs");
 const path = require("path");
@@ -98,7 +107,7 @@ function portal(b) {
       description: "{service, vertical, title, status, score (0-100), label, trend, trend_basis, summary, drivers[], risk_flags[], confidence{score,label}, coverage, inputs[], watch[], citations[{url}], method}. Errors return a JSON object with an error field (HTTP 400).",
     },
     methods,
-    example: { method: "POST", path: "/v1/brief", request: example(b), responseSummary: SAMPLES[b.service_id] || { service: b.service_id, note: "Fill from a live MainNet capture." } },
+    example: { method: "POST", path: "/v1/brief", request: SAMPLES[b.service_id] ? SAMPLES[b.service_id].request : example(b), responseSummary: SAMPLES[b.service_id] ? SAMPLES[b.service_id].response : { service: b.service_id, note: "Fill from a live MainNet capture." } },
     pocket: {
       network: "mainnet",
       serviceId: b.service_id,

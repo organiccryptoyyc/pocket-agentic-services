@@ -58,11 +58,25 @@
     "method": "POST",
     "path": "/v1/brief",
     "request": {
-      "vertical": "macro-regime"
+      "vertical": "inflation"
     },
     "responseSummary": {
       "service": "pmic-macro-signals",
-      "note": "Fill from a live MainNet capture."
+      "vertical": "inflation",
+      "status": "ok",
+      "score": 59,
+      "label": "steady",
+      "trend": "steady",
+      "previous_score": 56,
+      "inputs": 6,
+      "confidence": 93,
+      "risk_flags": [
+        "mixed_signals",
+        "extreme_level"
+      ],
+      "strongest_input": "Core CPI +2.45% y/y, low for its history (scored 94)",
+      "weakest_input": "Import prices +6.95% y/y, top of range (scored 0)",
+      "citations": "FRED and BLS link per input"
     }
   },
   "pocket": {
