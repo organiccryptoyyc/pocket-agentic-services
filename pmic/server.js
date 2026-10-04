@@ -12,7 +12,7 @@
 //   POST /v1/entities  {entity_type?, industry?, geography?}
 //   POST /v1/sources   {}                                             source health + collector status
 //   POST /v1/alerts    {open_only?, source_id?, limit?}
-//   GET  /v1/version, /v1/health
+//   GET  /v1/version, /v1/health (also /healthz, for PSM)
 //
 // The API only reads (the database is opened read-only); bin/collect.js writes. When
 // PMIC_API_TOKEN is set every POST route needs "Authorization: Bearer <token>": the collector API

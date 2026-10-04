@@ -96,7 +96,8 @@ function createServer({ service, version, versionPath, healthPath, routes }) {
       if (req.method === "GET" && path === versionPath) {
         return sendJson(res, 200, { service, version });
       }
-      if (req.method === "GET" && path === healthPath) {
+      // /healthz is what Pocket Service Manager probes after a deploy.
+      if (req.method === "GET" && (path === healthPath || path === "/healthz")) {
         return sendJson(res, 200, { status: "ok" });
       }
 

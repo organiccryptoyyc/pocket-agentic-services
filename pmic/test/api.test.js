@@ -64,6 +64,9 @@ test("probes", async () => {
   const h = await call("GET", "/v1/health", undefined, { token: null });
   assert.equal(h.json.status, "ok");
   assert.equal(h.json.role, "hub");
+  const hz = await call("GET", "/healthz", undefined, { token: null });
+  assert.equal(hz.status, 200);
+  assert.equal(hz.json.status, "ok");
   assert.equal(h.json.ready, true);
   assert.ok(h.json.scored_series > 300);
 });

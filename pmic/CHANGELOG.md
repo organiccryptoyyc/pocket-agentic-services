@@ -23,3 +23,4 @@ First build: FRED, BLS, BEA, SEC EDGAR, openFDA and World Bank on a Raspberry Pi
 - Hub: `node pmic/ops/package-psm.js` builds `Downloads\pmic-hub` for PSM. It deploys to
   `hetzner-mainnet` as container `pmic-hub-backend` (API 8080, ingest 8091 behind the route
   `/pmic-ingest`). Steps are in `docs/HUB_SETUP.md`. The packager doesn't print the token.
+- The hub and the pack template answer `GET /healthz`, the path PSM probes after a deploy.
