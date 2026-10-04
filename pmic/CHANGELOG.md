@@ -48,6 +48,13 @@
   owner wallet for macro (tx `0F2FC67ED6291608D7D7698FC17BDE11300724288F8668EC4883F5B65B18047D`),
   `pmic-company-app` (tx `82281EE093DE55C0A420FABA4DEE9BF6B9F29A464F14C77372A5C1B99BF1174F`),
   `pmic-pharma-app` (tx `5E949A689D60135FC705E97B585B61E1F09DCC303D07BB9A0B9201B8067BEE04`).
+- Beta TestNet (2026-10-04, test POKT): registered `pmic-macro-signals` tx
+  `F98DEAF59FEDFD9403A0353853C9E237E2E394745BECFA5E6CDC7DA57E0F5469`, `pmic-company-signals` tx
+  `DD16E7EF052CACF00C010867E7A245815FF2B509D449F521841D5668BA43A25E`, `pmic-pharma-signals` tx
+  `B034A95AF7CFC17A3C61416704C4C9A6285E67F4B8EBD676852F9B9BCF809D1F`. Beta supplier re-staked at
+  https://beta.organiccryptoyyc.com (tx `EA1CFACB7B5C694FEF6F292F267092F4F526BDA208588E4DB212CB97F5BA49DE`),
+  test apps staked, live relays passed. PNF stakes MainNet apps for paid use, so MainNet test apps
+  get unstaked; future relay tests run on Beta.
 - Known data quirk: openFDA FAERS counts for the latest weeks read near 0 because of reporting lag,
   which lifts the drug-market score. Fixed in 0.2.0.
 
