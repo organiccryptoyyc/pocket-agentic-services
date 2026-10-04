@@ -1,6 +1,6 @@
 # PMI: listing request for portal@pokt.foundation / Pocket partner channel
 
-Attach `sage-service.yaml` and `portal-descriptor.json` (this folder). Health-check PR: <PR link>.
+Health-check PR: https://github.com/pokt-network/pocket-network-resources/pull/9. Sent by email to portal@pokt.foundation on 2026-10-04 with sage-service.yaml + portal-descriptor.json.
 
 ---
 
@@ -29,7 +29,7 @@ Attached:
 1. sage-service.yaml: SAGE gateway config (passthrough, rpc_types ["rest"], 30s relay timeout, version and health checks).
 2. portal-descriptor.json: suggested portal entry in your descriptor format.
 
-Health-check PR to pocket-network-resources/pocket-health-checks.yaml: <PR link>
+Health-check PR to pocket-network-resources/pocket-health-checks.yaml: https://github.com/pokt-network/pocket-network-resources/pull/9
 
 Schema: https://github.com/organiccryptoyyc/pocket-agentic-services/tree/main/prediction-market-intel (openapi.json).
 
