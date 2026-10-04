@@ -23,6 +23,9 @@
 - FAERS lag: the FDA loads adverse event reports in batches, so the newest weeks read 0 and scored as
   "calm". FAERS series now stop at the last complete week with reports. Migration 004 deletes the
   zero weeks already stored on the Pi and the hub.
+- Inputs the hub knows but has never collected are listed under `pending_inputs` (flag
+  `inputs_pending`) and left out of coverage, so a newly added input doesn't blank a brief's score
+  before the collector backfills it.
 - Deploy: Pi rebuild (collector), then PSM Deploy for `pmic-hub` and the three packs. No
   re-registration and no POKT.
 

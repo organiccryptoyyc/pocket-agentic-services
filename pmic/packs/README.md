@@ -47,7 +47,7 @@ plus `/v1/events` for the company and pharma bundles.
    (`trend_basis: score_history`). Until then, it is the weighted vote of each input's latest
    direction, signed toward a higher score: a net share of 25% or more is a move
    (`trend_basis: input_trends`).
-5. **Flags.** `insufficient_data`, `partial_coverage` (under 75% of weight), `mixed_signals`
+5. **Flags.** `inputs_pending` (an input the hub has never collected yet; it is listed in `pending_inputs` and left out of coverage), `insufficient_data`, `partial_coverage` (under 75% of weight), `mixed_signals`
    (input scores spread with a standard deviation over 20), plus inputs' stale, mismatch, outlier,
    sharp-move, extreme-level and high-severity-event flags.
 6. **Confidence.** The weighted mean of input confidence, scaled down when coverage is under 75%.

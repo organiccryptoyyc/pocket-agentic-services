@@ -167,3 +167,20 @@ test("raw routes stay inside each bundle's scope; bad input is a 400", async () 
     assert.equal((await call("pmic-macro-signals", "POST", "/v1/inflation/adjust", body)).status, 400, JSON.stringify(body));
   }
 });
+
+test("inputs the hub has never collected are pending, not missing", () => {
+  const V = require("../packs/lib/verticals");
+  const cur = (id, status, score) => ({ series_id: id, status, metric: { label: id, polarity: 1 }, composite_score: score, percentile: 50, trend: "flat", confidence: { score: 90 }, risk_flags: [] });
+  const vertical = { id: "x", title: "X", labels: { high: "h", mid: "m", low: "l" } };
+  const members = [
+    V.scoreMember({ weight: 2 }, cur("a", "ok", 70), null),
+    V.scoreMember({ weight: 2 }, cur("b", "no_data", null), null),
+    V.scoreMember({ weight: 1 }, cur("c", "no_data", null), null),
+  ];
+  const out = V.combine(vertical, members, { horizon: "90d" });
+  assert.equal(out.status, "ok");
+  assert.equal(out.score, 70);
+  assert.ok(out.risk_flags.includes("inputs_pending"));
+  assert.deepEqual(out.pending_inputs.map((p) => p.series_id), ["b", "c"]);
+  assert.equal(out.coverage.inputs, 1);
+});

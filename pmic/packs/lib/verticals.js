@@ -52,7 +52,8 @@ function scoreMember(cfg, current, previous) {
     citation_url: current.provenance ? current.provenance.citation_url || null : null,
     source: current.provenance && current.provenance.source ? current.provenance.source.id : null,
   };
-  if (current.status !== "ok") return { ...base, role: dir === 0 ? "watch" : "input", scoring: null, score: null, previous_score: null };
+  // no_data: the hub knows the series but has never collected it (a new input not yet backfilled).
+  if (current.status !== "ok") return { ...base, role: dir === 0 ? "watch" : "input", scoring: null, score: null, previous_score: null, ...(current.status === "no_data" ? { pending: true } : {}) };
   if (dir === 0) return { ...base, role: "watch", scoring: "hub_unusualness", score: current.composite_score, previous_score: previous ? previous.composite_score : null };
   if (dir === hubPolarity) return { ...base, role: "input", scoring: "hub_composite", score: current.composite_score, previous_score: previous ? previous.composite_score : null };
   const score = fromPercentile(current.percentile, dir);
@@ -94,8 +95,11 @@ function stdev(xs) {
 
 // members: output of scoreMember for every input that exists for this vertical (or entity).
 function combine(vertical, members, { horizon, entity = null } = {}) {
-  const inputs = members.filter((m) => m.role === "input");
-  const watch = members.filter((m) => m.role === "watch");
+  // Inputs never collected yet are listed as pending and left out of coverage, so adding an input
+  // to a vertical doesn't blank its score until the collector has backfilled it.
+  const pending = members.filter((m) => m.pending);
+  const inputs = members.filter((m) => m.role === "input" && !m.pending);
+  const watch = members.filter((m) => m.role === "watch" && !m.pending);
   const scored = inputs.filter((m) => m.score !== null);
   const totalWeight = inputs.reduce((a, m) => a + m.weight, 0);
   const scoredWeight = scored.reduce((a, m) => a + m.weight, 0);
@@ -112,6 +116,7 @@ function combine(vertical, members, { horizon, entity = null } = {}) {
 
   const flags = new Set();
   if (!enough) flags.add("insufficient_data");
+  if (pending.length) flags.add("inputs_pending");
   else if (coverage < 0.75) flags.add("partial_coverage");
   if (scored.length >= 3 && stdev(scored.map((m) => m.score)) > MIXED_STDEV) flags.add("mixed_signals");
   for (const m of inputs) for (const f of m.risk_flags) if (["stale_data", "cross_source_mismatch", "outlier_current", "sharp_move", "extreme_level", "high_severity_event_30d"].includes(f)) flags.add(f);
@@ -180,6 +185,7 @@ function combine(vertical, members, { horizon, entity = null } = {}) {
     coverage: { scored: scored.length, inputs: inputs.length, weight_share: Math.round(coverage * 100) / 100 },
     inputs,
     watch,
+    ...(pending.length ? { pending_inputs: pending.map((m) => ({ series_id: m.series_id, label: m.label, note: "not collected yet; excluded from the score" })) } : {}),
     citations: members.filter((m) => m.citation_url).map((m) => ({ series_id: m.series_id, label: m.label, as_of: m.value ? m.value.as_of : null, url: m.citation_url, source: m.source })),
     method: { version: VERSION, docs: "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/pmic/packs/README.md" },
   };
