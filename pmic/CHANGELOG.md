@@ -12,6 +12,27 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Packs batch 2, phase 1 (2026-10-04): 8 verticals, no new registration
+
+- `pmic-company-signals` 0.3.0: `insider-activity` (weekly Form 4 filings against the company's own
+  year, plus its latest Form 4 and 13D filings), `balance-sheet` (cash, current ratio, current assets
+  and liabilities, long-term debt, total assets, each against the company's own quarters) and
+  `peer-ranking` (new `peer_table` kind: rank position among the 14 companies on growth, margins and
+  liquidity).
+- `pmic-macro-signals` 0.3.0: `housing` (starts, permits, new-home sales, months of supply, FHFA
+  prices), `consumer` (real spending and income, retail sales, card delinquencies; saving rate and
+  consumer credit as watch items), and three 8-country tables: `country-risk` (6 Worldwide
+  Governance Indicators), `health-systems` (life expectancy, under-5 mortality, physicians, health
+  spending) and `education` (secondary and tertiary enrollment, education spending).
+- Catalog 321 -> 417 series: 9 FRED series (Census, FHFA, BEA, Federal Reserve; all public domain) and
+  11 World Bank indicators (WGI is CC BY 4.0). Skipped for copyright: Case-Shiller, Freddie Mac
+  mortgage rates, University of Michigan sentiment. China publishes no secondary enrollment
+  (`cn:SE.SEC.ENRR` skipped).
+- Still to come in batch 2: `clinical-pipeline` (ClinicalTrials.gov) and `fiscal-health` (Treasury
+  Fiscal Data); both need new collectors.
+- Deploy: Pi rebuild (collects the new series), PSM Deploy for `pmic-hub` and the macro and company
+  packs, then a gas-only Register service update of the two cards. No new fee.
+
 ## 0.2.0 packs and collector (2026-10-04, from the first paid relay answers)
 
 - Driver text now matches the driver score. When a vertical reads a series in the other direction

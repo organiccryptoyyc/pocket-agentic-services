@@ -1,13 +1,13 @@
 # PMIC service packs
 
 Paid Pocket services that sell scored briefs built on the PMIC hub. Related verticals are bundled
-into one service, so each bundle costs one registration fee and runs one container. Batch 1 has
-10 verticals in 3 services:
+into one service, so each bundle costs one registration fee and runs one container. Batches 1 and
+2 have 18 verticals in 3 services (batch 2 added 8 to the existing services, so no new fee):
 
 | Service ID | Verticals | Needs `entity_id` |
 |---|---|---|
-| `pmic-macro-signals` | macro-regime, inflation, labor, rates, credit-stress, commodities, global-compare (+ CPI inflation calculator) | no |
-| `pmic-company-signals` | fundamentals, filing-risk | yes: aapl, msft, nvda, amzn, wmt, jpm, bac, xom, pfe, lly, jnj, unh, nflx, dis |
+| `pmic-macro-signals` | macro-regime, inflation, labor, rates, credit-stress, commodities, global-compare, housing, consumer, country-risk, health-systems, education (+ CPI inflation calculator) | no |
+| `pmic-company-signals` | fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking | yes: aapl, msft, nvda, amzn, wmt, jpm, bac, xom, pfe, lly, jnj, unh, nflx, dis |
 | `pmic-pharma-signals` | drug-market, company-safety | company-safety only: pfe, lly, jnj |
 
 All data is free and public (FRED, BLS, BEA, SEC EDGAR, openFDA, World Bank). Paid or
@@ -57,7 +57,13 @@ plus `/v1/events` for the company and pharma bundles.
 costs 25 points. Each medium-severity 8-K or 13D costs 8, and any other 8-K costs 1. Routine 10-K,
 10-Q and 13G filings don't count. Insider Form 4 activity is a watch item.
 
-**Country comparison** ranks the 8 countries on each World Bank indicator. It gives each country
+**Peer ranking** ranks the 14 companies on the latest value of each metric (year-over-year growth
+for revenue, operating income and operating cash flow; levels for operating margin, net margin and
+current ratio). Each metric gives first place 100 and last place 0, and a company's score is the mean
+of its positions. It compares companies with each other, unlike every other vertical.
+
+**Country comparison** (global-compare, country-risk, health-systems, education) ranks the 8
+countries on each World Bank indicator. It gives each country
 the mean of its directional scores, which compare the country with its own history.
 
 **Inflation calculator.** `POST /v1/inflation/adjust {"amount":100,"from":"2025-03"}` works for the

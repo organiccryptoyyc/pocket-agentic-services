@@ -10,6 +10,8 @@
     { "entity_id": "br", "entity_type": "geography", "name": "Brazil", "geography": "BR" },
     { "entity_id": "ca", "entity_type": "geography", "name": "Canada", "geography": "CA" },
     { "entity_id": "us-banking", "entity_type": "sector", "name": "U.S. commercial banks (aggregate)", "geography": "US", "industry": "banking" },
+    { "entity_id": "us-housing", "entity_type": "sector", "name": "U.S. housing market", "geography": "US", "industry": "housing" },
+    { "entity_id": "us-consumer", "entity_type": "sector", "name": "U.S. consumers (aggregate)", "geography": "US", "industry": "consumer" },
     { "entity_id": "us-drug-market", "entity_type": "sector", "name": "U.S. drug market (FDA-regulated)", "geography": "US", "industry": "pharma" },
     { "entity_id": "commodity-wti", "entity_type": "commodity", "name": "WTI crude oil", "geography": "US", "industry": "energy" },
     { "entity_id": "commodity-henry-hub", "entity_type": "commodity", "name": "Henry Hub natural gas", "geography": "US", "industry": "energy" },
@@ -41,6 +43,17 @@
     { "series_id": "fred:IR", "source_id": "fred", "entity_id": "us", "metric_name": "import_price_index", "label": "Import price index, all commodities", "unit": "index", "frequency": "monthly", "category": "supply_chain", "industry": "trade", "polarity": 0, "transform": "yoy_pct", "params": { "id": "IR" } },
     { "series_id": "fred:IQ", "source_id": "fred", "entity_id": "us", "metric_name": "export_price_index", "label": "Export price index, all commodities", "unit": "index", "frequency": "monthly", "category": "supply_chain", "industry": "trade", "polarity": 0, "transform": "yoy_pct", "params": { "id": "IQ" } },
 
+    { "series_id": "fred:HOUST", "source_id": "fred", "entity_id": "us-housing", "metric_name": "housing_starts", "label": "Housing starts, total (SAAR, Census)", "unit": "thousands", "frequency": "monthly", "category": "macro", "industry": "housing", "polarity": 1, "transform": "yoy_pct", "params": { "id": "HOUST" } },
+    { "series_id": "fred:PERMIT", "source_id": "fred", "entity_id": "us-housing", "metric_name": "building_permits", "label": "New private housing permits (SAAR, Census)", "unit": "thousands", "frequency": "monthly", "category": "macro", "industry": "housing", "polarity": 1, "transform": "yoy_pct", "params": { "id": "PERMIT" } },
+    { "series_id": "fred:HSN1F", "source_id": "fred", "entity_id": "us-housing", "metric_name": "new_home_sales", "label": "New one-family houses sold (SAAR, Census)", "unit": "thousands", "frequency": "monthly", "category": "macro", "industry": "housing", "polarity": 1, "transform": "yoy_pct", "params": { "id": "HSN1F" } },
+    { "series_id": "fred:MSACSR", "source_id": "fred", "entity_id": "us-housing", "metric_name": "months_supply_new_homes", "label": "Months' supply of new houses (Census)", "unit": "months", "frequency": "monthly", "category": "macro", "industry": "housing", "polarity": 0, "transform": "level", "params": { "id": "MSACSR" } },
+    { "series_id": "fred:HPIPONM226S", "source_id": "fred", "entity_id": "us-housing", "metric_name": "house_price_index", "label": "FHFA purchase-only house price index (SA)", "unit": "index", "frequency": "monthly", "category": "macro", "industry": "housing", "polarity": 0, "transform": "yoy_pct", "params": { "id": "HPIPONM226S" } },
+
+    { "series_id": "fred:PCEC96", "source_id": "fred", "entity_id": "us-consumer", "metric_name": "real_pce", "label": "Real personal consumption expenditures (BEA)", "unit": "usd_billions_chained_2017", "frequency": "monthly", "category": "macro", "industry": "consumer", "polarity": 1, "transform": "yoy_pct", "params": { "id": "PCEC96" } },
+    { "series_id": "fred:DSPIC96", "source_id": "fred", "entity_id": "us-consumer", "metric_name": "real_disposable_income", "label": "Real disposable personal income (BEA)", "unit": "usd_billions_chained_2017", "frequency": "monthly", "category": "macro", "industry": "consumer", "polarity": 1, "transform": "yoy_pct", "params": { "id": "DSPIC96" } },
+    { "series_id": "fred:PSAVERT", "source_id": "fred", "entity_id": "us-consumer", "metric_name": "personal_saving_rate", "label": "Personal saving rate (BEA)", "unit": "percent", "frequency": "monthly", "category": "macro", "industry": "consumer", "polarity": 0, "transform": "level", "params": { "id": "PSAVERT" } },
+    { "series_id": "fred:TOTALSL", "source_id": "fred", "entity_id": "us-consumer", "metric_name": "consumer_credit", "label": "Consumer credit outstanding (Federal Reserve G.19)", "unit": "usd_billions", "frequency": "monthly", "category": "credit", "industry": "consumer", "polarity": 0, "transform": "yoy_pct", "params": { "id": "TOTALSL" } },
+
     { "series_id": "bls:LNS14000000", "source_id": "bls", "entity_id": "us", "metric_name": "unemployment_rate", "label": "Unemployment rate (CPS, SA)", "unit": "percent", "frequency": "monthly", "category": "macro", "industry": "labor", "polarity": -1, "transform": "level", "params": { "id": "LNS14000000" }, "cross_check": "us_unemployment_rate" },
     { "series_id": "bls:CES0000000001", "source_id": "bls", "entity_id": "us", "metric_name": "nonfarm_payrolls", "label": "Total nonfarm employment (CES, SA)", "unit": "thousands", "frequency": "monthly", "category": "macro", "industry": "labor", "polarity": 1, "transform": "diff", "params": { "id": "CES0000000001" }, "cross_check": "us_payrolls" },
     { "series_id": "bls:CUSR0000SA0", "source_id": "bls", "entity_id": "us", "metric_name": "cpi_all_items", "label": "CPI-U, all items (SA)", "unit": "index", "frequency": "monthly", "category": "macro", "industry": "economy", "polarity": -1, "transform": "yoy_pct", "params": { "id": "CUSR0000SA0" } },
@@ -59,7 +72,7 @@
   "worldbank": {
     "countries": ["us", "cn", "jp", "de", "gb", "in", "br", "ca"],
     "_skip_comment": "country:indicator pairs the World Bank does not publish (confirmed on the first live run, 2026-10-04).",
-    "skip": ["cn:GC.XPN.TOTL.GD.ZS"],
+    "skip": ["cn:GC.XPN.TOTL.GD.ZS", "cn:SE.SEC.ENRR"],
     "indicators": [
       { "id": "NY.GDP.MKTP.KD.ZG", "metric_name": "gdp_growth", "label": "GDP growth (annual %)", "unit": "percent", "category": "macro", "industry": "economy", "polarity": 1 },
       { "id": "FP.CPI.TOTL.ZG", "metric_name": "inflation_cpi", "label": "Inflation, consumer prices (annual %)", "unit": "percent", "category": "macro", "industry": "economy", "polarity": -1 },
@@ -67,7 +80,18 @@
       { "id": "SE.XPD.TOTL.GD.ZS", "metric_name": "education_spending_pct_gdp", "label": "Government expenditure on education (% of GDP)", "unit": "percent", "category": "education", "industry": "education", "polarity": 1 },
       { "id": "SH.XPD.CHEX.GD.ZS", "metric_name": "health_spending_pct_gdp", "label": "Current health expenditure (% of GDP)", "unit": "percent", "category": "health", "industry": "health_care", "polarity": 0 },
       { "id": "GC.XPN.TOTL.GD.ZS", "metric_name": "government_expense_pct_gdp", "label": "Government expense (% of GDP)", "unit": "percent", "category": "political", "industry": "public_budget", "polarity": 0 },
-      { "id": "SE.TER.ENRR", "metric_name": "tertiary_enrollment_gross", "label": "School enrollment, tertiary (% gross)", "unit": "percent", "category": "education", "industry": "education", "polarity": 1 }
+      { "id": "SE.TER.ENRR", "metric_name": "tertiary_enrollment_gross", "label": "School enrollment, tertiary (% gross)", "unit": "percent", "category": "education", "industry": "education", "polarity": 1 },
+      { "id": "SE.SEC.ENRR", "metric_name": "secondary_enrollment_gross", "label": "School enrollment, secondary (% gross)", "unit": "percent", "category": "education", "industry": "education", "polarity": 1 },
+      { "id": "SP.DYN.LE00.IN", "metric_name": "life_expectancy", "label": "Life expectancy at birth, total (years)", "unit": "years", "category": "health", "industry": "health_care", "polarity": 1 },
+      { "id": "SH.DYN.MORT", "metric_name": "under5_mortality", "label": "Mortality rate, under-5 (per 1,000 live births)", "unit": "per_1000", "category": "health", "industry": "health_care", "polarity": -1 },
+      { "id": "SH.XPD.CHEX.PC.CD", "metric_name": "health_spending_per_capita", "label": "Current health expenditure per capita (current US$)", "unit": "usd", "category": "health", "industry": "health_care", "polarity": 0 },
+      { "id": "SH.MED.PHYS.ZS", "metric_name": "physicians_per_1000", "label": "Physicians (per 1,000 people)", "unit": "per_1000", "category": "health", "industry": "health_care", "polarity": 1 },
+      { "id": "GOV_WGI_GE.EST", "metric_name": "wgi_government_effectiveness", "label": "Government effectiveness (WGI estimate, -2.5 to 2.5)", "unit": "index", "category": "political", "industry": "governance", "polarity": 1 },
+      { "id": "GOV_WGI_PV.EST", "metric_name": "wgi_political_stability", "label": "Political stability and absence of violence (WGI estimate)", "unit": "index", "category": "political", "industry": "governance", "polarity": 1 },
+      { "id": "GOV_WGI_RL.EST", "metric_name": "wgi_rule_of_law", "label": "Rule of law (WGI estimate)", "unit": "index", "category": "political", "industry": "governance", "polarity": 1 },
+      { "id": "GOV_WGI_CC.EST", "metric_name": "wgi_control_of_corruption", "label": "Control of corruption (WGI estimate)", "unit": "index", "category": "political", "industry": "governance", "polarity": 1 },
+      { "id": "GOV_WGI_RQ.EST", "metric_name": "wgi_regulatory_quality", "label": "Regulatory quality (WGI estimate)", "unit": "index", "category": "political", "industry": "governance", "polarity": 1 },
+      { "id": "GOV_WGI_VA.EST", "metric_name": "wgi_voice_accountability", "label": "Voice and accountability (WGI estimate)", "unit": "index", "category": "political", "industry": "governance", "polarity": 1 }
     ]
   },
 

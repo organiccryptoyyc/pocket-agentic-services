@@ -275,4 +275,69 @@ function countryTable(vertical, signalsByMetric, { horizon, countries = null }) 
   };
 }
 
-module.exports = { VERSION, scoreMember, combine, filingRisk, countryTable, labelFor, trendWord, fromPercentile };
+// Peer table: one hub signal per (company, metric). Ranks the peers on each metric's latest value
+// (the transformed value: yoy growth for flows, the level for ratios) and gives each company the
+// mean of its rank positions, 100 = first, 0 = last. Unlike the other verticals this compares
+// companies with each other, not with their own history.
+function peerTable(vertical, signalsByMetric, { horizon, entity, peers }) {
+  const metrics = [];
+  const byCompany = new Map();
+  for (const cfg of vertical.metrics) {
+    const sigs = (signalsByMetric.get(cfg.metric) || []).filter((s) => s.status === "ok" && peers.includes(s.entity.entity_id) && s.value && Number.isFinite(valueOf(s)));
+    if (sigs.length < 2) continue;
+    const pol = cfg.polarity === undefined ? sigs[0].metric.polarity || 1 : cfg.polarity;
+    const rows = sigs
+      .map((s) => ({ entity_id: s.entity.entity_id, name: s.entity.name, value: valueOf(s), as_of: s.value.as_of, citation_url: s.provenance ? s.provenance.citation_url : null }))
+      .sort((a, b) => pol * (b.value - a.value) || a.entity_id.localeCompare(b.entity_id))
+      .map((r, i, all) => ({ rank: i + 1, ...r, score: Math.round((100 * (all.length - 1 - i)) / (all.length - 1)) }));
+    metrics.push({ metric: cfg.metric, label: sigs[0].metric.label, basis: cfg.basis || null, unit: cfg.basis === "yoy growth" ? "percent" : sigs[0].metric.unit, peers_ranked: rows.length, rows });
+    for (const r of rows) {
+      if (!byCompany.has(r.entity_id)) byCompany.set(r.entity_id, { entity_id: r.entity_id, name: r.name, scores: [] });
+      byCompany.get(r.entity_id).scores.push(r.score);
+    }
+  }
+  const ranking = [...byCompany.values()]
+    .map((c) => ({ entity_id: c.entity_id, name: c.name, score: Math.round(c.scores.reduce((a, b) => a + b, 0) / c.scores.length), metrics_ranked: c.scores.length }))
+    .sort((a, b) => b.score - a.score || a.entity_id.localeCompare(b.entity_id))
+    .map((c, i) => ({ position: i + 1, ...c }));
+  const me = ranking.find((c) => c.entity_id === entity.entity_id) || null;
+  const mine = metrics.map((m) => ({ m, r: m.rows.find((x) => x.entity_id === entity.entity_id) })).filter((x) => x.r);
+  const enough = me && metrics.length && mine.length >= metrics.length / 2;
+  const score = enough ? me.score : null;
+  const label = labelFor(score, vertical.labels);
+  const subject = `${vertical.title} for ${entity.name || entity.entity_id}`;
+  const best = mine.length ? mine.reduce((a, b) => (b.r.score > a.r.score ? b : a)) : null;
+  const worst = mine.length ? mine.reduce((a, b) => (b.r.score < a.r.score ? b : a)) : null;
+  const summary = score === null
+    ? `${subject}: not enough reported metrics to rank (${mine.length} of ${metrics.length}).`
+    : `${subject}: ${score}/100, ${label}, position ${me.position} of ${ranking.length} on ${mine.length} metrics.` +
+      (best && worst && best !== worst ? ` Best: ${best.m.label} (rank ${best.r.rank} of ${best.m.peers_ranked}); weakest: ${worst.m.label} (rank ${worst.r.rank} of ${worst.m.peers_ranked}).` : "");
+  return {
+    vertical: vertical.id,
+    title: vertical.title,
+    question: vertical.question,
+    entity,
+    horizon,
+    status: score === null ? "insufficient_data" : "ok",
+    score,
+    label,
+    position: me ? me.position : null,
+    of: ranking.length,
+    summary,
+    scale: { high: `${HIGH}+ = ${vertical.labels.high}`, mid: `${LOW + 1}-${HIGH - 1} = ${vertical.labels.mid}`, low: `${LOW} or less = ${vertical.labels.low}`, note: vertical.note },
+    drivers: mine.map(({ m, r }) => ({ metric: m.metric, label: m.label, basis: m.basis, value: r.value, rank: r.rank, of: m.peers_ranked, score: r.score, as_of: r.as_of, citation_url: r.citation_url })).sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50)),
+    risk_flags: score === null ? ["insufficient_data"] : mine.length < metrics.length ? ["partial_coverage"] : [],
+    confidence: { score: score === null ? 0 : Math.round(90 * (mine.length / metrics.length)), label: confidenceLabel(score === null ? 0 : Math.round(90 * (mine.length / metrics.length))), note: "Ranks use each company's latest SEC filing; fiscal quarters differ between companies." },
+    peers: ranking,
+    metrics,
+    citations: mine.filter(({ r }) => r.citation_url).map(({ m, r }) => ({ label: `${m.label}, ${entity.name || entity.entity_id}`, url: r.citation_url, as_of: r.as_of, source: "sec" })),
+    method: { version: VERSION, docs: "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/pmic/packs/README.md" },
+  };
+}
+
+function valueOf(s) {
+  const v = s.value.transformed !== undefined && s.value.transformed !== null ? s.value.transformed : s.value.current;
+  return typeof v === "number" ? v : Number(v);
+}
+
+module.exports = { VERSION, scoreMember, combine, filingRisk, countryTable, peerTable, labelFor, trendWord, fromPercentile };

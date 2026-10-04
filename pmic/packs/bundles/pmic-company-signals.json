@@ -2,9 +2,9 @@
   "_comment": "Company verticals take an entity_id (lower-case ticker). Members are expanded per company from the metric list; metrics a company does not report are left out of that company's score rather than counted as missing.",
   "service_id": "pmic-company-signals",
   "display_name": "PMIC Company Fundamentals and Filing Risk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "category": "finance",
-  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, and a filing risk score from 8-K items, 13D filings and insider Form 4 activity. Every input carries its SEC citation.",
+  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, a filing risk score from 8-K items, 13D filings and insider Form 4 activity, an insider activity score, a balance sheet strength score, and a peer ranking against the other 13 companies on growth, margins and liquidity. Every input carries its SEC citation.",
   "default_horizon": "365d",
   "cache_seconds": 300,
   "hub_scope": [{ "source_id": "sec" }],
@@ -40,6 +40,56 @@
       "labels": { "high": "quiet", "mid": "active", "low": "elevated" },
       "penalties": { "high": 25, "medium": 8, "low_8k": 1 },
       "watch_metric": "insider_form4_weekly"
+    },
+    {
+      "id": "insider-activity",
+      "title": "Insider activity",
+      "question": "Are this company's insiders trading more than usual?",
+      "kind": "entity_composite",
+      "series_pattern": "sec:{TICKER}:{metric}",
+      "note": "Higher score means quieter insider activity than usual: weekly Form 4 filings compared with this company's own trailing year. Form 4 reports insider buys, sells, grants and exercises; a busy week is a reason to read the filings, not a verdict. The latest Form 4 and 13D filings are listed under recent_events.",
+      "labels": { "high": "quiet", "mid": "normal", "low": "unusually active" },
+      "trend_words": { "up": "quieting", "down": "picking up" },
+      "include_events": true,
+      "event_types": ["insider_form4", "ownership_13d"],
+      "metrics": [
+        { "metric": "insider_form4_weekly", "direction": -1 }
+      ]
+    },
+    {
+      "id": "balance-sheet",
+      "title": "Balance sheet strength",
+      "question": "How strong is this company's liquidity and leverage versus its own history?",
+      "kind": "entity_composite",
+      "series_pattern": "sec:{TICKER}:{metric}",
+      "note": "Higher score means a stronger balance sheet than usual for this company: more cash and current assets, a higher current ratio, less long-term debt and fewer current liabilities, each compared with its own recent quarters. Banks report differently; metrics a company does not file are left out of its score.",
+      "labels": { "high": "strong", "mid": "stable", "low": "stretched" },
+      "trend_words": { "up": "strengthening", "down": "weakening" },
+      "metrics": [
+        { "metric": "current_ratio", "weight": 2 },
+        { "metric": "cash", "weight": 2 },
+        { "metric": "long_term_debt", "weight": 2 },
+        { "metric": "assets_current" },
+        { "metric": "liabilities_current" },
+        { "metric": "total_assets" }
+      ]
+    },
+    {
+      "id": "peer-ranking",
+      "title": "Peer ranking",
+      "question": "How does this company rank against the other 13 large US companies on growth, profitability and cash generation?",
+      "kind": "peer_table",
+      "source_id": "sec",
+      "note": "Ranks all 14 companies on the latest reported value of each metric (year-over-year growth for revenue, operating income and cash flow; levels for margins and the current ratio). A company's score is its average rank position: 100 = first on every metric, 0 = last. This compares companies with each other, unlike the other company verticals, which compare a company with its own history.",
+      "labels": { "high": "leader", "mid": "middle of the pack", "low": "laggard" },
+      "metrics": [
+        { "metric": "revenue_q", "polarity": 1, "basis": "yoy growth" },
+        { "metric": "operating_income_q", "polarity": 1, "basis": "yoy growth" },
+        { "metric": "operating_cash_flow_q", "polarity": 1, "basis": "yoy growth" },
+        { "metric": "operating_margin", "polarity": 1, "basis": "level" },
+        { "metric": "net_margin", "polarity": 1, "basis": "level" },
+        { "metric": "current_ratio", "polarity": 1, "basis": "level" }
+      ]
     }
   ]
 }

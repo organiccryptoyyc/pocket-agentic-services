@@ -2,9 +2,9 @@
   "_comment": "One file per on-chain service. Related verticals are bundled into one service so they share one registration fee and one container. Member scores: when a member's own polarity matches (or no 'direction' is set) the hub's composite_score is used; when 'direction' differs from the hub's polarity (for example a neutral price series read as cost pressure), the pack scores it from the percentile in that direction. Neutral members without a direction are reported under 'watch', not averaged.",
   "service_id": "pmic-macro-signals",
   "display_name": "PMIC Macro and Markets Signals",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "category": "finance",
-  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, and an 8-country comparison. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
+  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, housing, consumer health, and 8-country comparisons of the economy, governance and stability, health systems and education. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
   "default_horizon": "90d",
   "cache_seconds": 300,
   "hub_scope": [{ "source_id": "fred" }, { "source_id": "bls" }, { "source_id": "bea" }, { "source_id": "worldbank" }],
@@ -115,6 +115,66 @@
       "source_id": "worldbank",
       "note": "Annual World Bank data (latest year each country has reported). Country score averages the hub's scores for the directional indicators.",
       "metrics": ["gdp_growth", "inflation_cpi", "unemployment_rate_ilo", "government_expense_pct_gdp", "education_spending_pct_gdp", "health_spending_pct_gdp", "tertiary_enrollment_gross"]
+    },
+    {
+      "id": "housing",
+      "title": "US housing market",
+      "question": "Is US housing heating up or cooling down?",
+      "kind": "composite",
+      "note": "Higher score means a hotter market than usual: starts, permits, new-home sales and price growth above their own history, and fewer months of unsold supply.",
+      "labels": { "high": "heating", "mid": "balanced", "low": "cooling" },
+      "trend_words": { "up": "heating", "down": "cooling" },
+      "members": [
+        { "series_id": "fred:HOUST", "weight": 2 },
+        { "series_id": "fred:PERMIT", "weight": 2 },
+        { "series_id": "fred:HSN1F" },
+        { "series_id": "fred:MSACSR", "direction": -1 },
+        { "series_id": "fred:HPIPONM226S", "direction": 1 }
+      ]
+    },
+    {
+      "id": "consumer",
+      "title": "US consumer health",
+      "question": "How strong is the US consumer: spending, income and credit?",
+      "kind": "composite",
+      "note": "Higher score means a stronger consumer than usual: real spending, real income and retail sales growing faster than their own history, card delinquencies lower. Saving rate and consumer credit growth are watch items.",
+      "labels": { "high": "strong", "mid": "steady", "low": "strained" },
+      "trend_words": { "up": "strengthening", "down": "weakening" },
+      "members": [
+        { "series_id": "fred:PCEC96", "weight": 2 },
+        { "series_id": "fred:DSPIC96", "weight": 2 },
+        { "series_id": "fred:RSAFS" },
+        { "series_id": "fred:DRCCLACBS" },
+        { "series_id": "fred:PSAVERT" },
+        { "series_id": "fred:TOTALSL" }
+      ]
+    },
+    {
+      "id": "country-risk",
+      "title": "Country governance and stability",
+      "question": "How stable and well governed is each of these countries?",
+      "kind": "country_table",
+      "source_id": "worldbank",
+      "note": "World Bank Worldwide Governance Indicators (annual estimates, about -2.5 weak to +2.5 strong). Ranked values compare countries with each other; country score averages the hub's scores, which compare each country with its own history.",
+      "metrics": ["wgi_government_effectiveness", "wgi_political_stability", "wgi_rule_of_law", "wgi_control_of_corruption", "wgi_regulatory_quality", "wgi_voice_accountability"]
+    },
+    {
+      "id": "health-systems",
+      "title": "Country health systems",
+      "question": "How do these countries compare on health outcomes and health spending?",
+      "kind": "country_table",
+      "source_id": "worldbank",
+      "note": "Annual World Bank data. Life expectancy, under-5 mortality and physicians per 1,000 are directional; health spending per capita and as a share of GDP are reported for comparison. Ranked values compare countries with each other.",
+      "metrics": ["life_expectancy", "under5_mortality", "physicians_per_1000", "health_spending_per_capita", "health_spending_pct_gdp"]
+    },
+    {
+      "id": "education",
+      "title": "Country education",
+      "question": "How do these countries compare on education access and investment?",
+      "kind": "country_table",
+      "source_id": "worldbank",
+      "note": "Annual World Bank data: secondary and tertiary gross enrollment and government education spending (% of GDP). China does not publish secondary enrollment to the World Bank. Ranked values compare countries with each other.",
+      "metrics": ["secondary_enrollment_gross", "tertiary_enrollment_gross", "education_spending_pct_gdp"]
     }
   ],
   "extra_routes": ["inflation_adjust"]

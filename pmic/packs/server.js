@@ -94,7 +94,7 @@ function entityOf(body, required) {
   return id;
 }
 
-const needsEntity = (v) => v.kind === "entity_composite" || v.kind === "entity_events";
+const needsEntity = (v) => v.kind === "entity_composite" || v.kind === "entity_events" || v.kind === "peer_table";
 const sinceFor = (horizon) => new Date(Date.now() - Number(horizon.replace("d", "")) * DAY).toISOString().slice(0, 10);
 
 let entityCache = { at: 0, map: null };
@@ -147,8 +147,20 @@ async function brief(v, { horizon, entity, countries }) {
     const cfgs = v.metrics.map((m) => ({ ...m, series_id: v.series_pattern.replace("{TICKER}", ticker).replace("{metric}", m.metric) }));
     const members = (await Promise.all(cfgs.map((m) => member(m, horizon)))).filter(Boolean);
     const out = V.combine(v, members, { horizon, entity: await entityInfo(entity) });
-    if (v.include_events) out.recent_events = (await hub("/v1/events", { entity_id: entity, since: sinceFor(horizon), limit: 20 })).events;
+    if (v.include_events) {
+      // event_types narrows the list (insider-activity shows Form 4 and 13D only).
+      const events = (await hub("/v1/events", { entity_id: entity, since: sinceFor(horizon), limit: v.event_types ? 500 : 20 })).events;
+      out.recent_events = (v.event_types ? events.filter((e) => v.event_types.includes(e.event_type)) : events).slice(0, 20);
+    }
     return out;
+  }
+  if (v.kind === "peer_table") {
+    const byMetric = new Map();
+    for (const m of v.metrics) {
+      const r = await hub("/v1/signals", { source_id: v.source_id, metric_name: m.metric, limit: 200, horizon });
+      byMetric.set(m.metric, r.signals);
+    }
+    return V.peerTable(v, byMetric, { horizon, entity: await entityInfo(entity), peers: PACK.entities });
   }
   if (v.kind === "entity_events") {
     const events = (await hub("/v1/events", { entity_id: entity, since: sinceFor(horizon), limit: 500 })).events;

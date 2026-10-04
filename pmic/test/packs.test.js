@@ -66,7 +66,7 @@ function checkBrief(b, bundle) {
 
 test("probes: version, health and the PSM healthz path", async () => {
   for (const b of BUNDLES) {
-    assert.deepEqual((await call(b, "GET", "/v1/version")).json, { service: b, version: "0.2.0" });
+    assert.deepEqual((await call(b, "GET", "/v1/version")).json, { service: b, version: require(`../packs/bundles/${b}.json`).version });
     for (const p of ["/v1/health", "/healthz"]) {
       const h = await call(b, "GET", p);
       assert.equal(h.status, 200);
@@ -77,7 +77,8 @@ test("probes: version, health and the PSM healthz path", async () => {
 
 test("macro bundle: every vertical is a scored, cited brief", async () => {
   const list = (await call("pmic-macro-signals", "POST", "/v1/verticals", {})).json;
-  assert.equal(list.count, 7);
+  assert.equal(list.count, 12);
+  for (const id of ["housing", "consumer", "country-risk", "health-systems", "education"]) assert.ok(list.verticals.some((v) => v.id === id), `batch 2 vertical ${id}`);
   for (const v of list.verticals) {
     const r = await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: v.id });
     assert.equal(r.status, 200, JSON.stringify(r.json));
@@ -109,7 +110,7 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
 
 test("macro overview and inflation calculator", async () => {
   const o = (await call("pmic-macro-signals", "POST", "/v1/overview", {})).json;
-  assert.equal(o.count, 7);
+  assert.equal(o.count, 12);
   assert.ok(o.briefs.every((b) => b.status === "ok"));
   const range = (await call("pmic-macro-signals", "POST", "/v1/inflation/adjust", { amount: 100, from: "1990-01" }));
   assert.equal(range.status, 400);
@@ -133,11 +134,46 @@ test("company bundle: fundamentals and filing risk need a covered entity", async
   assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "fundamentals" })).json.error.code, "invalid_input");
   assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "fundamentals", entity_id: "tsla" })).json.error.code, "unknown_entity");
   const o = (await call("pmic-company-signals", "POST", "/v1/overview", { entity_id: "msft" })).json;
-  assert.equal(o.count, 2);
+  assert.equal(o.count, 5);
   assert.equal((await call("pmic-company-signals", "POST", "/v1/events", {})).status, 400, "company events need an entity");
   const ev = await call("pmic-company-signals", "POST", "/v1/events", { entity_id: "aapl", limit: 5 });
   assert.equal(ev.status, 200);
   assert.ok(ev.json.events.every((e) => e.entity_id === "aapl"));
+});
+
+test("company batch 2: insider activity, balance sheet and peer ranking", async () => {
+  const ins = (await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "insider-activity", entity_id: "aapl" })).json;
+  checkBrief(ins, "pmic-company-signals");
+  assert.equal(ins.inputs[0].series_id, "sec:AAPL:insider_form4_weekly");
+  assert.equal(ins.inputs[0].scoring, "percentile_inverted", "more insider filings than usual reads as a lower score");
+  assert.ok(ins.recent_events.every((e) => ["insider_form4", "ownership_13d"].includes(e.event_type)), "only insider and 13D events are listed");
+  const bs = (await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "balance-sheet", entity_id: "msft" })).json;
+  checkBrief(bs, "pmic-company-signals");
+  assert.ok(bs.inputs.some((m) => m.series_id === "sec:MSFT:long_term_debt"));
+  const peer = (await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "peer-ranking", entity_id: "nvda" })).json;
+  checkBrief(peer, "pmic-company-signals");
+  assert.ok(peer.peers.length >= 10, "ranks the covered companies");
+  assert.deepEqual(peer.peers.map((p) => p.position), peer.peers.map((_, i) => i + 1));
+  assert.equal(peer.position, peer.peers.find((p) => p.entity_id === "nvda").position);
+  for (const m of peer.metrics) {
+    assert.ok(m.rows.every((r, i) => r.rank === i + 1));
+    assert.equal(m.rows[0].score, 100);
+    assert.equal(m.rows[m.rows.length - 1].score, 0);
+  }
+  assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "peer-ranking" })).json.error.code, "invalid_input");
+});
+
+test("peer table: rank positions, polarity and too few metrics", () => {
+  const V = require("../packs/lib/verticals");
+  const sig = (id, v) => ({ status: "ok", entity: { entity_id: id, name: id.toUpperCase() }, metric: { label: "M", unit: "ratio", polarity: 1 }, value: { current: v, transformed: v, as_of: "2026-06-30" }, provenance: { citation_url: "https://www.sec.gov/x" } });
+  const vertical = { id: "p", title: "Peer", labels: { high: "leader", mid: "mid", low: "laggard" }, metrics: [{ metric: "a", polarity: 1 }, { metric: "b", polarity: -1 }] };
+  const by = new Map([["a", [sig("x", 3), sig("y", 2), sig("z", 1)]], ["b", [sig("x", 3), sig("y", 2), sig("z", 1)]]]);
+  const out = V.peerTable(vertical, by, { horizon: "365d", entity: { entity_id: "y", name: "Y" }, peers: ["x", "y", "z"] });
+  assert.equal(out.score, 50);
+  assert.equal(out.metrics[1].rows[0].entity_id, "z", "polarity -1 ranks the lowest value first");
+  const lone = V.peerTable(vertical, new Map([["a", [sig("x", 3), sig("y", 2)]]]), { horizon: "365d", entity: { entity_id: "z", name: "Z" }, peers: ["x", "y", "z"] });
+  assert.equal(lone.status, "insufficient_data");
+  assert.equal(lone.score, null);
 });
 
 test("pharma bundle: market and company briefs", async () => {

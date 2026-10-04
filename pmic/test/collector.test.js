@@ -155,7 +155,7 @@ test("cadence: nothing is due right after a pass; a failure backs off and raises
   const db2 = dbLib.open({ dataDir: d2 });
   const failing = makeFetch(catalog, { now: NOW, fail: (u) => u.host === "api.worldbank.org" });
   const s = await collectOnce(db2, catalog, { now: NOW, dataDir: d2, env: ENV, fetchImpl: failing, sources: ["worldbank"] });
-  assert.equal(s.sources[0].failed.length, 55);
+  assert.equal(s.sources[0].failed.length, catalog.series.filter((x) => x.source_id === "worldbank").length);
   assert.ok(count(db2, "SELECT COUNT(*) n FROM alerts WHERE kind = 'api_failure' AND resolved_at IS NULL") > 0);
   assert.ok(count(db2, "SELECT COUNT(*) n FROM fetch_logs WHERE ok = 0 AND http_status = 503") > 0);
   const soon = await collectOnce(db2, catalog, { now: new Date(NOW.getTime() + 10 * 60e3), dataDir: d2, env: ENV, fetchImpl: failing, sources: ["worldbank"] });

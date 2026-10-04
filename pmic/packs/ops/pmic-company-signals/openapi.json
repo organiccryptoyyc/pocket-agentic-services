@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Company Fundamentals and Filing Risk",
-    "version": "0.2.0",
-    "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, and a filing risk score from 8-K items, 13D filings and insider Form 4 activity. Every input carries its SEC citation."
+    "version": "0.3.0",
+    "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, a filing risk score from 8-K items, 13D filings and insider Form 4 activity, an insider activity score, a balance sheet strength score, and a peer ranking against the other 13 companies on growth, margins and liquidity. Every input carries its SEC citation."
   },
   "servers": [
     {
@@ -64,7 +64,10 @@
                     "type": "string",
                     "enum": [
                       "fundamentals",
-                      "filing-risk"
+                      "filing-risk",
+                      "insider-activity",
+                      "balance-sheet",
+                      "peer-ranking"
                     ]
                   },
                   "entity_id": {
@@ -129,7 +132,7 @@
     },
     "/v1/overview": {
       "post": {
-        "summary": "Every brief for one company.",
+        "summary": "Every brief at once, compact.",
         "requestBody": {
           "required": true,
           "content": {
