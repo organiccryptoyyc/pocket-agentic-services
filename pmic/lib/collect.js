@@ -27,6 +27,14 @@ const ADAPTERS = {
   lda: require("./adapters/lda"),
   usaspending: require("./adapters/usaspending"),
   pinksheet: require("./adapters/pinksheet"),
+  treasury: require("./adapters/treasury"),
+  fema: require("./adapters/fema"),
+  usgs: require("./adapters/usgs"),
+  nws: require("./adapters/nws"),
+  cisa: require("./adapters/cisa"),
+  nvd: require("./adapters/nvd"),
+  cdc: require("./adapters/cdc"),
+  patentsview: require("./adapters/patentsview"),
 };
 
 const DAY = 86400000;

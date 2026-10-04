@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Macro and Markets Signals",
-    "version": "0.3.0",
-    "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, housing, consumer health, and 8-country comparisons of the economy, governance and stability, health systems and education. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator."
+    "version": "0.4.0",
+    "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, housing, consumer health, Treasury auction demand (TreasuryDirect), US fuel supply (EIA), trade flows by partner, business formation (Census), and 8-country comparisons of the economy, governance and stability, health systems and education. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator."
   },
   "servers": [
     {
@@ -77,7 +77,11 @@
                       "education",
                       "yield-curve",
                       "bank-health",
-                      "global-rates-fx"
+                      "global-rates-fx",
+                      "treasury-demand",
+                      "energy-supply",
+                      "trade-flows",
+                      "business-formation"
                     ]
                   },
                   "horizon": {
@@ -196,7 +200,8 @@
                       "ecb",
                       "fdic",
                       "cfpb",
-                      "pinksheet"
+                      "pinksheet",
+                      "treasury"
                     ]
                   },
                   "horizon": {

@@ -2,12 +2,12 @@
   "_comment": "Public sector verticals: product safety recalls, political money and federal spending, from free US government APIs (CPSC, NHTSA, FDA, FEC, Senate LDA, USAspending, Treasury). Batch 2's one new service.",
   "service_id": "pmic-public-sector-signals",
   "display_name": "PMIC Public Sector Signals",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "category": "government",
-  "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC consumer products, NHTSA vehicles and equipment, FDA food), political money (FEC independent expenditures, Senate lobbying registrations and filings) and federal spending (USAspending award obligations by agency, Monthly Treasury Statement outlays, receipts and deficit). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input.",
+  "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC consumer products, NHTSA vehicles and equipment, FDA food), political money (FEC independent expenditures, Senate lobbying registrations and filings) and federal spending (USAspending award obligations by agency, Monthly Treasury Statement outlays, receipts and deficit), natural hazards (FEMA disaster declarations, USGS earthquakes, NWS severe alerts), cyber threat (CISA Known Exploited Vulnerabilities, NIST NVD critical CVEs) and respiratory illness (CDC emergency department visits for COVID-19, flu and RSV). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input.",
   "default_horizon": "90d",
   "cache_seconds": 300,
-  "hub_scope": [{ "source_id": "cpsc" }, { "source_id": "nhtsa" }, { "source_id": "openfda", "entity_id": "us-food" }, { "source_id": "fec" }, { "source_id": "lda" }, { "source_id": "usaspending" }, { "source_id": "fred", "entity_id": "us-federal" }],
+  "hub_scope": [{ "source_id": "cpsc" }, { "source_id": "nhtsa" }, { "source_id": "openfda", "entity_id": "us-food" }, { "source_id": "fec" }, { "source_id": "lda" }, { "source_id": "usaspending" }, { "source_id": "fred", "entity_id": "us-federal" }, {"source_id": "fema"}, {"source_id": "usgs"}, {"source_id": "nws"}, {"source_id": "cisa"}, {"source_id": "nvd"}, {"source_id": "cdc"}],
   "verticals": [
     {
       "id": "product-recalls",
@@ -62,6 +62,53 @@
         { "series_id": "usaspending:obligations_dot_monthly" },
         { "series_id": "usaspending:obligations_ed_monthly" },
         { "series_id": "usaspending:obligations_usda_monthly" }
+      ]
+    },
+    {
+      "id": "natural-hazards",
+      "title": "US natural hazards",
+      "question": "Are disasters, severe weather and earthquakes running above normal?",
+      "kind": "composite",
+      "note": "Higher score means calmer than usual: fewer FEMA disaster declarations and fewer earthquakes (magnitude 4+ in the US region, 6+ worldwide) than each series' trailing two years. Active severe or extreme NWS weather alerts are a daily watch item that builds history from the first run. Declarations and major quakes are listed under recent_events.",
+      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
+      "trend_words": { "up": "calming", "down": "intensifying" },
+      "events_entities": ["us-hazards"],
+      "members": [
+        { "series_id": "fema:declarations_monthly", "weight": 2 },
+        { "series_id": "fema:major_disasters_monthly", "weight": 2 },
+        { "series_id": "usgs:us_quakes_m4_monthly" },
+        { "series_id": "usgs:global_quakes_m6_monthly" },
+        { "series_id": "nws:severe_alerts_active" }
+      ]
+    },
+    {
+      "id": "cyber-threat",
+      "title": "Cyber threat level",
+      "question": "Are actively exploited software flaws rising?",
+      "kind": "composite",
+      "note": "Higher score means calmer than usual: fewer vulnerabilities added to CISA's Known Exploited catalog (all, and those used in ransomware) each week, and fewer critical CVEs published in the NVD each month, against their trailing history. All CVEs published is a watch item. The newest exploited vulnerabilities are listed under recent_events.",
+      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
+      "trend_words": { "up": "calming", "down": "intensifying" },
+      "events_entities": ["us-cyber"],
+      "members": [
+        { "series_id": "cisa:kev_added_weekly", "weight": 2 },
+        { "series_id": "cisa:kev_ransomware_weekly", "weight": 2 },
+        { "series_id": "nvd:critical_cves_monthly" },
+        { "series_id": "nvd:cves_monthly" }
+      ]
+    },
+    {
+      "id": "disease-activity",
+      "title": "US respiratory illness",
+      "question": "Is respiratory illness (COVID-19, flu, RSV) rising in the US?",
+      "kind": "composite",
+      "note": "Higher score means less respiratory illness than usual: the weekly share of US emergency department visits diagnosed as COVID-19, influenza or RSV (CDC National Syndromic Surveillance Program), each against its own trailing year. Seasonal: winter peaks are normal, so read the trend with the calendar. Not for clinical decisions.",
+      "labels": { "high": "low activity", "mid": "moderate", "low": "high activity" },
+      "trend_words": { "up": "easing", "down": "rising" },
+      "members": [
+        { "series_id": "cdc:ed_covid_weekly" },
+        { "series_id": "cdc:ed_flu_weekly" },
+        { "series_id": "cdc:ed_rsv_weekly" }
       ]
     }
   ]

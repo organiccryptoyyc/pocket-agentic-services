@@ -1,16 +1,16 @@
 # PMIC service packs
 
 Paid Pocket services that sell scored briefs built on the PMIC hub. Related verticals are bundled
-into one service, so each bundle costs one registration fee and runs one container. Batches 1 and
-2 have 26 verticals in 4 services (batch 2 added 13 to the existing services and 3 in one new
-service):
+into one service, so each bundle costs one registration fee and runs one container. Batches 1 to
+3 have 36 verticals in 4 services (batch 2 added 13 to the existing services and 3 in one new
+service; batch 3 added 10 to the existing four, so no new registration fee):
 
 | Service ID | Verticals | Needs `entity_id` |
 |---|---|---|
-| `pmic-macro-signals` | macro-regime, inflation, labor, rates, credit-stress, commodities, global-compare, housing, consumer, country-risk, health-systems, education, yield-curve, bank-health, global-rates-fx (+ CPI inflation calculator) | no |
-| `pmic-company-signals` | fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking, public-attention | yes: aapl, msft, nvda, amzn, wmt, jpm, bac, xom, pfe, lly, jnj, unh, nflx, dis |
-| `pmic-pharma-signals` | drug-market, company-safety, clinical-pipeline | company-safety and clinical-pipeline: pfe, lly, jnj |
-| `pmic-public-sector-signals` | product-recalls, political-money, federal-spending | no |
+| `pmic-macro-signals` | macro-regime, inflation, labor, rates, credit-stress, commodities, global-compare, housing, consumer, country-risk, health-systems, education, yield-curve, bank-health, global-rates-fx, treasury-demand, energy-supply, trade-flows, business-formation (+ CPI inflation calculator) | no |
+| `pmic-company-signals` | fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking, public-attention, earnings-quality, innovation | yes: aapl, msft, nvda, amzn, wmt, jpm, bac, xom, pfe, lly, jnj, unh, nflx, dis |
+| `pmic-pharma-signals` | drug-market, company-safety, clinical-pipeline, drug-shortages | company-safety and clinical-pipeline: pfe, lly, jnj |
+| `pmic-public-sector-signals` | product-recalls, political-money, federal-spending, natural-hazards, cyber-threat, disease-activity | no |
 
 All data is free and public (FRED, BLS, BEA, SEC EDGAR, openFDA, World Bank, ECB, FDIC, CFPB, Wikimedia,
 ClinicalTrials.gov, CPSC, NHTSA, FEC, Senate LDA, USAspending). Paid or

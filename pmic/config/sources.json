@@ -204,6 +204,102 @@
       "key_env": null,
       "required_key": false,
       "notes": "CC BY 4.0. Monthly averages from the CMO-Historical-Data-Monthly.xlsx workbook; the link is read from the Pink Sheet page each poll because it changes with every release."
+    },
+    {
+      "source_id": "treasury",
+      "name": "TreasuryDirect auction results (Bureau of the Fiscal Service)",
+      "homepage": "https://www.treasurydirect.gov/webapis/webapisecurities.htm",
+      "terms_url": "https://www.treasurydirect.gov/legal-information/",
+      "tier": 1,
+      "reliability_score": 95,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key. Note and Bond auctions; monthly means of bid-to-cover, bidder shares and the high-minus-median yield spread."
+    },
+    {
+      "source_id": "fema",
+      "name": "OpenFEMA Disaster Declarations Summaries v2",
+      "homepage": "https://www.fema.gov/about/openfema/api",
+      "terms_url": "https://www.fema.gov/about/openfema/terms-conditions",
+      "tier": 1,
+      "reliability_score": 92,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key. Rows are per designated area; declarations are counted once per disaster number."
+    },
+    {
+      "source_id": "usgs",
+      "name": "USGS Earthquake Hazards Program (FDSN event service)",
+      "homepage": "https://earthquake.usgs.gov/fdsnws/event/1/",
+      "terms_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+      "tier": 1,
+      "reliability_score": 95,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. Monthly counts by magnitude; the US box includes nearby parts of Canada and Mexico."
+    },
+    {
+      "source_id": "nws",
+      "name": "National Weather Service alerts API (api.weather.gov)",
+      "homepage": "https://www.weather.gov/documentation/services-web-api",
+      "terms_url": "https://www.weather.gov/disclaimer",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key, User-Agent required. Active alerts only, so the series is a daily snapshot that builds history from the first run."
+    },
+    {
+      "source_id": "cisa",
+      "name": "CISA Known Exploited Vulnerabilities catalog",
+      "homepage": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "terms_url": "https://www.cisa.gov/privacy-policy",
+      "tier": 1,
+      "reliability_score": 95,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. One JSON file; additions counted by dateAdded."
+    },
+    {
+      "source_id": "nvd",
+      "name": "NIST National Vulnerability Database (CVE API 2.0)",
+      "homepage": "https://nvd.nist.gov/developers/vulnerabilities",
+      "terms_url": "https://nvd.nist.gov/developers/terms-of-use",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 10080,
+      "key_env": "NVD_API_KEY",
+      "required_key": false,
+      "notes": "Free. Without a key, 5 requests per 30 s, so a full backfill takes a few minutes; a free key makes it about ten times faster. Weekly poll."
+    },
+    {
+      "source_id": "cdc",
+      "name": "CDC National Syndromic Surveillance Program (data.cdc.gov)",
+      "homepage": "https://data.cdc.gov/Public-Health-Surveillance/2023-Respiratory-Virus-Response-NSSP-Emergency-Dep/vutn-jzwm",
+      "terms_url": "https://www.cdc.gov/other/agencymaterials.html",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 1440,
+      "key_env": "CDC_APP_TOKEN",
+      "required_key": false,
+      "notes": "Public domain. Socrata API; an app token is optional and only raises rate limits."
+    },
+    {
+      "source_id": "patentsview",
+      "name": "USPTO PatentsView PatentSearch API",
+      "homepage": "https://search.patentsview.org/docs/",
+      "terms_url": "https://patentsview.org/terms-of-use",
+      "tier": 2,
+      "reliability_score": 85,
+      "cadence_minutes": 10080,
+      "key_env": "PATENTSVIEW_API_KEY",
+      "required_key": true,
+      "notes": "Free key required (request at patentsview.org). Granted utility patents by assignee name, monthly; 45 requests a minute. Weekly poll."
     }
   ]
 }

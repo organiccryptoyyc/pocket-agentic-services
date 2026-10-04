@@ -2,12 +2,12 @@
   "_comment": "One file per on-chain service. Related verticals are bundled into one service so they share one registration fee and one container. Member scores: when a member's own polarity matches (or no 'direction' is set) the hub's composite_score is used; when 'direction' differs from the hub's polarity (for example a neutral price series read as cost pressure), the pack scores it from the percentile in that direction. Neutral members without a direction are reported under 'watch', not averaged.",
   "service_id": "pmic-macro-signals",
   "display_name": "PMIC Macro and Markets Signals",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "category": "finance",
-  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, housing, consumer health, and 8-country comparisons of the economy, governance and stability, health systems and education. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
+  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, housing, consumer health, Treasury auction demand (TreasuryDirect), US fuel supply (EIA), trade flows by partner, business formation (Census), and 8-country comparisons of the economy, governance and stability, health systems and education. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
   "default_horizon": "90d",
   "cache_seconds": 300,
-  "hub_scope": [{ "source_id": "fred" }, { "source_id": "bls" }, { "source_id": "bea" }, { "source_id": "worldbank" }, { "source_id": "ecb" }, { "source_id": "fdic" }, { "source_id": "cfpb" }, { "source_id": "pinksheet" }],
+  "hub_scope": [{ "source_id": "fred" }, { "source_id": "bls" }, { "source_id": "bea" }, { "source_id": "worldbank" }, { "source_id": "ecb" }, { "source_id": "fdic" }, { "source_id": "cfpb" }, { "source_id": "pinksheet" }, {"source_id": "treasury"}],
   "verticals": [
     {
       "id": "macro-regime",
@@ -242,6 +242,70 @@
         { "series_id": "ecb:EXR.D.JPY.EUR.SP00.A" },
         { "series_id": "ecb:EXR.D.CNY.EUR.SP00.A" },
         { "series_id": "ecb:EXR.D.CHF.EUR.SP00.A" }
+      ]
+    },
+    {
+      "id": "treasury-demand",
+      "title": "US Treasury auction demand",
+      "question": "Is demand for US government debt weakening?",
+      "kind": "composite",
+      "note": "Higher score means stronger demand than usual at Treasury note and bond auctions: a higher bid-to-cover, a larger share taken by indirect bidders (mostly foreign and institutional buyers), less left to primary dealers, and a narrower gap between the high and median yield. Monthly averages over that month's auctions; weak auctions are listed under recent_events.",
+      "labels": { "high": "strong", "mid": "normal", "low": "weak" },
+      "trend_words": { "up": "strengthening", "down": "weakening" },
+      "events_entities": ["us-federal"],
+      "event_types": ["weak_treasury_auction"],
+      "members": [
+        { "series_id": "treasury:bid_to_cover_monthly", "weight": 2 },
+        { "series_id": "treasury:indirect_share_monthly", "weight": 2 },
+        { "series_id": "treasury:dealer_share_monthly" },
+        { "series_id": "treasury:yield_spread_bp_monthly" }
+      ]
+    },
+    {
+      "id": "energy-supply",
+      "title": "US fuel supply",
+      "question": "Are US fuel supplies tight, and are pump prices rising?",
+      "kind": "composite",
+      "note": "Higher score means better supplied than usual: more commercial crude and gasoline in storage and lower gasoline and diesel prices than their own trailing year (weekly EIA data via FRED). Refinery utilization is a watch item.",
+      "labels": { "high": "well supplied", "mid": "balanced", "low": "tight" },
+      "trend_words": { "up": "easing", "down": "tightening" },
+      "members": [
+        { "series_id": "fred:WCESTUS1", "weight": 2 },
+        { "series_id": "fred:WGTSTUS1", "weight": 2 },
+        { "series_id": "fred:GASREGW", "direction": -1, "weight": 2 },
+        { "series_id": "fred:GASDESW", "direction": -1 },
+        { "series_id": "fred:WPULEUS3" }
+      ]
+    },
+    {
+      "id": "trade-flows",
+      "title": "US trade flows",
+      "question": "Is the US trade deficit widening, and with which partners?",
+      "kind": "composite",
+      "note": "Higher score means a better trade position than usual: a smaller goods-and-services deficit and faster export growth. Imports in total and from China, Mexico and Canada are watch items, so the brief shows which partner is unusual.",
+      "labels": { "high": "improving", "mid": "stable", "low": "deteriorating" },
+      "trend_words": { "up": "improving", "down": "deteriorating" },
+      "members": [
+        { "series_id": "fred:BOPGSTB", "weight": 2 },
+        { "series_id": "fred:BOPTEXP", "weight": 2 },
+        { "series_id": "fred:BOPTIMP" },
+        { "series_id": "fred:IMPCH" },
+        { "series_id": "fred:IMPMX" },
+        { "series_id": "fred:IMPCA" }
+      ]
+    },
+    {
+      "id": "business-formation",
+      "title": "US business formation",
+      "question": "Are Americans starting businesses faster or slower than usual?",
+      "kind": "composite",
+      "note": "Higher score means faster business formation than usual: new business applications, high-propensity applications (those likely to hire) and the Census projection of businesses that will form within four quarters, year over year (Census Business Formation Statistics via FRED).",
+      "labels": { "high": "booming", "mid": "steady", "low": "slowing" },
+      "trend_words": { "up": "accelerating", "down": "slowing" },
+      "members": [
+        { "series_id": "fred:BABATOTALSA" },
+        { "series_id": "fred:BAHBATOTALSA", "weight": 2 },
+        { "series_id": "fred:BFBF4QTOTALSA", "weight": 2 }
       ]
     }
   ],

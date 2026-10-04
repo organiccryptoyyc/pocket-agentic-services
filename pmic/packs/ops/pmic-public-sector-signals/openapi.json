@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Public Sector Signals",
-    "version": "0.1.0",
-    "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC consumer products, NHTSA vehicles and equipment, FDA food), political money (FEC independent expenditures, Senate lobbying registrations and filings) and federal spending (USAspending award obligations by agency, Monthly Treasury Statement outlays, receipts and deficit). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input."
+    "version": "0.2.0",
+    "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC consumer products, NHTSA vehicles and equipment, FDA food), political money (FEC independent expenditures, Senate lobbying registrations and filings) and federal spending (USAspending award obligations by agency, Monthly Treasury Statement outlays, receipts and deficit), natural hazards (FEMA disaster declarations, USGS earthquakes, NWS severe alerts), cyber threat (CISA Known Exploited Vulnerabilities, NIST NVD critical CVEs) and respiratory illness (CDC emergency department visits for COVID-19, flu and RSV). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input."
   },
   "servers": [
     {
@@ -65,7 +65,10 @@
                     "enum": [
                       "product-recalls",
                       "political-money",
-                      "federal-spending"
+                      "federal-spending",
+                      "natural-hazards",
+                      "cyber-threat",
+                      "disease-activity"
                     ]
                   },
                   "horizon": {
@@ -177,7 +180,13 @@
                       "fec",
                       "lda",
                       "usaspending",
-                      "fred"
+                      "fred",
+                      "fema",
+                      "usgs",
+                      "nws",
+                      "cisa",
+                      "nvd",
+                      "cdc"
                     ]
                   },
                   "horizon": {

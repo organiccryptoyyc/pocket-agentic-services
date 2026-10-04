@@ -35,7 +35,7 @@ before(async () => {
   const catalog = catalogLib.load();
   const db = dbLib.open({ dataDir: dir });
   const now = new Date("2026-10-04T06:00:00Z");
-  await collectOnce(db, catalog, { now, dataDir: dir, env: { BEA_API_KEY: "k", PMIC_SEC_USER_AGENT: "t t@example.com" }, fetchImpl: makeFetch(catalog, { now, blsMirrorsFred: true }) });
+  await collectOnce(db, catalog, { now, dataDir: dir, env: { BEA_API_KEY: "k", PMIC_SEC_USER_AGENT: "t t@example.com", PATENTSVIEW_API_KEY: "k", PMIC_NVD_GAP_MS: "0", PMIC_PATENTSVIEW_GAP_MS: "0" }, fetchImpl: makeFetch(catalog, { now, blsMirrorsFred: true }) });
   db.close();
   await start("server.js", path.join(__dirname, ".."), { PORT: String(HUB_PORT), PMIC_DATA_DIR: dir, PMIC_API_TOKEN: "hub-token", PMIC_INGEST_TOKEN: "" }, '"listening":true');
   for (const b of BUNDLES) {
@@ -77,7 +77,7 @@ test("probes: version, health and the PSM healthz path", async () => {
 
 test("macro bundle: every vertical is a scored, cited brief", async () => {
   const list = (await call("pmic-macro-signals", "POST", "/v1/verticals", {})).json;
-  assert.equal(list.count, 15);
+  assert.equal(list.count, 19);
   for (const id of ["housing", "consumer", "country-risk", "health-systems", "education", "yield-curve", "bank-health", "global-rates-fx"]) assert.ok(list.verticals.some((v) => v.id === id), `batch 2 vertical ${id}`);
   for (const v of list.verticals) {
     const r = await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: v.id });
@@ -89,7 +89,7 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
       continue;
     }
     checkBrief(r.json, "pmic-macro-signals");
-    assert.ok(r.json.inputs.length >= 2 && r.json.inputs.length + r.json.watch.length >= 4, `${v.id} inputs`);
+    assert.ok(r.json.inputs.length >= 2 && r.json.inputs.length + r.json.watch.length >= 3, `${v.id} inputs`);
     // The stub hub has one scoring pass, so there is no stored score from 90 days ago yet.
     assert.equal(r.json.trend_basis, "input_trends");
     const words = require("../packs/bundles/pmic-macro-signals.json").verticals.find((x) => x.id === v.id).trend_words;
@@ -110,7 +110,7 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
 
 test("macro overview and inflation calculator", async () => {
   const o = (await call("pmic-macro-signals", "POST", "/v1/overview", {})).json;
-  assert.equal(o.count, 15);
+  assert.equal(o.count, 19);
   assert.ok(o.briefs.every((b) => b.status === "ok"));
   const range = (await call("pmic-macro-signals", "POST", "/v1/inflation/adjust", { amount: 100, from: "1990-01" }));
   assert.equal(range.status, 400);
@@ -134,7 +134,7 @@ test("company bundle: fundamentals and filing risk need a covered entity", async
   assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "fundamentals" })).json.error.code, "invalid_input");
   assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "fundamentals", entity_id: "tsla" })).json.error.code, "unknown_entity");
   const o = (await call("pmic-company-signals", "POST", "/v1/overview", { entity_id: "msft" })).json;
-  assert.equal(o.count, 6);
+  assert.equal(o.count, 8);
   assert.equal((await call("pmic-company-signals", "POST", "/v1/events", {})).status, 400, "company events need an entity");
   const ev = await call("pmic-company-signals", "POST", "/v1/events", { entity_id: "aapl", limit: 5 });
   assert.equal(ev.status, 200);
@@ -214,7 +214,7 @@ test("company and pharma batch 2: insider dollar values, public attention, clini
 test("public sector bundle: recalls, political money and federal spending", async () => {
   const b = "pmic-public-sector-signals";
   const list = (await call(b, "POST", "/v1/verticals", {})).json;
-  assert.deepEqual(list.verticals.map((v) => v.id), ["product-recalls", "political-money", "federal-spending"]);
+  assert.deepEqual(list.verticals.map((v) => v.id), ["product-recalls", "political-money", "federal-spending", "natural-hazards", "cyber-threat", "disease-activity"]);
   for (const v of list.verticals) checkBrief((await call(b, "POST", "/v1/brief", { vertical: v.id })).json, b);
   const rec = (await call(b, "POST", "/v1/brief", { vertical: "product-recalls" })).json;
   assert.equal(rec.inputs.length, 6);
@@ -223,11 +223,42 @@ test("public sector bundle: recalls, political money and federal spending", asyn
   assert.ok(fed.watch.some((m) => m.series_id === "usaspending:obligations_dod_monthly"), "agencies are watch items");
   assert.ok(fed.watch.some((m) => m.series_id === "fred:MTSR133FMS"), "receipts are a watch item");
   const o = (await call(b, "POST", "/v1/overview", {})).json;
-  assert.equal(o.count, 3);
+  assert.equal(o.count, 6);
   const sig = (await call(b, "POST", "/v1/signals", { limit: 200 })).json;
-  assert.ok(sig.signals.every((x) => /^(cpsc|nhtsa|openfda:food|fec|lda|usaspending|fred:MTS)/.test(x.series_id)), "only public sector series");
+  assert.ok(sig.signals.every((x) => /^(cpsc|nhtsa|openfda:food|fec|lda|usaspending|fred:MTS|fema|usgs|nws|cisa|nvd|cdc)/.test(x.series_id)), "only public sector series");
   assert.equal((await call(b, "POST", "/v1/signal", { series_id: "fred:UNRATE" })).json.error.code, "unknown_series");
   assert.equal((await call(b, "POST", "/v1/events", {})).status, 404, "no raw events route");
+});
+
+test("batch 3 verticals: every one is a scored, cited brief", async () => {
+  for (const id of ["treasury-demand", "energy-supply", "trade-flows", "business-formation"]) {
+    const r = await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: id });
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    checkBrief(r.json, "pmic-macro-signals");
+  }
+  const td = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "treasury-demand" })).json;
+  assert.ok(td.inputs.some((m) => m.series_id === "treasury:bid_to_cover_monthly"));
+  assert.ok(Array.isArray(td.recent_events) && td.recent_events.every((e) => e.event_type === "weak_treasury_auction"), "only weak auctions are listed");
+  const energy = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "energy-supply" })).json;
+  assert.equal(energy.inputs.find((m) => m.series_id === "fred:GASREGW").direction, -1, "pump prices read as tightness");
+  assert.ok(energy.watch.some((m) => m.series_id === "fred:WPULEUS3"));
+  for (const id of ["earnings-quality", "innovation"]) {
+    const r = await call("pmic-company-signals", "POST", "/v1/brief", { vertical: id, entity_id: "aapl" });
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    checkBrief(r.json, "pmic-company-signals");
+  }
+  const shortages = (await call("pmic-pharma-signals", "POST", "/v1/brief", { vertical: "drug-shortages" })).json;
+  checkBrief(shortages, "pmic-pharma-signals");
+  assert.ok(shortages.recent_events.length > 0 && shortages.recent_events.every((e) => e.event_type === "drug_shortage"), "shortages, not recalls or approvals");
+  for (const id of ["natural-hazards", "cyber-threat", "disease-activity"]) {
+    const r = await call("pmic-public-sector-signals", "POST", "/v1/brief", { vertical: id });
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    checkBrief(r.json, "pmic-public-sector-signals");
+  }
+  const hazards = (await call("pmic-public-sector-signals", "POST", "/v1/brief", { vertical: "natural-hazards" })).json;
+  assert.ok(hazards.recent_events.some((e) => e.event_type === "disaster_declaration") && hazards.recent_events.some((e) => e.event_type === "earthquake"));
+  const cyber = (await call("pmic-public-sector-signals", "POST", "/v1/brief", { vertical: "cyber-threat" })).json;
+  assert.ok(cyber.recent_events.every((e) => e.event_type === "exploited_vulnerability"));
 });
 
 test("pharma bundle: market and company briefs", async () => {

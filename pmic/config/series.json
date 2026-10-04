@@ -12,6 +12,12 @@
     { "entity_id": "us-banking", "entity_type": "sector", "name": "U.S. commercial banks (aggregate)", "geography": "US", "industry": "banking" },
     { "entity_id": "us-housing", "entity_type": "sector", "name": "U.S. housing market", "geography": "US", "industry": "housing" },
     { "entity_id": "us-consumer", "entity_type": "sector", "name": "U.S. consumers (aggregate)", "geography": "US", "industry": "consumer" },
+    { "entity_id": "us-energy", "entity_type": "sector", "name": "U.S. fuel and oil supply", "geography": "US", "industry": "energy" },
+    { "entity_id": "us-trade", "entity_type": "sector", "name": "U.S. international trade", "geography": "US", "industry": "trade" },
+    { "entity_id": "us-business", "entity_type": "sector", "name": "U.S. new businesses (aggregate)", "geography": "US", "industry": "business_formation" },
+    { "entity_id": "us-hazards", "entity_type": "sector", "name": "U.S. natural hazards and disasters", "geography": "US", "industry": "hazards" },
+    { "entity_id": "us-cyber", "entity_type": "sector", "name": "Software vulnerabilities (CISA and NIST)", "geography": "GLOBAL", "industry": "cybersecurity" },
+    { "entity_id": "us-respiratory", "entity_type": "sector", "name": "U.S. respiratory illness (emergency departments)", "geography": "US", "industry": "public_health" },
     { "entity_id": "us-drug-market", "entity_type": "sector", "name": "U.S. drug market (FDA-regulated)", "geography": "US", "industry": "pharma" },
     { "entity_id": "commodity-wti", "entity_type": "commodity", "name": "WTI crude oil", "geography": "US", "industry": "energy" },
     { "entity_id": "commodity-henry-hub", "entity_type": "commodity", "name": "Henry Hub natural gas", "geography": "US", "industry": "energy" },
@@ -66,6 +72,43 @@
     { "series_id": "fred:DSPIC96", "source_id": "fred", "entity_id": "us-consumer", "metric_name": "real_disposable_income", "label": "Real disposable personal income (BEA)", "unit": "usd_billions_chained_2017", "frequency": "monthly", "category": "macro", "industry": "consumer", "polarity": 1, "transform": "yoy_pct", "params": { "id": "DSPIC96" } },
     { "series_id": "fred:PSAVERT", "source_id": "fred", "entity_id": "us-consumer", "metric_name": "personal_saving_rate", "label": "Personal saving rate (BEA)", "unit": "percent", "frequency": "monthly", "category": "macro", "industry": "consumer", "polarity": 0, "transform": "level", "params": { "id": "PSAVERT" } },
     { "series_id": "fred:TOTALSL", "source_id": "fred", "entity_id": "us-consumer", "metric_name": "consumer_credit", "label": "Consumer credit outstanding (Federal Reserve G.19)", "unit": "usd_billions", "frequency": "monthly", "category": "credit", "industry": "consumer", "polarity": 0, "transform": "yoy_pct", "params": { "id": "TOTALSL" } },
+
+    { "series_id": "fred:GASREGW", "source_id": "fred", "entity_id": "us-energy", "metric_name": "gasoline_retail_price", "label": "US regular gasoline retail price (EIA)", "unit": "usd_per_gallon", "frequency": "weekly", "category": "commodity", "industry": "energy", "polarity": 0, "transform": "level", "params": { "id": "GASREGW" } },
+    { "series_id": "fred:GASDESW", "source_id": "fred", "entity_id": "us-energy", "metric_name": "diesel_retail_price", "label": "US on-highway diesel retail price (EIA)", "unit": "usd_per_gallon", "frequency": "weekly", "category": "commodity", "industry": "energy", "polarity": 0, "transform": "level", "params": { "id": "GASDESW" } },
+    { "series_id": "fred:WCESTUS1", "source_id": "fred", "entity_id": "us-energy", "metric_name": "crude_stocks_ex_spr", "label": "US commercial crude oil stocks, excluding SPR (EIA)", "unit": "thousand_barrels", "frequency": "weekly", "category": "commodity", "industry": "energy", "polarity": 1, "transform": "level", "params": { "id": "WCESTUS1" } },
+    { "series_id": "fred:WGTSTUS1", "source_id": "fred", "entity_id": "us-energy", "metric_name": "gasoline_stocks", "label": "US total gasoline stocks (EIA)", "unit": "thousand_barrels", "frequency": "weekly", "category": "commodity", "industry": "energy", "polarity": 1, "transform": "level", "params": { "id": "WGTSTUS1" } },
+    { "series_id": "fred:WPULEUS3", "source_id": "fred", "entity_id": "us-energy", "metric_name": "refinery_utilization", "label": "US refinery utilization, percent of operable capacity (EIA)", "unit": "percent", "frequency": "weekly", "category": "commodity", "industry": "energy", "polarity": 0, "transform": "level", "params": { "id": "WPULEUS3" } },
+
+    { "series_id": "fred:BOPGSTB", "source_id": "fred", "entity_id": "us-trade", "metric_name": "trade_balance", "label": "US trade balance, goods and services (BEA/Census)", "unit": "usd_millions", "frequency": "monthly", "category": "supply_chain", "industry": "trade", "polarity": 1, "transform": "level", "params": { "id": "BOPGSTB" } },
+    { "series_id": "fred:BOPTEXP", "source_id": "fred", "entity_id": "us-trade", "metric_name": "exports", "label": "US exports of goods and services (BEA/Census)", "unit": "usd_millions", "frequency": "monthly", "category": "supply_chain", "industry": "trade", "polarity": 1, "transform": "yoy_pct", "params": { "id": "BOPTEXP" } },
+    { "series_id": "fred:BOPTIMP", "source_id": "fred", "entity_id": "us-trade", "metric_name": "imports", "label": "US imports of goods and services (BEA/Census)", "unit": "usd_millions", "frequency": "monthly", "category": "supply_chain", "industry": "trade", "polarity": 0, "transform": "yoy_pct", "params": { "id": "BOPTIMP" } },
+    { "series_id": "fred:IMPCH", "source_id": "fred", "entity_id": "us-trade", "metric_name": "imports_from_china", "label": "US goods imports from China (Census)", "unit": "usd_millions", "frequency": "monthly", "category": "supply_chain", "industry": "trade", "polarity": 0, "transform": "yoy_pct", "params": { "id": "IMPCH" } },
+    { "series_id": "fred:IMPMX", "source_id": "fred", "entity_id": "us-trade", "metric_name": "imports_from_mexico", "label": "US goods imports from Mexico (Census)", "unit": "usd_millions", "frequency": "monthly", "category": "supply_chain", "industry": "trade", "polarity": 0, "transform": "yoy_pct", "params": { "id": "IMPMX" } },
+    { "series_id": "fred:IMPCA", "source_id": "fred", "entity_id": "us-trade", "metric_name": "imports_from_canada", "label": "US goods imports from Canada (Census)", "unit": "usd_millions", "frequency": "monthly", "category": "supply_chain", "industry": "trade", "polarity": 0, "transform": "yoy_pct", "params": { "id": "IMPCA" } },
+
+    { "series_id": "fred:BABATOTALSA", "source_id": "fred", "entity_id": "us-business", "metric_name": "business_applications", "label": "Business applications, total (Census BFS, SA)", "unit": "count", "frequency": "monthly", "category": "macro", "industry": "business_formation", "polarity": 1, "transform": "yoy_pct", "params": { "id": "BABATOTALSA" } },
+    { "series_id": "fred:BAHBATOTALSA", "source_id": "fred", "entity_id": "us-business", "metric_name": "high_propensity_business_applications", "label": "High-propensity business applications (Census BFS, SA)", "unit": "count", "frequency": "monthly", "category": "macro", "industry": "business_formation", "polarity": 1, "transform": "yoy_pct", "params": { "id": "BAHBATOTALSA" } },
+    { "series_id": "treasury:bid_to_cover_monthly", "source_id": "treasury", "entity_id": "us-federal", "metric_name": "auction_bid_to_cover", "label": "Treasury note and bond auctions: average bid-to-cover, monthly", "unit": "ratio", "frequency": "monthly", "category": "credit", "industry": "rates", "polarity": 1, "transform": "level", "params": { "feed": "bid_to_cover" } },
+    { "series_id": "treasury:indirect_share_monthly", "source_id": "treasury", "entity_id": "us-federal", "metric_name": "auction_indirect_share", "label": "Treasury note and bond auctions: indirect bidders' share accepted, monthly", "unit": "ratio", "frequency": "monthly", "category": "credit", "industry": "rates", "polarity": 1, "transform": "level", "params": { "feed": "indirect_share" } },
+    { "series_id": "treasury:dealer_share_monthly", "source_id": "treasury", "entity_id": "us-federal", "metric_name": "auction_dealer_share", "label": "Treasury note and bond auctions: primary dealers' share accepted, monthly", "unit": "ratio", "frequency": "monthly", "category": "credit", "industry": "rates", "polarity": -1, "transform": "level", "params": { "feed": "dealer_share" } },
+    { "series_id": "treasury:yield_spread_bp_monthly", "source_id": "treasury", "entity_id": "us-federal", "metric_name": "auction_high_minus_median_bp", "label": "Treasury note and bond auctions: high yield minus median yield (bp), monthly", "unit": "basis_points", "frequency": "monthly", "category": "credit", "industry": "rates", "polarity": -1, "transform": "level", "params": { "feed": "yield_spread_bp" } },
+
+    { "series_id": "fema:declarations_monthly", "source_id": "fema", "entity_id": "us-hazards", "metric_name": "disaster_declarations", "label": "FEMA disaster declarations (all types), monthly", "unit": "count", "frequency": "monthly", "category": "hazards", "industry": "hazards", "polarity": -1, "transform": "level", "params": { "feed": "all" } },
+    { "series_id": "fema:major_disasters_monthly", "source_id": "fema", "entity_id": "us-hazards", "metric_name": "major_disaster_declarations", "label": "FEMA major disaster declarations (DR), monthly", "unit": "count", "frequency": "monthly", "category": "hazards", "industry": "hazards", "polarity": -1, "transform": "level", "params": { "feed": "major" } },
+    { "series_id": "usgs:us_quakes_m4_monthly", "source_id": "usgs", "entity_id": "us-hazards", "metric_name": "us_region_earthquakes_m4", "label": "Earthquakes of magnitude 4+ in the US region (USGS), monthly", "unit": "count", "frequency": "monthly", "category": "hazards", "industry": "hazards", "polarity": -1, "transform": "level", "params": { "region": "us", "min_magnitude": 4 } },
+    { "series_id": "usgs:global_quakes_m6_monthly", "source_id": "usgs", "entity_id": "us-hazards", "metric_name": "global_earthquakes_m6", "label": "Earthquakes of magnitude 6+ worldwide (USGS), monthly", "unit": "count", "frequency": "monthly", "category": "hazards", "industry": "hazards", "polarity": -1, "transform": "level", "params": { "region": "global", "min_magnitude": 6 } },
+    { "series_id": "nws:severe_alerts_active", "source_id": "nws", "entity_id": "us-hazards", "metric_name": "active_severe_weather_alerts", "label": "Active NWS alerts of Severe or Extreme severity (daily snapshot)", "unit": "count", "frequency": "daily", "category": "hazards", "industry": "weather", "polarity": 0, "transform": "level", "params": { "feed": "severe" } },
+
+    { "series_id": "cisa:kev_added_weekly", "source_id": "cisa", "entity_id": "us-cyber", "metric_name": "kev_additions", "label": "Vulnerabilities added to CISA's Known Exploited catalog, weekly", "unit": "count", "frequency": "weekly", "category": "cyber", "industry": "cybersecurity", "polarity": -1, "transform": "level", "params": { "feed": "added" } },
+    { "series_id": "cisa:kev_ransomware_weekly", "source_id": "cisa", "entity_id": "us-cyber", "metric_name": "kev_ransomware_additions", "label": "Known exploited vulnerabilities used in ransomware, added weekly (CISA)", "unit": "count", "frequency": "weekly", "category": "cyber", "industry": "cybersecurity", "polarity": -1, "transform": "level", "params": { "feed": "ransomware" } },
+    { "series_id": "nvd:cves_monthly", "source_id": "nvd", "entity_id": "us-cyber", "metric_name": "cves_published", "label": "CVEs published in the NVD, monthly", "unit": "count", "frequency": "monthly", "category": "cyber", "industry": "cybersecurity", "polarity": 0, "transform": "level", "params": { "feed": "all" } },
+    { "series_id": "nvd:critical_cves_monthly", "source_id": "nvd", "entity_id": "us-cyber", "metric_name": "critical_cves_published", "label": "CVEs with CRITICAL CVSS v3 severity published in the NVD, monthly", "unit": "count", "frequency": "monthly", "category": "cyber", "industry": "cybersecurity", "polarity": -1, "transform": "level", "params": { "feed": "critical" } },
+
+    { "series_id": "cdc:ed_covid_weekly", "source_id": "cdc", "entity_id": "us-respiratory", "metric_name": "ed_visits_covid_pct", "label": "Emergency department visits diagnosed as COVID-19, percent (CDC NSSP)", "unit": "percent", "frequency": "weekly", "category": "health", "industry": "public_health", "polarity": -1, "transform": "level", "params": { "pathogen": "COVID-19" } },
+    { "series_id": "cdc:ed_flu_weekly", "source_id": "cdc", "entity_id": "us-respiratory", "metric_name": "ed_visits_influenza_pct", "label": "Emergency department visits diagnosed as influenza, percent (CDC NSSP)", "unit": "percent", "frequency": "weekly", "category": "health", "industry": "public_health", "polarity": -1, "transform": "level", "params": { "pathogen": "Influenza" } },
+    { "series_id": "cdc:ed_rsv_weekly", "source_id": "cdc", "entity_id": "us-respiratory", "metric_name": "ed_visits_rsv_pct", "label": "Emergency department visits diagnosed as RSV, percent (CDC NSSP)", "unit": "percent", "frequency": "weekly", "category": "health", "industry": "public_health", "polarity": -1, "transform": "level", "params": { "pathogen": "RSV" } },
+
+    { "series_id": "fred:BFBF4QTOTALSA", "source_id": "fred", "entity_id": "us-business", "metric_name": "projected_business_formations", "label": "Projected business formations within 4 quarters (Census BFS, SA)", "unit": "count", "frequency": "monthly", "category": "macro", "industry": "business_formation", "polarity": 1, "transform": "yoy_pct", "params": { "id": "BFBF4QTOTALSA" } },
 
     { "series_id": "fred:DGS1MO", "source_id": "fred", "entity_id": "us", "metric_name": "treasury_yield_1m", "label": "1-month Treasury constant maturity yield", "unit": "percent", "frequency": "daily", "category": "credit", "industry": "rates", "polarity": 0, "transform": "level", "params": { "id": "DGS1MO" } },
     { "series_id": "fred:DGS3MO", "source_id": "fred", "entity_id": "us", "metric_name": "treasury_yield_3m", "label": "3-month Treasury constant maturity yield", "unit": "percent", "frequency": "daily", "category": "credit", "industry": "rates", "polarity": 0, "transform": "level", "params": { "id": "DGS3MO" } },
@@ -172,20 +215,20 @@
   "sec": {
     "_comment": "One company facts pull and one submissions pull per company per day. skip_metrics lists concepts a company does not report (confirmed on the first live run, 2026-10-04: banks have no operating income or current assets/liabilities; XOM, PFE, LLY and JNJ do not tag OperatingIncomeLoss; JPM has no framed long-term debt and XOM none after 2017); ratios built on a skipped metric are skipped too. Metrics come from XBRL frames (CYyyyyQn for quarters, CYyyyy for fiscal years, ...I for instants) so every value is the one SEC deduplicated across filings. concepts lists fallbacks in order.",
     "companies": [
-      { "ticker": "AAPL", "cik": "0000320193", "name": "Apple Inc.", "industry": "technology", "wiki": "Apple_Inc." },
-      { "ticker": "MSFT", "cik": "0000789019", "name": "Microsoft Corp.", "industry": "technology", "wiki": "Microsoft" },
-      { "ticker": "NVDA", "cik": "0001045810", "name": "NVIDIA Corp.", "industry": "semiconductors", "wiki": "Nvidia" },
-      { "ticker": "AMZN", "cik": "0001018724", "name": "Amazon.com Inc.", "industry": "retail", "wiki": "Amazon_(company)" },
-      { "ticker": "WMT", "cik": "0000104169", "name": "Walmart Inc.", "industry": "retail", "wiki": "Walmart" },
-      { "ticker": "JPM", "cik": "0000019617", "name": "JPMorgan Chase & Co.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current", "long_term_debt"], "wiki": "JPMorgan_Chase" },
-      { "ticker": "BAC", "cik": "0000070858", "name": "Bank of America Corp.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current"], "wiki": "Bank_of_America" },
-      { "ticker": "XOM", "cik": "0000034088", "name": "Exxon Mobil Corp.", "industry": "energy", "skip_metrics": ["operating_income", "long_term_debt"], "wiki": "ExxonMobil" },
-      { "ticker": "PFE", "cik": "0000078003", "name": "Pfizer Inc.", "industry": "pharma", "fda_firm": "Pfizer", "ctgov_sponsors": ["Pfizer"], "skip_metrics": ["operating_income"], "wiki": "Pfizer" },
-      { "ticker": "LLY", "cik": "0000059478", "name": "Eli Lilly and Co.", "industry": "pharma", "fda_firm": "Eli Lilly", "ctgov_sponsors": ["Eli Lilly and Company"], "skip_metrics": ["operating_income"], "wiki": "Eli_Lilly_and_Company" },
-      { "ticker": "JNJ", "cik": "0000200406", "name": "Johnson & Johnson", "industry": "pharma", "fda_firm": "Johnson & Johnson", "fda_aliases": ["Janssen"], "ctgov_sponsors": ["Janssen", "Johnson & Johnson"], "skip_metrics": ["operating_income"], "wiki": "Johnson_&_Johnson" },
-      { "ticker": "UNH", "cik": "0000731766", "name": "UnitedHealth Group Inc.", "industry": "health_care", "wiki": "UnitedHealth_Group" },
-      { "ticker": "NFLX", "cik": "0001065280", "name": "Netflix Inc.", "industry": "media", "wiki": "Netflix" },
-      { "ticker": "DIS", "cik": "0001744489", "name": "The Walt Disney Co.", "industry": "media", "wiki": "The_Walt_Disney_Company" }
+      { "ticker": "AAPL", "cik": "0000320193", "name": "Apple Inc.", "industry": "technology", "wiki": "Apple_Inc.", "patent_assignees": ["Apple Inc."] },
+      { "ticker": "MSFT", "cik": "0000789019", "name": "Microsoft Corp.", "industry": "technology", "wiki": "Microsoft", "patent_assignees": ["Microsoft Technology Licensing, LLC", "Microsoft Corporation"] },
+      { "ticker": "NVDA", "cik": "0001045810", "name": "NVIDIA Corp.", "industry": "semiconductors", "wiki": "Nvidia", "patent_assignees": ["NVIDIA Corporation"] },
+      { "ticker": "AMZN", "cik": "0001018724", "name": "Amazon.com Inc.", "industry": "retail", "wiki": "Amazon_(company)", "patent_assignees": ["Amazon Technologies, Inc."] },
+      { "ticker": "WMT", "cik": "0000104169", "name": "Walmart Inc.", "industry": "retail", "wiki": "Walmart", "patent_assignees": ["Walmart Apollo, LLC"] },
+      { "ticker": "JPM", "cik": "0000019617", "name": "JPMorgan Chase & Co.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current", "long_term_debt"], "wiki": "JPMorgan_Chase", "patent_assignees": ["JPMorgan Chase Bank, N.A."] },
+      { "ticker": "BAC", "cik": "0000070858", "name": "Bank of America Corp.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current"], "wiki": "Bank_of_America", "patent_assignees": ["Bank of America Corporation"] },
+      { "ticker": "XOM", "cik": "0000034088", "name": "Exxon Mobil Corp.", "industry": "energy", "skip_metrics": ["operating_income", "long_term_debt"], "wiki": "ExxonMobil", "patent_assignees": ["ExxonMobil Technology and Engineering Company", "ExxonMobil Upstream Research Company", "Exxon Mobil Corporation"] },
+      { "ticker": "PFE", "cik": "0000078003", "name": "Pfizer Inc.", "industry": "pharma", "fda_firm": "Pfizer", "ctgov_sponsors": ["Pfizer"], "skip_metrics": ["operating_income"], "wiki": "Pfizer", "patent_assignees": ["Pfizer Inc."] },
+      { "ticker": "LLY", "cik": "0000059478", "name": "Eli Lilly and Co.", "industry": "pharma", "fda_firm": "Eli Lilly", "ctgov_sponsors": ["Eli Lilly and Company"], "skip_metrics": ["operating_income"], "wiki": "Eli_Lilly_and_Company", "patent_assignees": ["Eli Lilly and Company"] },
+      { "ticker": "JNJ", "cik": "0000200406", "name": "Johnson & Johnson", "industry": "pharma", "fda_firm": "Johnson & Johnson", "fda_aliases": ["Janssen"], "ctgov_sponsors": ["Janssen", "Johnson & Johnson"], "skip_metrics": ["operating_income"], "wiki": "Johnson_&_Johnson", "patent_assignees": ["Janssen Biotech, Inc.", "Janssen Pharmaceutica NV", "Johnson & Johnson"] },
+      { "ticker": "UNH", "cik": "0000731766", "name": "UnitedHealth Group Inc.", "industry": "health_care", "wiki": "UnitedHealth_Group", "patent_assignees": ["Optum, Inc.", "Optum Services (Ireland) Limited", "UnitedHealth Group Incorporated"] },
+      { "ticker": "NFLX", "cik": "0001065280", "name": "Netflix Inc.", "industry": "media", "wiki": "Netflix", "patent_assignees": ["Netflix, Inc."] },
+      { "ticker": "DIS", "cik": "0001744489", "name": "The Walt Disney Co.", "industry": "media", "wiki": "The_Walt_Disney_Company", "patent_assignees": ["Disney Enterprises, Inc."] }
     ],
     "metrics": [
       { "metric_name": "revenue", "label": "Revenue", "unit": "usd", "polarity": 1, "concepts": ["RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues", "SalesRevenueNet", "RevenuesNetOfInterestExpense"], "kind": "duration" },
@@ -201,7 +244,9 @@
     "ratios": [
       { "metric_name": "operating_margin", "label": "Operating margin", "unit": "ratio", "polarity": 1, "numerator": "operating_income", "denominator": "revenue" },
       { "metric_name": "net_margin", "label": "Net margin", "unit": "ratio", "polarity": 1, "numerator": "net_income", "denominator": "revenue" },
-      { "metric_name": "current_ratio", "label": "Current ratio (liquidity)", "unit": "ratio", "polarity": 1, "numerator": "assets_current", "denominator": "liabilities_current" }
+      { "metric_name": "current_ratio", "label": "Current ratio (liquidity)", "unit": "ratio", "polarity": 1, "numerator": "assets_current", "denominator": "liabilities_current" },
+      { "metric_name": "cash_conversion", "label": "Cash conversion (operating cash flow / net income)", "unit": "ratio", "polarity": 1, "numerator": "operating_cash_flow", "denominator": "net_income" },
+      { "metric_name": "cash_flow_margin", "label": "Operating cash flow margin (operating cash flow / revenue)", "unit": "ratio", "polarity": 1, "numerator": "operating_cash_flow", "denominator": "revenue" }
     ],
     "_insider_comment": "Form 4 open-market purchases (code P) and sales (code S), valued at shares x price per share and summed by filing week. Each Form 4 is read once and remembered (kv sec_form4:<ticker>). Grants, option exercises and tax withholding are not counted.",
     "insider_metrics": [
@@ -218,6 +263,13 @@
     "metrics": [
       { "metric_name": "pageviews_weekly", "label": "Wikipedia pageviews of the company article, weekly", "feed": "pageviews" },
       { "metric_name": "edits_weekly", "label": "Wikipedia edits of the company article, weekly", "feed": "edits" }
+    ]
+  },
+
+  "patents": {
+    "_comment": "USPTO PatentsView: utility patents granted each month to the company's assignee names (sec.companies[].patent_assignees). Big companies file through IP-holding subsidiaries (Microsoft Technology Licensing, Amazon Technologies, Walmart Apollo), so those names are listed. Needs PATENTSVIEW_API_KEY.",
+    "metrics": [
+      { "metric_name": "patent_grants_monthly", "label": "Utility patents granted to the company (USPTO), monthly", "polarity": 1 }
     ]
   },
 
@@ -240,7 +292,10 @@
       { "feed": "approvals_nda_bla", "metric_name": "approvals_nda_bla_weekly", "label": "Original NDA/BLA approvals, weekly", "polarity": 1 },
       { "feed": "approvals_anda", "metric_name": "approvals_anda_weekly", "label": "Original ANDA (generic) approvals, weekly", "polarity": 1 },
       { "feed": "faers", "metric_name": "adverse_event_reports_weekly", "label": "FAERS adverse event reports received, weekly", "polarity": -1 },
-      { "feed": "labels", "metric_name": "label_updates_weekly", "label": "Drug label (SPL) versions effective, weekly", "polarity": 0 }
+      { "feed": "labels", "metric_name": "label_updates_weekly", "label": "Drug label (SPL) versions effective, weekly", "polarity": 0 },
+      { "feed": "shortages_new", "metric_name": "drug_shortages_new_weekly", "label": "New drug shortages posted by the FDA, weekly", "polarity": -1 },
+      { "feed": "shortages_discontinued", "metric_name": "drug_discontinuations_weekly", "label": "Drug discontinuations posted by the FDA (to be discontinued), weekly", "polarity": -1 },
+      { "feed": "shortages_resolved", "metric_name": "drug_shortages_resolved_weekly", "label": "Drug shortages resolved (FDA, by last update; the FDA keeps few resolved records), weekly", "polarity": 0 }
     ],
     "_company_feeds_comment": "Per-company series for SEC companies with fda_firm ({firm} is that name). FAERS and label counts match openfda.manufacturer_name, so they cover the firm's labeled products, not subsidiaries named differently.",
     "company_feeds": [

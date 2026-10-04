@@ -6,6 +6,7 @@
 "use strict";
 
 const { batch2 } = require("./stub-batch2");
+const { batch3 } = require("./stub-batch3");
 
 const DAY = 86400000;
 
@@ -74,8 +75,8 @@ function makeFetch(catalog, opts = {}) {
     return dates.map((d, i) => {
       let v = val(id, i, base);
       if (i === dates.length - 1 && bump[id]) v *= bump[id];
-      // FRED marks holidays with "."
-      return { date: d, value: i % 97 === 5 ? "." : v.toFixed(3) };
+      // FRED marks holidays with "."; counts (business applications) are whole numbers.
+      return { date: d, value: i % 97 === 5 ? "." : s.unit === "count" ? String(Math.round(v * 1000)) : v.toFixed(3) };
     });
   }
 
@@ -215,6 +216,18 @@ function makeFetch(catalog, opts = {}) {
       const search = u.searchParams.get("search") || "";
       const count = u.searchParams.get("count");
       if (/recalling_firm:"Eli Lilly"/.test(search)) return json({ error: { code: "NOT_FOUND", message: "No matches found!" } }, 404);
+      if (u.pathname.endsWith("shortages.json")) {
+        // Drug shortages: MM/DD/YYYY dates, about one new posting every 3 days for 400 days.
+        const us = (ms) => { const d = ymd(ms); return `${d.slice(5, 7)}/${d.slice(8, 10)}/${d.slice(0, 4)}`; };
+        const results = [];
+        for (let k = 0; k < 140; k++) {
+          const posted = now.getTime() - (2 + k * 3) * DAY;
+          const status = k % 7 === 0 ? "To Be Discontinued" : k % 11 === 0 ? "Resolved" : "Current";
+          results.push({ status, initial_posting_date: us(posted), update_date: us(posted + 20 * DAY), company_name: k % 5 === 0 ? "Pfizer Laboratories Div Pfizer Inc" : `Maker ${k}`, generic_name: `Drug ${k}`, availability: k % 4 === 0 ? "Unavailable" : "Limited Availability", therapeutic_category: ["Anesthesia"], shortage_reason: "Demand increase for the drug" });
+        }
+        const skip = Number(u.searchParams.get("skip") || 0);
+        return json({ meta: { results: { skip, limit: 1000, total: results.length } }, results: results.slice(skip, skip + 1000) });
+      }
       if (count) {
         const results = [];
         for (let t = now.getTime() - 405 * DAY; t < now.getTime() - DAY; t += DAY) {
@@ -268,6 +281,8 @@ function makeFetch(catalog, opts = {}) {
     }
     const b2 = batch2(u, init, now, json);
     if (b2) return b2;
+    const b3 = batch3(u, init, now, json);
+    if (b3) return b3;
     return { status: 404, ok: false, text: `stub has no route for ${url}` };
   }
   fetchImpl.calls = calls;

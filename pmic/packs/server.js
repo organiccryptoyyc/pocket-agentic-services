@@ -161,8 +161,10 @@ async function brief(v, { horizon, entity, countries }) {
     if ((v.extras || []).includes("term_structure")) out.term_structure = termStructure(members);
     if (v.events_entities) {
       // Sector briefs (recalls, bank failures) list the latest events of their sector entities.
-      const lists = await Promise.all(v.events_entities.map((id) => hub("/v1/events", { entity_id: id, since: sinceFor(horizon), limit: 20 })));
-      out.recent_events = lists.flatMap((l) => l.events).sort((a, b) => String(b.event_time).localeCompare(String(a.event_time))).slice(0, 20);
+      // event_types narrows a shared entity's events (drug-shortages lists shortages, not recalls).
+      const lists = await Promise.all(v.events_entities.map((id) => hub("/v1/events", { entity_id: id, since: sinceFor(horizon), limit: v.event_types ? 500 : 20 })));
+      const all = lists.flatMap((l) => l.events).filter((e) => !v.event_types || v.event_types.includes(e.event_type));
+      out.recent_events = all.sort((a, b) => String(b.event_time).localeCompare(String(a.event_time))).slice(0, 20);
     }
     return out;
   }

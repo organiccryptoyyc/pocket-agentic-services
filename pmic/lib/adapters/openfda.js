@@ -207,10 +207,81 @@ async function collect(series, ctx) {
     });
   }
 
+  const shortFeeds = ["shortages_new", "shortages_discontinued", "shortages_resolved"].map((f) => byFeed.get(f)).filter(Boolean);
+  if (shortFeeds.length) {
+    const ids = shortFeeds.map((s) => s.series_id);
+    await run(ids, async () => {
+      const { rows, sha } = await shortages(ctx, key);
+      const cite = "https://www.accessdata.fda.gov/scripts/drugshortages/default.cfm";
+      // New shortages: by first posting date (all statuses but discontinuations). Discontinuations:
+      // status "To Be Discontinued", by first posting. Resolved: by last update (the FDA keeps few).
+      const pick = {
+        shortages_new: (x) => (x.status !== "To Be Discontinued" ? x.posted : null),
+        shortages_discontinued: (x) => (x.status === "To Be Discontinued" ? x.posted : null),
+        shortages_resolved: (x) => (x.status === "Resolved" ? x.updated : null),
+      };
+      for (const s of shortFeeds) {
+        const daily = rows.map(pick[s.params.feed]).filter(Boolean).map((d) => [d, 1]);
+        for (const [w, n] of weeklyCounts(daily, ctx.since(s), ctx.now)) {
+          out.observations.push({ series_id: s.series_id, observation_time: w, period: `week of ${w}`, value: n, source_url: cite, raw_sha256: sha });
+        }
+      }
+      const eventSince = ctx.eventSince();
+      const seen = new Set();
+      for (const x of rows) {
+        if (!x.posted || x.posted < eventSince || x.status === "Resolved") continue;
+        const key2 = `${x.generic}|${x.company}`;
+        if (seen.has(key2)) continue; // one event per drug and company, not per package
+        seen.add(key2);
+        out.events.push({
+          external_id: `shortage:${x.posted}:${key2}`.slice(0, 200),
+          entity_id: firmEntity(ctx, x.company),
+          event_type: "drug_shortage",
+          event_time: x.posted,
+          title: `Drug shortage posted: ${x.generic || "unknown drug"} (${x.company || "unknown company"})${x.availability ? `, ${x.availability}` : ""}`.slice(0, 300),
+          severity: /unavailable/i.test(x.availability || "") ? "high" : "medium",
+          detail: { generic_name: x.generic, company_name: x.company, availability: x.availability, therapeutic_category: x.category, shortage_reason: x.reason },
+          source_url: cite,
+          raw_sha256: sha,
+        });
+      }
+    });
+  }
+
   if (byFeed.get("recalls") || series.some((s) => s.params.feed === "recalls_firm")) {
     await run([], async () => out.events.push(...(await recallEvents(ctx, key))));
   }
   return out;
 }
 
-module.exports = { collect, q, firmEntity };
+// openFDA drug shortages: every record (about 1,600), paged 1,000 at a time. Dates are MM/DD/YYYY.
+function usDate(s) {
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(s || "").trim());
+  return m ? `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}` : null;
+}
+
+async function shortages(ctx, key) {
+  const rows = [];
+  let sha = null;
+  for (let skip = 0; skip < 25000; skip += 1000) {
+    const r = await ctx.get(`openfda:shortages:${skip}`, withKey(`${BASE}/shortages.json?limit=1000&skip=${skip}`, key), {}, { allowStatus: [404] });
+    sha = r.sha256;
+    const body = bodyOrEmpty(r, "openfda shortages");
+    for (const x of body.results) {
+      rows.push({
+        status: x.status || null,
+        posted: usDate(x.initial_posting_date),
+        updated: usDate(x.update_date),
+        company: x.company_name || null,
+        generic: x.generic_name || null,
+        availability: x.availability || null,
+        category: Array.isArray(x.therapeutic_category) ? x.therapeutic_category.join(", ") : x.therapeutic_category || null,
+        reason: x.shortage_reason || null,
+      });
+    }
+    if (body.results.length < 1000) break;
+  }
+  return { rows, sha };
+}
+
+module.exports = { collect, q, firmEntity, usDate };

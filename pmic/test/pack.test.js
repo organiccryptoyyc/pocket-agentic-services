@@ -59,7 +59,7 @@ test("pack answers inside its scope only", async () => {
   assert.equal(out.status, 400);
   assert.equal(out.json.error.code, "unknown_series");
   const ev = await call("/v1/events", { limit: 50 });
-  assert.ok(ev.json.events.every((e) => ["drug_recall", "drug_approval", "filing_8k", "filing_10q", "filing_10k", "insider_form4", "ownership_13g", "ownership_13d"].includes(e.event_type)));
+  assert.ok(ev.json.events.every((e) => ["drug_recall", "drug_approval", "drug_shortage", "filing_8k", "filing_10q", "filing_10k", "insider_form4", "ownership_13g", "ownership_13d"].includes(e.event_type)));
   assert.equal((await call("/v1/explain", { series_id: "openfda:PFE:drug_recalls_weekly" })).status, 200);
   assert.equal((await call("/v1/signals", { horizon: "2y" })).status, 400);
 });

@@ -2,9 +2,9 @@
   "_comment": "Health and pharma verticals: openFDA safety and approvals, and ClinicalTrials.gov pipelines (batch 2).",
   "service_id": "pmic-pharma-signals",
   "display_name": "PMIC Pharma Safety and Approval Signals",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "category": "health",
-  "description": "Scored drug-market and company safety briefs from openFDA: recalls (all and Class I), adverse event reports, label changes, and NDA/BLA and generic approvals for the US drug market, plus per-company recalls, adverse event reports, approvals and label changes for Pfizer, Eli Lilly and Johnson & Johnson. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and openFDA citations.",
+  "description": "Scored drug-market and company safety briefs from openFDA: recalls (all and Class I), adverse event reports, label changes, and NDA/BLA and generic approvals for the US drug market, plus per-company recalls, adverse event reports, approvals and label changes for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipeline activity, and US drug shortages and discontinuations. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and openFDA citations.",
   "default_horizon": "90d",
   "cache_seconds": 300,
   "hub_scope": [{ "source_id": "openfda", "entity_id": "us-drug-market" }, { "source_id": "openfda", "entity_id": "pfe" }, { "source_id": "openfda", "entity_id": "lly" }, { "source_id": "openfda", "entity_id": "jnj" }, { "source_id": "ctgov" }],
@@ -61,6 +61,22 @@
         { "metric": "active_trials", "weight": 2 },
         { "metric": "trial_stops_monthly" },
         { "metric": "trial_completions_monthly" }
+      ]
+    },
+    {
+      "id": "drug-shortages",
+      "title": "US drug shortages",
+      "question": "Are drug shortages and discontinuations rising in the US?",
+      "kind": "composite",
+      "note": "Higher score means calmer than usual: fewer new drug shortages and discontinuations posted by the FDA each week than over the trailing year. Resolved shortages are a watch item (the FDA keeps few resolved records). The latest postings are listed under recent_events.",
+      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
+      "trend_words": { "up": "easing", "down": "worsening" },
+      "events_entities": ["us-drug-market", "pfe", "lly", "jnj"],
+      "event_types": ["drug_shortage"],
+      "members": [
+        { "series_id": "openfda:drug_shortages_new_weekly", "weight": 2 },
+        { "series_id": "openfda:drug_discontinuations_weekly" },
+        { "series_id": "openfda:drug_shortages_resolved_weekly" }
       ]
     }
   ]

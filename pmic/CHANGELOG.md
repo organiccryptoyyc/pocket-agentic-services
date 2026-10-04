@@ -12,6 +12,32 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Packs batch 3 (2026-10-04): 10 verticals, 8 new sources, no new registration
+
+- Probed live from the PC before building (2026-10-04): TreasuryDirect, OpenFEMA, USGS, NWS, CISA
+  KEV, NIST NVD, CDC NSSP (data.cdc.gov vutn-jzwm) and openFDA drug shortages all answer with no
+  key. The Census trade API now needs a key and EIA does too, so trade and energy come from FRED,
+  which republishes both. PatentsView needs a free key (`PATENTSVIEW_API_KEY`).
+- `pmic-macro-signals` 0.4.0: `treasury-demand` (bid-to-cover, indirect and dealer shares, high
+  minus median yield; weak auctions as events), `energy-supply` (EIA crude and gasoline stocks,
+  gasoline and diesel prices; refinery use as a watch item), `trade-flows` (balance, exports;
+  imports in total and from China, Mexico and Canada as watch items), `business-formation`
+  (Census BFS applications, high-propensity applications, projected formations).
+- `pmic-company-signals` 0.4.0: `earnings-quality` (new SEC ratios `cash_conversion` = operating
+  cash flow / net income, `cash_flow_margin` = operating cash flow / revenue) and `innovation`
+  (USPTO patent grants per month by assignee name, including IP-holding subsidiaries).
+- `pmic-pharma-signals` 0.4.0: `drug-shortages` (new FDA shortage and discontinuation postings
+  weekly; resolved is a watch item because the FDA keeps only about 19 resolved records).
+- `pmic-public-sector-signals` 0.2.0: `natural-hazards` (FEMA declarations counted once per
+  disaster, USGS M4+ US region and M6+ worldwide, NWS active severe alerts as a daily snapshot),
+  `cyber-threat` (CISA KEV additions and ransomware use weekly, NVD critical CVEs monthly) and
+  `disease-activity` (CDC emergency department share for COVID-19, flu and RSV).
+- Composite verticals take `event_types` to narrow `events_entities` (drug-shortages lists
+  shortages, not the market's recalls).
+- Catalog 536 -> 610 series. Tests 55/55 (new `test/batch3.test.js`, stub `test/stub-batch3.js`).
+- Pi check: `sh ops/probe-batch3.sh`. Deploy: Pi rebuild, PSM Deploy `pmic-hub` and the four
+  packs, then gas-only card updates for all four. No new fee.
+
 ## Packs batch 2, phase 2 (2026-10-04): 8 verticals, 11 new sources, one new service
 
 LIVE on MainNet 2026-10-04:

@@ -1,7 +1,7 @@
 {
   "serviceId": "pmic-company-signals",
   "displayName": "PMIC Company Fundamentals and Filing Risk",
-  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, a filing risk score from 8-K items, 13D filings and insider Form 4 activity, an insider activity score, a balance sheet strength score, and a peer ranking against the other 13 companies on growth, margins and liquidity. Every input carries its SEC citation. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
+  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, a filing risk score from 8-K items, 13D filings and insider Form 4 activity, an insider activity score, a balance sheet strength score, a peer ranking against the other 13 companies on growth, margins and liquidity, an earnings quality score (are profits backed by cash), and patent activity from USPTO PatentsView. Every input carries its SEC or USPTO citation. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
   "category": "finance",
   "protocols": [
     "rest"
@@ -18,7 +18,9 @@
           "insider-activity",
           "balance-sheet",
           "peer-ranking",
-          "public-attention"
+          "public-attention",
+          "earnings-quality",
+          "innovation"
         ],
         "description": "Which brief. POST /v1/verticals describes each."
       },
@@ -40,7 +42,7 @@
           "nflx",
           "dis"
         ],
-        "description": "Company (lower-case ticker); required for fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking, public-attention."
+        "description": "Company (lower-case ticker); required for fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking, public-attention, earnings-quality, innovation."
       },
       "horizon": {
         "type": "string",
