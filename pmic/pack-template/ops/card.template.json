@@ -11,7 +11,7 @@
   ],
   "apis": ["{{SERVICE_ID}}-signals"],
   "specs": [
-    { "kind": "docs", "api": "{{SERVICE_ID}}-signals", "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/market-intel-collector/docs/SCORING.md", "notes": "Scoring method." }
+    { "kind": "docs", "api": "{{SERVICE_ID}}-signals", "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/docs/SCORING.md", "notes": "Scoring method." }
   ],
   "access": "public",
   "results": "variable",

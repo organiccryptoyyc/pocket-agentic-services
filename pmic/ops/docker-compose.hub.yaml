@@ -11,7 +11,7 @@
 services:
   hub:
     build: ..
-    image: market-intel-collector:latest
+    image: pmic:latest
     container_name: pmic-hub
     command: ["node", "server.js"]
     environment:
@@ -30,7 +30,7 @@ services:
 
   # The hub prunes and backs up on its own schedule (the Pi's maintenance does not replicate).
   hub-maintenance:
-    image: market-intel-collector:latest
+    image: pmic:latest
     container_name: pmic-hub-maintenance
     entrypoint: ["sh", "-c", "while true; do node bin/collect.js --maintain; sleep 86400; done"]
     volumes:

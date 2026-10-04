@@ -60,7 +60,7 @@ async function call(method, route, body, { token = TOKEN, base = BASE } = {}) {
 
 test("probes", async () => {
   const v = await call("GET", "/v1/version", undefined, { token: null });
-  assert.deepEqual(v.json, { service: "market-intel-collector", version: "0.1.0" });
+  assert.deepEqual(v.json, { service: "pmic", version: "0.1.0" });
   const h = await call("GET", "/v1/health", undefined, { token: null });
   assert.equal(h.json.status, "ok");
   assert.equal(h.json.role, "hub");
@@ -83,7 +83,7 @@ test("every query route answers 200 with good input", async () => {
   for (const [route, body] of Object.entries(good)) {
     const r = await call("POST", route, body);
     assert.equal(r.status, 200, `${route}: ${JSON.stringify(r.json).slice(0, 200)}`);
-    assert.equal(r.json.service, "market-intel-collector");
+    assert.equal(r.json.service, "pmic");
   }
   const s = await call("POST", "/v1/signal", { series_id: "fred:T10Y2Y" });
   assert.equal(s.json.status, "ok");

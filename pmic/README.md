@@ -1,4 +1,4 @@
-# Public Market Intelligence Collector (PMIC)
+# PMIC: Public Market Intelligence Collection
 
 The data layer under the planned ~50 Pocket API service packs. It pulls official public
 datasets on a schedule, keeps every raw payload, normalizes them into SQLite, runs quality
@@ -120,7 +120,7 @@ proxy, cache, card / SAGE / portal templates) is in [`pack-template/`](pack-temp
 ## Run it on the Pi / Umbrel
 
 ```bash
-git clone https://github.com/organiccryptoyyc/pocket-agentic-services && cd pocket-agentic-services/market-intel-collector
+git clone https://github.com/organiccryptoyyc/pocket-agentic-services && cd pocket-agentic-services/pmic
 cp .env.example .env        # set PMIC_SEC_USER_AGENT, BEA_API_KEY, PMIC_API_TOKEN (others optional)
 docker compose up -d --build
 docker logs -f pmic-collector          # first pass backfills the retention windows

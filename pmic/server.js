@@ -1,4 +1,4 @@
-// Public Market Intelligence Collector: query API.
+// Public Market Intelligence Collection: query API.
 //
 // The read side every service pack builds on. Same contract as the other packages in this repo:
 // JSON object bodies only, inputs in the POST body, 400 + JSON on bad input, never a 5xx.
@@ -27,7 +27,7 @@ const catalogLib = require("./lib/catalog");
 const Q = require("./lib/query");
 const { startIngest } = require("./lib/sync");
 
-const SERVICE = "market-intel-collector";
+const SERVICE = "pmic";
 const VERSION = "0.1.0";
 const PORT = Number(process.env.PORT || 8088);
 
