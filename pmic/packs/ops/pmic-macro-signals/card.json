@@ -1,0 +1,80 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, and an 8-country comparison. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator. POST /v1/brief {vertical} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: macro-regime (Is the US economy strengthening or weakening, and why?); inflation (Is inflation pressure building or easing?); labor (How strong is the US job market?); rates (Are financial conditions tightening, and is the yield curve inverted?); credit-stress (Is consumer or bank credit stress rising?); commodities (Are energy, metals and freight adding cost pressure?); global-compare (How do these economies compare on growth, inflation and jobs?). Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog. Every response is a single JSON object. Research signal, not investment advice.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "pmic-macro-signals-backend on :8080; mount at /",
+      "notes": "POST /v1/verticals, POST /v1/brief, POST /v1/overview, POST /v1/signals, POST /v1/signal, POST /v1/explain, POST /v1/catalog, POST /v1/inflation/adjust; GET /v1/version, /v1/health. JSON body only. Bad input returns 400 + JSON."
+    }
+  ],
+  "apis": [
+    "pmic-macro-signals-briefs"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "pmic-macro-signals-briefs",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs/ops/pmic-macro-signals/openapi.json"
+    },
+    {
+      "kind": "docs",
+      "api": "pmic-macro-signals-briefs",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs/README.md",
+      "notes": "How briefs are scored."
+    }
+  ],
+  "access": "public",
+  "results": "variable",
+  "serving": {
+    "backend": "Node.js HTTP server (zero npm dependencies) behind a RelayMiner at http://<container>:8080. No caller auth. Answers come from a private hub refreshed by a scheduled collector of official public data; 5-minute cache.",
+    "implementations": [
+      "pmic-macro-signals >= 0.1"
+    ],
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/version",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.service",
+          "matches": "^pmic-macro-signals$"
+        },
+        "notes": "Identity probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/health",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.status",
+          "matches": "^ok$"
+        },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/verticals",
+          "method": "POST",
+          "body": {}
+        },
+        "expect": {
+          "json_path": "$.service",
+          "matches": "^pmic-macro-signals$"
+        },
+        "notes": "Functional probe."
+      }
+    ],
+    "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/pmic/packs/README.md",
+  "updated": "2026-10-04"
+}

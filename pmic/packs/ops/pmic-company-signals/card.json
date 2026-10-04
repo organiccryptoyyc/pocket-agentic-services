@@ -1,0 +1,80 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, and a filing risk score from 8-K items, 13D filings and insider Form 4 activity. Every input carries its SEC citation. POST /v1/brief {vertical, entity_id} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: fundamentals (How healthy are this company's financials versus its own recent history?); filing-risk (Has this company filed anything risky lately?). Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog, /v1/events. Every response is a single JSON object. Research signal, not investment advice.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "pmic-company-signals-backend on :8080; mount at /",
+      "notes": "POST /v1/verticals, POST /v1/brief, POST /v1/overview, POST /v1/signals, POST /v1/signal, POST /v1/explain, POST /v1/catalog, POST /v1/events; GET /v1/version, /v1/health. JSON body only. Bad input returns 400 + JSON."
+    }
+  ],
+  "apis": [
+    "pmic-company-signals-briefs"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "pmic-company-signals-briefs",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs/ops/pmic-company-signals/openapi.json"
+    },
+    {
+      "kind": "docs",
+      "api": "pmic-company-signals-briefs",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs/README.md",
+      "notes": "How briefs are scored."
+    }
+  ],
+  "access": "public",
+  "results": "variable",
+  "serving": {
+    "backend": "Node.js HTTP server (zero npm dependencies) behind a RelayMiner at http://<container>:8080. No caller auth. Answers come from a private hub refreshed by a scheduled collector of official public data; 5-minute cache.",
+    "implementations": [
+      "pmic-company-signals >= 0.1"
+    ],
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/version",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.service",
+          "matches": "^pmic-company-signals$"
+        },
+        "notes": "Identity probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/health",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.status",
+          "matches": "^ok$"
+        },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/verticals",
+          "method": "POST",
+          "body": {}
+        },
+        "expect": {
+          "json_path": "$.service",
+          "matches": "^pmic-company-signals$"
+        },
+        "notes": "Functional probe."
+      }
+    ],
+    "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/pmic/packs/README.md",
+  "updated": "2026-10-04"
+}

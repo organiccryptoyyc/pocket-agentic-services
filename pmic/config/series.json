@@ -1,0 +1,132 @@
+{
+  "_comment": "Series catalog. polarity: +1 higher reads as stronger/better, -1 higher reads as weaker/riskier, 0 neutral (score measures how unusual the reading is, not direction). transform is what the score's level/z/percentile are computed on: level (the raw value), yoy_pct, mom_pct, or diff (change vs previous observation). Percent changes over 7/30/90/365 days are always reported on the raw value. cross_check groups series from different sources that should agree; a mismatch raises an alert and a risk flag. SEC and openFDA rows are expanded by lib/catalog.js from the templates at the bottom. Excluded on licensing grounds (third-party copyright on FRED): University of Michigan sentiment, LBMA gold, VIX, ICE BofA spreads.",
+  "entities": [
+    { "entity_id": "us", "entity_type": "geography", "name": "United States", "geography": "US" },
+    { "entity_id": "cn", "entity_type": "geography", "name": "China", "geography": "CN" },
+    { "entity_id": "jp", "entity_type": "geography", "name": "Japan", "geography": "JP" },
+    { "entity_id": "de", "entity_type": "geography", "name": "Germany", "geography": "DE" },
+    { "entity_id": "gb", "entity_type": "geography", "name": "United Kingdom", "geography": "GB" },
+    { "entity_id": "in", "entity_type": "geography", "name": "India", "geography": "IN" },
+    { "entity_id": "br", "entity_type": "geography", "name": "Brazil", "geography": "BR" },
+    { "entity_id": "ca", "entity_type": "geography", "name": "Canada", "geography": "CA" },
+    { "entity_id": "us-banking", "entity_type": "sector", "name": "U.S. commercial banks (aggregate)", "geography": "US", "industry": "banking" },
+    { "entity_id": "us-drug-market", "entity_type": "sector", "name": "U.S. drug market (FDA-regulated)", "geography": "US", "industry": "pharma" },
+    { "entity_id": "commodity-wti", "entity_type": "commodity", "name": "WTI crude oil", "geography": "US", "industry": "energy" },
+    { "entity_id": "commodity-henry-hub", "entity_type": "commodity", "name": "Henry Hub natural gas", "geography": "US", "industry": "energy" },
+    { "entity_id": "commodity-copper", "entity_type": "commodity", "name": "Copper (global benchmark)", "geography": "GLOBAL", "industry": "metals" }
+  ],
+  "series": [
+    { "series_id": "fred:CPIAUCSL", "source_id": "fred", "entity_id": "us", "metric_name": "cpi_all_items", "label": "CPI, all items (SA)", "unit": "index", "frequency": "monthly", "category": "macro", "industry": "economy", "polarity": -1, "transform": "yoy_pct", "params": { "id": "CPIAUCSL" } },
+    { "series_id": "fred:CPILFESL", "source_id": "fred", "entity_id": "us", "metric_name": "cpi_core", "label": "Core CPI, less food and energy (SA)", "unit": "index", "frequency": "monthly", "category": "macro", "industry": "economy", "polarity": -1, "transform": "yoy_pct", "params": { "id": "CPILFESL" } },
+    { "series_id": "fred:PPIACO", "source_id": "fred", "entity_id": "us", "metric_name": "ppi_all_commodities", "label": "PPI, all commodities", "unit": "index", "frequency": "monthly", "category": "macro", "industry": "economy", "polarity": -1, "transform": "yoy_pct", "params": { "id": "PPIACO" } },
+    { "series_id": "fred:PAYEMS", "source_id": "fred", "entity_id": "us", "metric_name": "nonfarm_payrolls", "label": "Total nonfarm payrolls", "unit": "thousands", "frequency": "monthly", "category": "macro", "industry": "labor", "polarity": 1, "transform": "diff", "params": { "id": "PAYEMS" }, "cross_check": "us_payrolls" },
+    { "series_id": "fred:UNRATE", "source_id": "fred", "entity_id": "us", "metric_name": "unemployment_rate", "label": "Unemployment rate", "unit": "percent", "frequency": "monthly", "category": "macro", "industry": "labor", "polarity": -1, "transform": "level", "params": { "id": "UNRATE" }, "cross_check": "us_unemployment_rate" },
+    { "series_id": "fred:CIVPART", "source_id": "fred", "entity_id": "us", "metric_name": "labor_force_participation", "label": "Labor force participation rate", "unit": "percent", "frequency": "monthly", "category": "macro", "industry": "labor", "polarity": 1, "transform": "level", "params": { "id": "CIVPART" } },
+    { "series_id": "fred:JTSJOL", "source_id": "fred", "entity_id": "us", "metric_name": "jolts_openings", "label": "JOLTS job openings", "unit": "thousands", "frequency": "monthly", "category": "macro", "industry": "labor", "polarity": 1, "transform": "level", "params": { "id": "JTSJOL" }, "cross_check": "us_jolts" },
+    { "series_id": "fred:DGS2", "source_id": "fred", "entity_id": "us", "metric_name": "treasury_yield_2y", "label": "2-year Treasury constant maturity yield", "unit": "percent", "frequency": "daily", "category": "credit", "industry": "rates", "polarity": 0, "transform": "level", "params": { "id": "DGS2" } },
+    { "series_id": "fred:DGS10", "source_id": "fred", "entity_id": "us", "metric_name": "treasury_yield_10y", "label": "10-year Treasury constant maturity yield", "unit": "percent", "frequency": "daily", "category": "credit", "industry": "rates", "polarity": 0, "transform": "level", "params": { "id": "DGS10" } },
+    { "series_id": "fred:T10Y2Y", "source_id": "fred", "entity_id": "us", "metric_name": "curve_slope_10y_2y", "label": "10y minus 2y Treasury spread (curve slope)", "unit": "percentage_points", "frequency": "daily", "category": "credit", "industry": "rates", "polarity": 1, "transform": "level", "params": { "id": "T10Y2Y" } },
+    { "series_id": "fred:DFF", "source_id": "fred", "entity_id": "us", "metric_name": "fed_funds_effective", "label": "Effective federal funds rate (policy rate)", "unit": "percent", "frequency": "daily", "category": "credit", "industry": "rates", "polarity": 0, "transform": "level", "params": { "id": "DFF" } },
+    { "series_id": "fred:RSAFS", "source_id": "fred", "entity_id": "us", "metric_name": "retail_sales", "label": "Advance retail and food services sales", "unit": "usd_millions", "frequency": "monthly", "category": "macro", "industry": "retail", "polarity": 1, "transform": "yoy_pct", "params": { "id": "RSAFS" } },
+    { "series_id": "fred:GDPC1", "source_id": "fred", "entity_id": "us", "metric_name": "real_gdp", "label": "Real GDP (chained 2017 dollars, SAAR)", "unit": "usd_billions", "frequency": "quarterly", "category": "macro", "industry": "economy", "polarity": 1, "transform": "yoy_pct", "params": { "id": "GDPC1" } },
+    { "series_id": "fred:INDPRO", "source_id": "fred", "entity_id": "us", "metric_name": "industrial_production", "label": "Industrial production index", "unit": "index", "frequency": "monthly", "category": "macro", "industry": "industrial", "polarity": 1, "transform": "yoy_pct", "params": { "id": "INDPRO" } },
+    { "series_id": "fred:DPSACBW027SBOG", "source_id": "fred", "entity_id": "us-banking", "metric_name": "bank_deposits", "label": "Deposits, all commercial banks (H.8)", "unit": "usd_billions", "frequency": "weekly", "category": "credit", "industry": "banking", "polarity": 1, "transform": "yoy_pct", "params": { "id": "DPSACBW027SBOG" } },
+    { "series_id": "fred:TOTLL", "source_id": "fred", "entity_id": "us-banking", "metric_name": "bank_loans_leases", "label": "Loans and leases in bank credit (H.8)", "unit": "usd_billions", "frequency": "weekly", "category": "credit", "industry": "banking", "polarity": 1, "transform": "yoy_pct", "params": { "id": "TOTLL" } },
+    { "series_id": "fred:DRCCLACBS", "source_id": "fred", "entity_id": "us-banking", "metric_name": "delinquency_credit_cards", "label": "Delinquency rate on credit card loans", "unit": "percent", "frequency": "quarterly", "category": "credit", "industry": "consumer_credit", "polarity": -1, "transform": "level", "params": { "id": "DRCCLACBS" } },
+    { "series_id": "fred:DRSFRMACBS", "source_id": "fred", "entity_id": "us-banking", "metric_name": "delinquency_residential_mortgages", "label": "Delinquency rate on single-family residential mortgages", "unit": "percent", "frequency": "quarterly", "category": "credit", "industry": "consumer_credit", "polarity": -1, "transform": "level", "params": { "id": "DRSFRMACBS" } },
+    { "series_id": "fred:DCOILWTICO", "source_id": "fred", "entity_id": "commodity-wti", "metric_name": "price", "label": "WTI crude oil spot price (EIA)", "unit": "usd_per_barrel", "frequency": "daily", "category": "commodity", "industry": "energy", "polarity": 0, "transform": "level", "params": { "id": "DCOILWTICO" } },
+    { "series_id": "fred:DHHNGSP", "source_id": "fred", "entity_id": "commodity-henry-hub", "metric_name": "price", "label": "Henry Hub natural gas spot price (EIA)", "unit": "usd_per_mmbtu", "frequency": "daily", "category": "commodity", "industry": "energy", "polarity": 0, "transform": "level", "params": { "id": "DHHNGSP" } },
+    { "series_id": "fred:PCOPPUSDM", "source_id": "fred", "entity_id": "commodity-copper", "metric_name": "price", "label": "Global copper price (IMF)", "unit": "usd_per_metric_ton", "frequency": "monthly", "category": "commodity", "industry": "metals", "polarity": 0, "transform": "level", "params": { "id": "PCOPPUSDM" } },
+    { "series_id": "fred:TSIFRGHT", "source_id": "fred", "entity_id": "us", "metric_name": "freight_tsi", "label": "Freight Transportation Services Index (BTS)", "unit": "index", "frequency": "monthly", "category": "supply_chain", "industry": "logistics", "polarity": 1, "transform": "yoy_pct", "params": { "id": "TSIFRGHT" } },
+    { "series_id": "fred:IR", "source_id": "fred", "entity_id": "us", "metric_name": "import_price_index", "label": "Import price index, all commodities", "unit": "index", "frequency": "monthly", "category": "supply_chain", "industry": "trade", "polarity": 0, "transform": "yoy_pct", "params": { "id": "IR" } },
+    { "series_id": "fred:IQ", "source_id": "fred", "entity_id": "us", "metric_name": "export_price_index", "label": "Export price index, all commodities", "unit": "index", "frequency": "monthly", "category": "supply_chain", "industry": "trade", "polarity": 0, "transform": "yoy_pct", "params": { "id": "IQ" } },
+
+    { "series_id": "bls:LNS14000000", "source_id": "bls", "entity_id": "us", "metric_name": "unemployment_rate", "label": "Unemployment rate (CPS, SA)", "unit": "percent", "frequency": "monthly", "category": "macro", "industry": "labor", "polarity": -1, "transform": "level", "params": { "id": "LNS14000000" }, "cross_check": "us_unemployment_rate" },
+    { "series_id": "bls:CES0000000001", "source_id": "bls", "entity_id": "us", "metric_name": "nonfarm_payrolls", "label": "Total nonfarm employment (CES, SA)", "unit": "thousands", "frequency": "monthly", "category": "macro", "industry": "labor", "polarity": 1, "transform": "diff", "params": { "id": "CES0000000001" }, "cross_check": "us_payrolls" },
+    { "series_id": "bls:CUSR0000SA0", "source_id": "bls", "entity_id": "us", "metric_name": "cpi_all_items", "label": "CPI-U, all items (SA)", "unit": "index", "frequency": "monthly", "category": "macro", "industry": "economy", "polarity": -1, "transform": "yoy_pct", "params": { "id": "CUSR0000SA0" } },
+    { "series_id": "bls:JTS000000000000000JOL", "source_id": "bls", "entity_id": "us", "metric_name": "jolts_openings", "label": "JOLTS job openings, total nonfarm", "unit": "thousands", "frequency": "monthly", "category": "macro", "industry": "labor", "polarity": 1, "transform": "level", "params": { "id": "JTS000000000000000JOL" }, "cross_check": "us_jolts" },
+    { "series_id": "bls:WPUFD4", "source_id": "bls", "entity_id": "us", "metric_name": "ppi_final_demand", "label": "PPI, final demand", "unit": "index", "frequency": "monthly", "category": "macro", "industry": "economy", "polarity": -1, "transform": "yoy_pct", "params": { "id": "WPUFD4" } },
+    { "series_id": "bls:CES0500000003", "source_id": "bls", "entity_id": "us", "metric_name": "avg_hourly_earnings", "label": "Average hourly earnings, private (SA)", "unit": "usd", "frequency": "monthly", "category": "macro", "industry": "labor", "polarity": 1, "transform": "yoy_pct", "params": { "id": "CES0500000003" } },
+
+    { "series_id": "bea:NIPA:T10101:1", "source_id": "bea", "entity_id": "us", "metric_name": "real_gdp_growth_saar", "label": "Real GDP, percent change from preceding quarter (SAAR)", "unit": "percent", "frequency": "quarterly", "category": "macro", "industry": "economy", "polarity": 1, "transform": "level", "params": { "dataset": "NIPA", "table": "T10101", "line": "1", "frequency": "Q" } },
+    { "series_id": "bea:GDPbyIndustry:1:31G", "source_id": "bea", "entity_id": "us", "metric_name": "value_added_manufacturing", "label": "Value added by industry: manufacturing", "unit": "usd_billions", "frequency": "quarterly", "category": "macro", "industry": "manufacturing", "polarity": 1, "transform": "yoy_pct", "params": { "dataset": "GDPbyIndustry", "table_id": "1", "industry": "31G", "frequency": "Q" } },
+    { "series_id": "bea:GDPbyIndustry:1:51", "source_id": "bea", "entity_id": "us", "metric_name": "value_added_information", "label": "Value added by industry: information", "unit": "usd_billions", "frequency": "quarterly", "category": "entertainment", "industry": "media", "polarity": 1, "transform": "yoy_pct", "params": { "dataset": "GDPbyIndustry", "table_id": "1", "industry": "51", "frequency": "Q" } },
+    { "series_id": "bea:GDPbyIndustry:1:52", "source_id": "bea", "entity_id": "us", "metric_name": "value_added_finance_insurance", "label": "Value added by industry: finance and insurance", "unit": "usd_billions", "frequency": "quarterly", "category": "macro", "industry": "finance", "polarity": 1, "transform": "yoy_pct", "params": { "dataset": "GDPbyIndustry", "table_id": "1", "industry": "52", "frequency": "Q" } },
+    { "series_id": "bea:GDPbyIndustry:1:62", "source_id": "bea", "entity_id": "us", "metric_name": "value_added_health_care", "label": "Value added by industry: health care and social assistance", "unit": "usd_billions", "frequency": "quarterly", "category": "health", "industry": "health_care", "polarity": 1, "transform": "yoy_pct", "params": { "dataset": "GDPbyIndustry", "table_id": "1", "industry": "62", "frequency": "Q" } },
+    { "series_id": "bea:GDPbyIndustry:1:61", "source_id": "bea", "entity_id": "us", "metric_name": "value_added_education", "label": "Value added by industry: educational services", "unit": "usd_billions", "frequency": "quarterly", "category": "education", "industry": "education", "polarity": 1, "transform": "yoy_pct", "params": { "dataset": "GDPbyIndustry", "table_id": "1", "industry": "61", "frequency": "Q" } }
+  ],
+
+  "worldbank": {
+    "countries": ["us", "cn", "jp", "de", "gb", "in", "br", "ca"],
+    "_skip_comment": "country:indicator pairs the World Bank does not publish (confirmed on the first live run, 2026-10-04).",
+    "skip": ["cn:GC.XPN.TOTL.GD.ZS"],
+    "indicators": [
+      { "id": "NY.GDP.MKTP.KD.ZG", "metric_name": "gdp_growth", "label": "GDP growth (annual %)", "unit": "percent", "category": "macro", "industry": "economy", "polarity": 1 },
+      { "id": "FP.CPI.TOTL.ZG", "metric_name": "inflation_cpi", "label": "Inflation, consumer prices (annual %)", "unit": "percent", "category": "macro", "industry": "economy", "polarity": -1 },
+      { "id": "SL.UEM.TOTL.ZS", "metric_name": "unemployment_rate_ilo", "label": "Unemployment, % of labor force (ILO estimate)", "unit": "percent", "category": "macro", "industry": "labor", "polarity": -1 },
+      { "id": "SE.XPD.TOTL.GD.ZS", "metric_name": "education_spending_pct_gdp", "label": "Government expenditure on education (% of GDP)", "unit": "percent", "category": "education", "industry": "education", "polarity": 1 },
+      { "id": "SH.XPD.CHEX.GD.ZS", "metric_name": "health_spending_pct_gdp", "label": "Current health expenditure (% of GDP)", "unit": "percent", "category": "health", "industry": "health_care", "polarity": 0 },
+      { "id": "GC.XPN.TOTL.GD.ZS", "metric_name": "government_expense_pct_gdp", "label": "Government expense (% of GDP)", "unit": "percent", "category": "political", "industry": "public_budget", "polarity": 0 },
+      { "id": "SE.TER.ENRR", "metric_name": "tertiary_enrollment_gross", "label": "School enrollment, tertiary (% gross)", "unit": "percent", "category": "education", "industry": "education", "polarity": 1 }
+    ]
+  },
+
+  "sec": {
+    "_comment": "One company facts pull and one submissions pull per company per day. skip_metrics lists concepts a company does not report (confirmed on the first live run, 2026-10-04: banks have no operating income or current assets/liabilities; XOM, PFE, LLY and JNJ do not tag OperatingIncomeLoss; JPM has no framed long-term debt and XOM none after 2017); ratios built on a skipped metric are skipped too. Metrics come from XBRL frames (CYyyyyQn for quarters, CYyyyy for fiscal years, ...I for instants) so every value is the one SEC deduplicated across filings. concepts lists fallbacks in order.",
+    "companies": [
+      { "ticker": "AAPL", "cik": "0000320193", "name": "Apple Inc.", "industry": "technology" },
+      { "ticker": "MSFT", "cik": "0000789019", "name": "Microsoft Corp.", "industry": "technology" },
+      { "ticker": "NVDA", "cik": "0001045810", "name": "NVIDIA Corp.", "industry": "semiconductors" },
+      { "ticker": "AMZN", "cik": "0001018724", "name": "Amazon.com Inc.", "industry": "retail" },
+      { "ticker": "WMT", "cik": "0000104169", "name": "Walmart Inc.", "industry": "retail" },
+      { "ticker": "JPM", "cik": "0000019617", "name": "JPMorgan Chase & Co.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current", "long_term_debt"] },
+      { "ticker": "BAC", "cik": "0000070858", "name": "Bank of America Corp.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current"] },
+      { "ticker": "XOM", "cik": "0000034088", "name": "Exxon Mobil Corp.", "industry": "energy", "skip_metrics": ["operating_income", "long_term_debt"] },
+      { "ticker": "PFE", "cik": "0000078003", "name": "Pfizer Inc.", "industry": "pharma", "fda_firm": "Pfizer", "skip_metrics": ["operating_income"] },
+      { "ticker": "LLY", "cik": "0000059478", "name": "Eli Lilly and Co.", "industry": "pharma", "fda_firm": "Eli Lilly", "skip_metrics": ["operating_income"] },
+      { "ticker": "JNJ", "cik": "0000200406", "name": "Johnson & Johnson", "industry": "pharma", "fda_firm": "Johnson & Johnson", "fda_aliases": ["Janssen"], "skip_metrics": ["operating_income"] },
+      { "ticker": "UNH", "cik": "0000731766", "name": "UnitedHealth Group Inc.", "industry": "health_care" },
+      { "ticker": "NFLX", "cik": "0001065280", "name": "Netflix Inc.", "industry": "media" },
+      { "ticker": "DIS", "cik": "0001744489", "name": "The Walt Disney Co.", "industry": "media" }
+    ],
+    "metrics": [
+      { "metric_name": "revenue", "label": "Revenue", "unit": "usd", "polarity": 1, "concepts": ["RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues", "SalesRevenueNet", "RevenuesNetOfInterestExpense"], "kind": "duration" },
+      { "metric_name": "operating_income", "label": "Operating income", "unit": "usd", "polarity": 1, "concepts": ["OperatingIncomeLoss"], "kind": "duration" },
+      { "metric_name": "net_income", "label": "Net income", "unit": "usd", "polarity": 1, "concepts": ["NetIncomeLoss"], "kind": "duration" },
+      { "metric_name": "operating_cash_flow", "label": "Net cash from operating activities", "unit": "usd", "polarity": 1, "concepts": ["NetCashProvidedByUsedInOperatingActivities"], "kind": "duration" },
+      { "metric_name": "cash", "label": "Cash and cash equivalents", "unit": "usd", "polarity": 1, "concepts": ["CashAndCashEquivalentsAtCarryingValue", "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"], "kind": "instant" },
+      { "metric_name": "long_term_debt", "label": "Long-term debt", "unit": "usd", "polarity": -1, "concepts": ["LongTermDebtNoncurrent", "LongTermDebt"], "kind": "instant" },
+      { "metric_name": "assets_current", "label": "Current assets", "unit": "usd", "polarity": 1, "concepts": ["AssetsCurrent"], "kind": "instant" },
+      { "metric_name": "liabilities_current", "label": "Current liabilities", "unit": "usd", "polarity": -1, "concepts": ["LiabilitiesCurrent"], "kind": "instant" },
+      { "metric_name": "total_assets", "label": "Total assets", "unit": "usd", "polarity": 1, "concepts": ["Assets"], "kind": "instant" }
+    ],
+    "ratios": [
+      { "metric_name": "operating_margin", "label": "Operating margin", "unit": "ratio", "polarity": 1, "numerator": "operating_income", "denominator": "revenue" },
+      { "metric_name": "net_margin", "label": "Net margin", "unit": "ratio", "polarity": 1, "numerator": "net_income", "denominator": "revenue" },
+      { "metric_name": "current_ratio", "label": "Current ratio (liquidity)", "unit": "ratio", "polarity": 1, "numerator": "assets_current", "denominator": "liabilities_current" }
+    ],
+    "event_forms": ["10-K", "10-Q", "8-K", "4", "SC 13D", "SC 13D/A", "SC 13G", "SC 13G/A", "SCHEDULE 13D", "SCHEDULE 13G"],
+    "high_severity_8k_items": ["1.03", "2.04", "2.06", "3.01", "4.01", "4.02"],
+    "medium_severity_8k_items": ["1.01", "1.02", "2.01", "2.05", "5.01", "5.02"]
+  },
+
+  "openfda": {
+    "_comment": "Weekly counts become observations on entity us-drug-market (and per-company counts for SEC companies with fda_firm). Individual recalls and approvals become events. FAERS counts are voluntary, unverified reports: an attention proxy, not incidence.",
+    "lookback_days": 400,
+    "feeds": [
+      { "feed": "recalls", "metric_name": "drug_recalls_weekly", "label": "Drug recalls reported (all classes), weekly", "polarity": -1 },
+      { "feed": "recalls_class1", "metric_name": "drug_recalls_class1_weekly", "label": "Class I drug recalls reported, weekly", "polarity": -1 },
+      { "feed": "approvals_nda_bla", "metric_name": "approvals_nda_bla_weekly", "label": "Original NDA/BLA approvals, weekly", "polarity": 1 },
+      { "feed": "approvals_anda", "metric_name": "approvals_anda_weekly", "label": "Original ANDA (generic) approvals, weekly", "polarity": 1 },
+      { "feed": "faers", "metric_name": "adverse_event_reports_weekly", "label": "FAERS adverse event reports received, weekly", "polarity": -1 },
+      { "feed": "labels", "metric_name": "label_updates_weekly", "label": "Drug label (SPL) versions effective, weekly", "polarity": 0 }
+    ],
+    "_company_feeds_comment": "Per-company series for SEC companies with fda_firm ({firm} is that name). FAERS and label counts match openfda.manufacturer_name, so they cover the firm's labeled products, not subsidiaries named differently.",
+    "company_feeds": [
+      { "feed": "recalls_firm", "metric_name": "drug_recalls_weekly", "label": "Drug recalls naming {firm}, weekly", "polarity": -1 },
+      { "feed": "faers_firm", "metric_name": "adverse_event_reports_weekly", "label": "FAERS adverse event reports for {firm} products, weekly", "polarity": -1 },
+      { "feed": "approvals_firm", "metric_name": "approvals_weekly", "label": "Original FDA approvals (NDA, BLA, ANDA) for {firm}, weekly", "polarity": 1 },
+      { "feed": "labels_firm", "metric_name": "label_updates_weekly", "label": "Drug label (SPL) versions effective for {firm} products, weekly", "polarity": 0 }
+    ]
+  }
+}

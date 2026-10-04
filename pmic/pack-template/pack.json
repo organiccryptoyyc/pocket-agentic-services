@@ -1,0 +1,10 @@
+{
+  "_comment": "One file defines a service pack. scope is merged into every hub query (callers cannot widen it); events_scope does the same for /v1/events, which filters by entity industry. Copy this folder to ../../<service_id>/ and edit.",
+  "service_id": "pharma-safety-signals",
+  "display_name": "Pharma Safety and Approval Signals",
+  "version": "0.1.0",
+  "scope": { "category": "health" },
+  "events_scope": { "industry": "pharma" },
+  "default_horizon": "90d",
+  "cache_seconds": 300
+}

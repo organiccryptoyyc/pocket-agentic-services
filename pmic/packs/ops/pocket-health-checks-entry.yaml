@@ -1,0 +1,93 @@
+- service_id: pmic-company-signals
+  # PMIC Company Fundamentals and Filing Risk: an agentic REST service (not a blockchain), so no sync_check or
+  # sync_allowance. Identity, readiness and one functional check, matching the service card.
+  check_interval: 30s
+  enabled: true
+  checks:
+    - name: version
+      type: rest
+      method: GET
+      path: /v1/version
+      expected_status_code: 200
+      expected_response_contains: '"pmic-company-signals"'
+      timeout: 5s
+      reputation_signal: critical_error
+    - name: health
+      type: rest
+      method: GET
+      path: /v1/health
+      expected_status_code: 200
+      expected_response_contains: '"status":"ok"'
+      timeout: 5s
+      reputation_signal: major_error
+    - name: verticals
+      type: rest
+      method: POST
+      path: /v1/verticals
+      body: '{}'
+      expected_status_code: 200
+      expected_response_contains: '"service":"pmic-company-signals"'
+      timeout: 5s
+      reputation_signal: major_error
+- service_id: pmic-macro-signals
+  # PMIC Macro and Markets Signals: an agentic REST service (not a blockchain), so no sync_check or
+  # sync_allowance. Identity, readiness and one functional check, matching the service card.
+  check_interval: 30s
+  enabled: true
+  checks:
+    - name: version
+      type: rest
+      method: GET
+      path: /v1/version
+      expected_status_code: 200
+      expected_response_contains: '"pmic-macro-signals"'
+      timeout: 5s
+      reputation_signal: critical_error
+    - name: health
+      type: rest
+      method: GET
+      path: /v1/health
+      expected_status_code: 200
+      expected_response_contains: '"status":"ok"'
+      timeout: 5s
+      reputation_signal: major_error
+    - name: verticals
+      type: rest
+      method: POST
+      path: /v1/verticals
+      body: '{}'
+      expected_status_code: 200
+      expected_response_contains: '"service":"pmic-macro-signals"'
+      timeout: 5s
+      reputation_signal: major_error
+- service_id: pmic-pharma-signals
+  # PMIC Pharma Safety and Approval Signals: an agentic REST service (not a blockchain), so no sync_check or
+  # sync_allowance. Identity, readiness and one functional check, matching the service card.
+  check_interval: 30s
+  enabled: true
+  checks:
+    - name: version
+      type: rest
+      method: GET
+      path: /v1/version
+      expected_status_code: 200
+      expected_response_contains: '"pmic-pharma-signals"'
+      timeout: 5s
+      reputation_signal: critical_error
+    - name: health
+      type: rest
+      method: GET
+      path: /v1/health
+      expected_status_code: 200
+      expected_response_contains: '"status":"ok"'
+      timeout: 5s
+      reputation_signal: major_error
+    - name: verticals
+      type: rest
+      method: POST
+      path: /v1/verticals
+      body: '{}'
+      expected_status_code: 200
+      expected_response_contains: '"service":"pmic-pharma-signals"'
+      timeout: 5s
+      reputation_signal: major_error

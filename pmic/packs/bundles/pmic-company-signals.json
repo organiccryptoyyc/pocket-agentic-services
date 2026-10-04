@@ -1,0 +1,45 @@
+{
+  "_comment": "Company verticals take an entity_id (lower-case ticker). Members are expanded per company from the metric list; metrics a company does not report are left out of that company's score rather than counted as missing.",
+  "service_id": "pmic-company-signals",
+  "display_name": "PMIC Company Fundamentals and Filing Risk",
+  "version": "0.2.0",
+  "category": "finance",
+  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, and a filing risk score from 8-K items, 13D filings and insider Form 4 activity. Every input carries its SEC citation.",
+  "default_horizon": "365d",
+  "cache_seconds": 300,
+  "hub_scope": [{ "source_id": "sec" }],
+  "events_scope": {},
+  "entities": ["aapl", "msft", "nvda", "amzn", "wmt", "jpm", "bac", "xom", "pfe", "lly", "jnj", "unh", "nflx", "dis"],
+  "verticals": [
+    {
+      "id": "fundamentals",
+      "title": "Company fundamentals",
+      "question": "How healthy are this company's financials versus its own recent history?",
+      "kind": "entity_composite",
+      "series_pattern": "sec:{TICKER}:{metric}",
+      "labels": { "high": "strong", "mid": "stable", "low": "weakening" },
+      "trend_words": { "up": "improving", "down": "deteriorating" },
+      "metrics": [
+        { "metric": "revenue_q", "weight": 2 },
+        { "metric": "operating_income_q" },
+        { "metric": "net_income_q" },
+        { "metric": "operating_cash_flow_q", "weight": 2 },
+        { "metric": "net_margin" },
+        { "metric": "operating_margin" },
+        { "metric": "cash" },
+        { "metric": "current_ratio" },
+        { "metric": "long_term_debt" }
+      ]
+    },
+    {
+      "id": "filing-risk",
+      "title": "Filing risk",
+      "question": "Has this company filed anything risky lately?",
+      "kind": "entity_events",
+      "note": "Score starts at 100 and drops for each 8-K with a high-severity item (bankruptcy, impairment, delisting, auditor change, restatement): -25, medium-severity item or 13D: -8, other 8-K: -1. Routine 10-K, 10-Q and 13G filings do not count. Insider Form 4 activity is reported under watch.",
+      "labels": { "high": "quiet", "mid": "active", "low": "elevated" },
+      "penalties": { "high": 25, "medium": 8, "low_8k": 1 },
+      "watch_metric": "insider_form4_weekly"
+    }
+  ]
+}

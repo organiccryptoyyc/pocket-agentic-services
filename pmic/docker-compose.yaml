@@ -1,0 +1,32 @@
+# Raspberry Pi 5 / Umbrel: the collector loop and the private query API, sharing one volume.
+#   cp .env.example .env   (fill in PMIC_SEC_USER_AGENT and any keys)
+#   docker compose up -d --build
+#   curl -s localhost:8088/v1/health
+services:
+  collector:
+    build: .
+    image: pmic:latest
+    container_name: pmic-collector
+    command: ["node", "bin/collect.js", "--loop"]
+    env_file: .env
+    volumes:
+      - pmic-data:/var/lib/pmic
+    restart: unless-stopped
+
+  api:
+    image: pmic:latest
+    container_name: pmic-api
+    command: ["node", "server.js"]
+    env_file: .env
+    environment:
+      PORT: "8088"
+    volumes:
+      - pmic-data:/var/lib/pmic
+    ports:
+      # LAN only by default. Change to "8088:8088" to reach it from other machines on the LAN.
+      - "127.0.0.1:8088:8088"
+    depends_on: [collector]
+    restart: unless-stopped
+
+volumes:
+  pmic-data:

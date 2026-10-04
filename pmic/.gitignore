@@ -1,0 +1,5 @@
+var/
+.env
+node_modules/
+.secrets/
+build/

@@ -1,0 +1,80 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "Scored drug-market and company safety briefs from openFDA: recalls (all and Class I), adverse event reports, label changes, and NDA/BLA and generic approvals for the US drug market, plus per-company recalls, adverse event reports, approvals and label changes for Pfizer, Eli Lilly and Johnson & Johnson. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and openFDA citations. POST /v1/brief {vertical, entity_id} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: drug-market (Are drug safety signals rising, and is the approval pipeline active?); company-safety (Are safety signals rising for this drug maker, and what has the FDA reported lately?). Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog, /v1/events. Every response is a single JSON object. Research signal, not investment advice.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "pmic-pharma-signals-backend on :8080; mount at /",
+      "notes": "POST /v1/verticals, POST /v1/brief, POST /v1/overview, POST /v1/signals, POST /v1/signal, POST /v1/explain, POST /v1/catalog, POST /v1/events; GET /v1/version, /v1/health. JSON body only. Bad input returns 400 + JSON."
+    }
+  ],
+  "apis": [
+    "pmic-pharma-signals-briefs"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "pmic-pharma-signals-briefs",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs/ops/pmic-pharma-signals/openapi.json"
+    },
+    {
+      "kind": "docs",
+      "api": "pmic-pharma-signals-briefs",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs/README.md",
+      "notes": "How briefs are scored."
+    }
+  ],
+  "access": "public",
+  "results": "variable",
+  "serving": {
+    "backend": "Node.js HTTP server (zero npm dependencies) behind a RelayMiner at http://<container>:8080. No caller auth. Answers come from a private hub refreshed by a scheduled collector of official public data; 5-minute cache.",
+    "implementations": [
+      "pmic-pharma-signals >= 0.1"
+    ],
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/version",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.service",
+          "matches": "^pmic-pharma-signals$"
+        },
+        "notes": "Identity probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/health",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.status",
+          "matches": "^ok$"
+        },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/verticals",
+          "method": "POST",
+          "body": {}
+        },
+        "expect": {
+          "json_path": "$.service",
+          "matches": "^pmic-pharma-signals$"
+        },
+        "notes": "Functional probe."
+      }
+    ],
+    "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/pmic/packs/README.md",
+  "updated": "2026-10-04"
+}

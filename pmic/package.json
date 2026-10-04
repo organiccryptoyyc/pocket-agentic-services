@@ -1,0 +1,17 @@
+{
+  "name": "pmic",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Public Market Intelligence Collection: scheduled pulls from official public APIs (FRED, BLS, BEA, SEC EDGAR, openFDA, World Bank) into SQLite, with raw payloads, QC, retention, 0-100 scoring and a private query API for Pocket service packs.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "collect": "node bin/collect.js",
+    "collect:loop": "node bin/collect.js --loop",
+    "test": "node --test test/collector.test.js test/api.test.js test/pack.test.js test/packs.test.js test/openfda.test.js test/sync.test.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {}
+}

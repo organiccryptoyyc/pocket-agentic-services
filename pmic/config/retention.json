@@ -1,0 +1,24 @@
+{
+  "_comment": "Days to keep, by retention class. These are minimums from the spec (raw 380, derived 400) or longer where the math needs it: year-over-year transforms on monthly data need 365 days of lookback on top of the 400-day derived window, and annual/quarterly series are tiny, so they keep 10 years. Observations older than their class horizon are neither ingested nor kept. Edit and the next prune pass applies it.",
+  "classes": {
+    "raw": 380,
+    "standard": 400,
+    "macro_monthly": 800,
+    "slow": 3650,
+    "derived": 400,
+    "scores": 400,
+    "event_standard": 400,
+    "event_high": 1095,
+    "rollup_weekly": 760,
+    "fetch_logs": 400,
+    "alerts": 400
+  },
+  "default_class_by_frequency": {
+    "daily": "standard",
+    "weekly": "standard",
+    "monthly": "macro_monthly",
+    "quarterly": "slow",
+    "annual": "slow"
+  },
+  "backups_to_keep": 7
+}

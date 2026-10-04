@@ -1,0 +1,44 @@
+{
+  "serviceId": "{{SERVICE_ID}}",
+  "displayName": "{{DISPLAY_NAME}}",
+  "description": "{{DESCRIPTION}} POST /v1/signals with a small JSON body for ranked, scored, cited signals; /v1/signal {series_id} for one; /v1/explain for why it moved. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
+  "category": "finance",
+  "protocols": ["rest"],
+  "inputSchema": {
+    "type": "object",
+    "description": "Options for POST /v1/signals (other routes take similar small bodies).",
+    "properties": {
+      "horizon": { "type": "string", "description": "7d, 30d, 90d or 365d." },
+      "sort": { "type": "string", "description": "composite, change, abs_change, confidence or deviation." },
+      "limit": { "type": "integer", "description": "How many signals to return, 1-200." }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "description": "For POST /v1/signals, {service, horizon, sort, count, signals[]}; each signal has summary, value, changes_pct, zscore, percentile, composite_score, trend, risk_flags, confidence, provenance (citation_url, source, fetch_time, raw_sha256). Errors return a JSON object with an error field (HTTP 400)."
+  },
+  "methods": {
+    "GET /v1/health": "read",
+    "GET /v1/version": "read",
+    "POST /v1/signals": "read",
+    "POST /v1/signal": "read",
+    "POST /v1/explain": "read",
+    "POST /v1/events": "read",
+    "POST /v1/catalog": "read"
+  },
+  "example": { "method": "POST", "path": "/v1/signals", "request": { "limit": 1 }, "responseSummary": { "service": "{{SERVICE_ID}}", "count": 1, "note": "Fill from a live MainNet capture." } },
+  "pocket": {
+    "network": "mainnet",
+    "serviceId": "{{SERVICE_ID}}",
+    "computeUnitsPerRelay": 100000,
+    "supplierOperator": "pokt1a0e9xlhmrpsw44upzmxqj7ct6eh7enqr7tzysx",
+    "supplierEndpoint": "https://agentic.organiccryptoyyc.com",
+    "owner": "pokt16cqt2tjzec6gsxdncl0v6k2aa7awya0wghevlw",
+    "registrationTx": "{{REGISTRATION_TX}}",
+    "healthChecks": [
+      "GET /v1/version contains \"service\":\"{{SERVICE_ID}}\"",
+      "GET /v1/health contains \"status\":\"ok\"",
+      "POST /v1/signals {\"limit\":1} contains \"service\":\"{{SERVICE_ID}}\""
+    ]
+  }
+}
