@@ -20,6 +20,7 @@ Probe fixes (after the first live run on the Pi):
 - ECB: policy rates (deposit, main refi) list only change dates, so the rate in force is carried forward to every weekday. HICP falls back to the freshest all-items series when the 2025 key goes stale (new classification in 2026).
 - FEC: a 429 keeps the months already read and finishes on later passes. A free api.data.gov key in FEC_API_KEY avoids the shared DEMO_KEY limit.
 - Fetch errors now include the underlying reason (DNS, refused, TLS), to diagnose the USAspending failures on the Pi.
+- Second probe on the Pi: all 95 series ok (FEC with its api.data.gov key). Every ECB HICP series ends at 2025-12 (ops/find-ecb.sh), so euro area inflation is left out of the global-rates-fx score until the ECB publishes it again; the series keeps collecting.
 
 - New collectors, all free official data with no paid license: ECB Data Portal (policy rates, euro
   STR, HICP, five euro reference rates), FDIC BankFind (bank failures), CFPB complaint database,
