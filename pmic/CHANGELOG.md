@@ -8,6 +8,8 @@
 - The hub push token (`PMIC_INGEST_TOKEN`) lives only in `pmic\.secrets\hub.env` on the packaging
   PC, in the generated PSM compose file, and in the Pi's `.env`. Never paste it into chat or commit it.
   If it leaks, delete `hub.env`, re-run `node pmic/ops/package-psm.js`, redeploy `pmic-hub` and update the Pi.
+- Skip any data source that needs a subscription or a paid license for now (owner's rule, 2026-10-04).
+  Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
 ## 0.1.0 (2026-10-04, branch `market-intel-collector`, draft PR #1)
