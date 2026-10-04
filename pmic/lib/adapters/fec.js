@@ -1,10 +1,12 @@
 // OpenFEC: independent expenditures (Schedule E) reported per calendar month, read from the
 // pagination count of a one-row query. FEC_API_KEY is a free api.data.gov key; without it the
-// public DEMO_KEY is used, whose daily limit fits the weekly poll. Months already read are kept
-// and only the latest three are re-read, since filings arrive late and get amended.
+// public DEMO_KEY is used, whose hourly limit is shared and low. Months already read are kept
+// and only the latest three are re-read, since filings arrive late and get amended. When the key
+// is rate limited (429) the pass stops there and keeps what it has; the next pass carries on.
 "use strict";
 
 const { SchemaError, parseJson, completeMonths, addMonths } = require("./common");
+const { FetchError } = require("../net");
 
 const BASE = "https://api.open.fec.gov/v1";
 const REFRESH_MONTHS = 3;
@@ -28,13 +30,26 @@ async function collect(series, ctx) {
       const cache = ctx.kvGet(s.series_id) || {};
       const refresh = new Set(months.slice(-REFRESH_MONTHS));
       let sha = null;
+      let limited = null;
       for (const m of months) {
         if (cache[m] !== undefined && !refresh.has(m)) continue;
         const url = `${BASE}/schedules/schedule_e/?api_key=${encodeURIComponent(key)}&min_date=${m}&max_date=${lastDay(m)}&per_page=1`;
-        const r = await ctx.get(`fec:${s.params.feed}:${m}`, url, { headers: { Accept: "application/json" } });
-        cache[m] = countOf(parseJson(r.text, `fec ${m}`));
-        sha = r.sha256;
+        try {
+          const r = await ctx.get(`fec:${s.params.feed}:${m}`, url, { headers: { Accept: "application/json" } });
+          cache[m] = countOf(parseJson(r.text, `fec ${m}`));
+          sha = r.sha256;
+        } catch (e) {
+          if (!(e instanceof FetchError && e.status === 429)) throw e;
+          limited = e;
+          break;
+        }
         ctx.kvSet(s.series_id, cache);
+      }
+      if (limited) {
+        const have = months.filter((m) => cache[m] !== undefined).length;
+        const hint = ctx.env.FEC_API_KEY ? "" : " (on the shared DEMO_KEY; a free api.data.gov key in FEC_API_KEY lifts this)";
+        if (!have) throw new FetchError(`fec: rate limited before any month was read${hint}`, 429);
+        ctx.note("fec", `rate limited after ${have} of ${months.length} months${hint}; the rest are read on later passes`);
       }
       for (const k of Object.keys(cache)) if (!months.includes(k)) delete cache[k];
       ctx.kvSet(s.series_id, cache);

@@ -54,7 +54,10 @@ async function once(url, init, timeoutMs) {
     return { status: res.status, ok: res.ok, text, contentType: (res.headers && res.headers.get && res.headers.get("content-type")) || null };
   } catch (e) {
     if (e.name === "AbortError") throw new FetchError(`no response within ${timeoutMs}ms from ${redact(url)}`);
-    throw new FetchError(`${e.name || "Error"} calling ${redact(url)}: ${e.message}`);
+    // Node's fetch says only "fetch failed"; the reason (DNS, refused, reset, TLS) is in e.cause.
+    const c = e.cause;
+    const why = c ? ` (${[c.code, c.message].filter(Boolean).join(": ")})` : "";
+    throw new FetchError(`${e.name || "Error"} calling ${redact(url)}: ${e.message}${why}`);
   } finally {
     clearTimeout(t);
   }

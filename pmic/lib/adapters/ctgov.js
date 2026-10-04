@@ -7,7 +7,9 @@
 const { SchemaError, parseJson, ymd, monthlyCounts } = require("./common");
 
 const BASE = "https://clinicaltrials.gov/api/v2/studies";
-const FIELDS = "NCTId,BriefTitle,OverallStatus,StartDate,CompletionDate,LastUpdatePostDate,Phase";
+// The date types must be asked for by name: without StartDateType/CompletionDateType the API sends
+// the dates with no type, and no start or completion would count as ACTUAL.
+const FIELDS = "NCTId,BriefTitle,OverallStatus,StartDate,StartDateType,CompletionDate,CompletionDateType,LastUpdatePostDate,Phase";
 const ACTIVE = new Set(["RECRUITING", "NOT_YET_RECRUITING", "ACTIVE_NOT_RECRUITING", "ENROLLING_BY_INVITATION"]);
 const STOPPED = new Set(["TERMINATED", "WITHDRAWN", "SUSPENDED"]);
 const MAX_PAGES = 30;

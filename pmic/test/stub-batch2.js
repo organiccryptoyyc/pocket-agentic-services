@@ -81,6 +81,26 @@ function batch2(u, init, now, json) {
     const since = u.searchParams.get("startPeriod");
     const monthly = key.startsWith("M.");
     const lines = ["KEY,FREQ,REF_AREA,TIME_PERIOD,OBS_VALUE,OBS_STATUS,TITLE"];
+    // Policy rates list only the dates they changed.
+    if (key.includes(".KR.")) {
+      for (const [d, v] of [["2019-09-18", -0.5], ["2024-06-12", 3.75], ["2025-06-11", 2.0]]) if (d >= since) lines.push(`${flow}.${key},B,U2,${d},${v},A,"Policy rate, test"`);
+      return text(lines.join("\n") + "\n", "text/csv");
+    }
+    // HICP: the 2025 key stops in December; the wildcard search also has the new all-items series.
+    if (flow === "ICP") {
+      const rows = (k, title, stop) => {
+        for (let t = Date.parse(`${since}T00:00:00Z`), i = 0; t < Math.min(stop, now.getTime() - 35 * DAY); t += 31 * DAY, i++) lines.push(`ICP.${k},M,U2,${ymd(t).slice(0, 7)},${(2 + 0.1 * i).toFixed(2)},A,"${title}"`);
+      };
+      const stop = Date.parse("2026-01-01T00:00:00Z");
+      if (key === "M.U2.N.000000.4.ANR") rows(key, "HICP - Overall index", stop);
+      else {
+        rows("M.U2.N.000000.4.ANR", "HICP - Overall index", stop);
+        rows("M.U2.N.TOTAL.4.ANR", "HICP - All-items", Infinity);
+        rows("M.U2.N.TOTXNRG.4.ANR", "HICP - All-items excluding energy", Infinity);
+        rows("M.U2.N.CP01.4.ANR", "HICP - Food and non-alcoholic beverages", Infinity);
+      }
+      return text(lines.join("\n") + "\n", "text/csv");
+    }
     let i = 0;
     for (let t = Date.parse(`${since}T00:00:00Z`); t < now.getTime() - DAY; t += monthly ? 30 * DAY : DAY) {
       const d = new Date(t);
@@ -116,8 +136,16 @@ function batch2(u, init, now, json) {
       for (let t = from, i = 0; t < now.getTime() - DAY; t += DAY, i++) items.push({ project: "en.wikipedia", article: parts[8], granularity: "daily", timestamp: `${ymd(t).replace(/-/g, "")}00`, access: "all-access", agent: "user", views: wave(i, 5000) });
       return json({ items });
     }
+    // Edits come from monthly dumps: published through the end of the month before last.
+    const loaded = Date.parse(`${ymd(now.getTime()).slice(0, 7)}-01T00:00:00Z`);
+    const published = new Date(loaded); published.setUTCMonth(published.getUTCMonth() - 1);
+    if (u.pathname.includes("/edits/aggregate/")) {
+      const results = [];
+      for (let t = from; t < published.getTime(); t = Date.UTC(new Date(t).getUTCFullYear(), new Date(t).getUTCMonth() + 1, 1)) results.push({ timestamp: `${ymd(t).slice(0, 7)}-01T00:00:00.000Z`, edits: 4000000 });
+      return json({ items: [{ project: "en.wikipedia.org", "editor-type": "all-editor-types", "page-type": "all-page-types", granularity: "monthly", results }] });
+    }
     const results = [];
-    for (let t = from, i = 0; t < now.getTime() - DAY; t += DAY, i++) if (i % 3 === 0) results.push({ timestamp: `${ymd(t)}T00:00:00.000Z`, edits: wave(i, 4) });
+    for (let t = from, i = 0; t < published.getTime(); t += DAY, i++) if (i % 3 === 0) results.push({ timestamp: `${ymd(t)}T00:00:00.000Z`, edits: wave(i, 4) });
     return json({ items: [{ project: "en.wikipedia", "page-title": parts[6], "editor-type": "all-editor-types", granularity: "daily", results }] });
   }
   if (u.host === "clinicaltrials.gov") {

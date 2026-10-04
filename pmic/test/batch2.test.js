@@ -17,7 +17,7 @@ const { pricesFrom } = require("../lib/adapters/pinksheet");
 const { monthCounts } = require("../lib/adapters/cfpb");
 const { units } = require("../lib/adapters/cpsc");
 const { fiscalToMonth } = require("../lib/adapters/usaspending");
-const { periodDate } = require("../lib/adapters/ecb");
+const { periodDate, stepDaily } = require("../lib/adapters/ecb");
 const { studyOf } = require("../lib/adapters/ctgov");
 const { form4Values, form4XmlUrl } = require("../lib/adapters/sec");
 const { completeQuarters } = require("../lib/adapters/fdic");
@@ -127,6 +127,10 @@ test("batch 2 sources: every series collects and events land on their sector ent
   // Monthly counts are complete months only; weekly sums are complete weeks only.
   assert.equal(db.prepare("SELECT MAX(observation_time) m FROM observations WHERE series_id = 'cfpb:complaints_total_monthly'").get().m, "2026-09-01");
   assert.equal(db.prepare("SELECT MAX(observation_time) m FROM observations WHERE series_id = 'wikimedia:AAPL:pageviews_weekly'").get().m, "2026-09-21");
+  // Edits stop at the last week inside the published months (through August), not zero-filled.
+  assert.equal(db.prepare("SELECT MAX(observation_time) m FROM observations WHERE series_id = 'wikimedia:AAPL:edits_weekly'").get().m, "2026-08-24");
+  // ClinicalTrials.gov only sends the ACTUAL/ESTIMATED date types when they are asked for.
+  assert.ok(db.prepare("SELECT COUNT(*) n FROM fetch_logs WHERE url LIKE '%clinicaltrials.gov%StartDateType%CompletionDateType%'").get().n > 0);
   // The Pink Sheet link is read from the page, not the fallback.
   assert.ok(db.prepare("SELECT COUNT(*) n FROM fetch_logs WHERE url LIKE '%test-0090012026%'").get().n === 1);
 });
@@ -151,4 +155,34 @@ test("LDA falls back to lda.gov when lda.senate.gov fails; FDIC falls back to it
   const hosts = new Set(fetchImpl.calls.map((c) => new URL(c.url).host));
   assert.ok(hosts.has("lda.gov") && hosts.has("banks.data.fdic.gov"));
   assert.ok(summary.sources.every((s) => s.failed.length > 0));
+});
+
+test("ECB policy rates are carried forward daily; stale HICP falls back to the fresh all-items series", async () => {
+  const { db, summary } = await run(["ecb"]);
+  const ecb = summary.sources.find((s) => s.source_id === "ecb");
+  assert.equal(ecb.failed.length, 0, JSON.stringify(ecb.failed[0]));
+  const dfr = db.prepare("SELECT COUNT(*) n, MAX(observation_time) t FROM observations WHERE series_id = 'ecb:FM.B.U2.EUR.4F.KR.DFR.LEV'").get();
+  assert.ok(dfr.n > 200, `weekday values, got ${dfr.n}`);
+  assert.equal(dfr.t, "2026-10-02");
+  assert.equal(db.prepare("SELECT metric_value v FROM observations WHERE series_id = 'ecb:FM.B.U2.EUR.4F.KR.DFR.LEV' ORDER BY observation_time LIMIT 1").get().v, 2);
+  const h = db.prepare("SELECT MAX(observation_time) t FROM observations WHERE series_id = 'ecb:ICP.M.U2.N.000000.4.ANR'").get();
+  assert.ok(h.t > "2026-06-01", `fresh HICP, got ${h.t}`);
+  assert.ok(ecb.notes.some((n) => n.includes("M.U2.N.TOTAL.4.ANR")), ecb.notes.join(" | "));
+  assert.deepEqual(stepDaily([["2026-01-05", 1], ["2026-01-08", 2]], "2026-01-06", new Date("2026-01-10T12:00:00Z")), [["2026-01-06", 1], ["2026-01-07", 1], ["2026-01-08", 2], ["2026-01-09", 2]]);
+});
+
+test("FEC keeps the months it read when the key is rate limited", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pmic-b2f-"));
+  const db = dbLib.open({ dataDir: dir });
+  const base = makeFetch(catalog, { now: NOW });
+  let fec = 0;
+  const f = async (url, init) => {
+    if (url.includes("api.open.fec.gov") && ++fec > 5) return { status: 429, ok: false, text: '{"error":{"code":"OVER_RATE_LIMIT"}}', contentType: "application/json" };
+    return base(url, init);
+  };
+  const summary = await collectOnce(db, catalog, { now: NOW, dataDir: dir, env: {}, fetchImpl: f, sources: ["fec"] });
+  const s = summary.sources.find((x) => x.source_id === "fec");
+  assert.equal(s.failed.length, 0, JSON.stringify(s.failed[0]));
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM observations WHERE source_id = 'fec'").get().n, 5);
+  assert.ok(s.notes.some((n) => n.includes("rate limited") && n.includes("FEC_API_KEY")), s.notes.join(" | "));
 });

@@ -14,6 +14,13 @@
 
 ## Packs batch 2, phase 2 (2026-10-04): 8 verticals, 11 new sources, one new service
 
+Probe fixes (after the first live run on the Pi):
+- ClinicalTrials.gov: ask for StartDateType and CompletionDateType, without which starts and completions were always 0.
+- Wikipedia edits: stop at the last month Wikimedia has published (about a month behind) instead of counting unpublished weeks as 0.
+- ECB: policy rates (deposit, main refi) list only change dates, so the rate in force is carried forward to every weekday. HICP falls back to the freshest all-items series when the 2025 key goes stale (new classification in 2026).
+- FEC: a 429 keeps the months already read and finishes on later passes. A free api.data.gov key in FEC_API_KEY avoids the shared DEMO_KEY limit.
+- Fetch errors now include the underlying reason (DNS, refused, TLS), to diagnose the USAspending failures on the Pi.
+
 - New collectors, all free official data with no paid license: ECB Data Portal (policy rates, euro
   STR, HICP, five euro reference rates), FDIC BankFind (bank failures), CFPB complaint database,
   Wikimedia pageviews and edits, ClinicalTrials.gov v2, CPSC recalls, NHTSA recalls (DOT open
