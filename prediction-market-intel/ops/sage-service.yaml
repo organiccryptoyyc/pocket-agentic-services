@@ -1,0 +1,31 @@
+# SAGE gateway configuration for prediction-market-intel. Send to the Pocket partner
+# channel / portal@pokt.foundation. Gateways do NOT read the service card; without this
+# entry SAGE refuses REST requests for the service and it is not discoverable on
+# agent.pocket.network.
+gateway_config:
+  services:
+    - id: prediction-market-intel
+      type: passthrough
+      rpc_types: ["rest"]
+      timeout_config:
+        relay_timeout: 30s        # cache miss = 4 parallel Polymarket calls (12s timeout, 1 retry)
+  active_health_checks:
+    local:
+      - service_id: prediction-market-intel
+        enabled: true
+        checks:
+          - name: version
+            type: rest
+            method: GET
+            path: /v1/version
+            expected_status_code: 200
+            reputation_signal: critical_error
+            timeout: 5s
+          - name: health
+            type: rest
+            method: GET
+            path: /v1/health
+            expected_status_code: 200
+            reputation_signal: major_error
+            timeout: 5s
+        # No sync_check / sync_allowance: not a blockchain service.
