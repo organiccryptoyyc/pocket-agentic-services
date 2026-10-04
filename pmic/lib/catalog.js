@@ -21,8 +21,10 @@ function load() {
   const series = cfg.series.map((s) => ({ ...s }));
 
   // World Bank: one annual series per (country, indicator).
+  const wbSkip = new Set(cfg.worldbank.skip || []);
   for (const country of cfg.worldbank.countries) {
     for (const ind of cfg.worldbank.indicators) {
+      if (wbSkip.has(`${country}:${ind.id}`)) continue;
       series.push({
         series_id: `worldbank:${country}:${ind.id}`,
         source_id: "worldbank",
