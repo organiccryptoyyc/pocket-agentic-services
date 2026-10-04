@@ -58,7 +58,8 @@ function open({ dataDir = DATA_DIR, readOnly = false } = {}) {
   const db = new DatabaseSync(file);
   try { fs.chmodSync(file, 0o600); } catch { /* best effort on non-POSIX hosts */ }
   db.exec("PRAGMA journal_mode = WAL");
-  db.exec("PRAGMA busy_timeout = 5000");
+  // Generous: a manual `collect.js --force` can run while the --loop collector is mid-pass.
+  db.exec("PRAGMA busy_timeout = 60000");
   db.exec("PRAGMA foreign_keys = ON");
   migrate(db);
   return db;
