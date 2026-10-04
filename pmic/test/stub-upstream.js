@@ -5,6 +5,8 @@
 // this build container, whose network policy blocks these hosts (see README "Verification").
 "use strict";
 
+const { batch2 } = require("./stub-batch2");
+
 const DAY = 86400000;
 
 function hash(s) {
@@ -264,6 +266,8 @@ function makeFetch(catalog, opts = {}) {
       }
       return json([{ page: 1, pages: 1, per_page: 1000, total: rows.length, sourceid: "2", lastupdated: "2026-09-19" }, rows]);
     }
+    const b2 = batch2(u, init, now, json);
+    if (b2) return b2;
     return { status: 404, ok: false, text: `stub has no route for ${url}` };
   }
   fetchImpl.calls = calls;

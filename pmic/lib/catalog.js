@@ -1,4 +1,4 @@
-// Loads config/*.json and expands the SEC, World Bank and openFDA templates into one flat
+// Loads config/*.json and expands the SEC, World Bank, openFDA, Wikipedia and ClinicalTrials.gov templates into one flat
 // series catalog. Everything downstream (collector, scoring, query API) works off this list.
 "use strict";
 
@@ -62,6 +62,19 @@ function load() {
       series.push({ ...base, series_id: `sec:${co.ticker}:${r.metric_name}`, metric_name: r.metric_name, label: r.label, unit: r.unit, frequency: "quarterly", polarity: r.polarity });
     }
     series.push({ ...base, series_id: `sec:${co.ticker}:insider_form4_weekly`, metric_name: "insider_form4_weekly", label: "Insider transaction filings (Form 4), weekly", unit: "count", frequency: "weekly", polarity: 0, category: "market" });
+    for (const m of cfg.sec.insider_metrics || []) {
+      series.push({ ...base, series_id: `sec:${co.ticker}:${m.metric_name}`, metric_name: m.metric_name, label: m.label, unit: "usd", frequency: "weekly", polarity: m.polarity, category: "market" });
+    }
+    if (co.wiki && cfg.wikimedia) {
+      for (const m of cfg.wikimedia.metrics) {
+        series.push({ series_id: `wikimedia:${co.ticker}:${m.metric_name}`, source_id: "wikimedia", entity_id, metric_name: m.metric_name, label: m.label, unit: "count", frequency: "weekly", category: "attention", industry: co.industry, polarity: 1, transform: "level", params: { feed: m.feed, article: co.wiki } });
+      }
+    }
+    if (co.ctgov_sponsors && cfg.clinicaltrials) {
+      for (const m of cfg.clinicaltrials.metrics) {
+        series.push({ series_id: `ctgov:${co.ticker}:${m.metric_name}`, source_id: "ctgov", entity_id, metric_name: m.metric_name, label: m.label, unit: "count", frequency: m.frequency, category: "health", industry: "pharma", polarity: m.polarity, transform: "level", params: { sponsors: co.ctgov_sponsors } });
+      }
+    }
     if (co.fda_firm) {
       for (const f of cfg.openfda.company_feeds) {
         series.push({ series_id: `openfda:${co.ticker}:${f.metric_name}`, source_id: "openfda", entity_id, metric_name: f.metric_name, label: f.label.replace("{firm}", co.fda_firm), unit: "count", frequency: "weekly", category: "health", industry: "pharma", polarity: f.polarity, transform: "level", params: { feed: f.feed, firm: co.fda_firm, firms: [co.fda_firm, ...(co.fda_aliases || [])] } });

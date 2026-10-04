@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "PMIC Company Fundamentals and Filing Risk",
-    "version": "0.3.0",
-    "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, a filing risk score from 8-K items, 13D filings and insider Form 4 activity, an insider activity score, a balance sheet strength score, and a peer ranking against the other 13 companies on growth, margins and liquidity. Every input carries its SEC citation."
+    "title": "PMIC Public Sector Signals",
+    "version": "0.1.0",
+    "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC consumer products, NHTSA vehicles and equipment, FDA food), political money (FEC independent expenditures, Senate lobbying registrations and filings) and federal spending (USAspending award obligations by agency, Monthly Treasury Statement outlays, receipts and deficit). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input."
   },
   "servers": [
     {
@@ -63,31 +63,9 @@
                   "vertical": {
                     "type": "string",
                     "enum": [
-                      "fundamentals",
-                      "filing-risk",
-                      "insider-activity",
-                      "balance-sheet",
-                      "peer-ranking",
-                      "public-attention"
-                    ]
-                  },
-                  "entity_id": {
-                    "type": "string",
-                    "enum": [
-                      "aapl",
-                      "msft",
-                      "nvda",
-                      "amzn",
-                      "wmt",
-                      "jpm",
-                      "bac",
-                      "xom",
-                      "pfe",
-                      "lly",
-                      "jnj",
-                      "unh",
-                      "nflx",
-                      "dis"
+                      "product-recalls",
+                      "political-money",
+                      "federal-spending"
                     ]
                   },
                   "horizon": {
@@ -133,7 +111,7 @@
     },
     "/v1/overview": {
       "post": {
-        "summary": "Every brief for one company.",
+        "summary": "Every brief at once, compact.",
         "requestBody": {
           "required": true,
           "content": {
@@ -141,25 +119,6 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "entity_id": {
-                    "type": "string",
-                    "enum": [
-                      "aapl",
-                      "msft",
-                      "nvda",
-                      "amzn",
-                      "wmt",
-                      "jpm",
-                      "bac",
-                      "xom",
-                      "pfe",
-                      "lly",
-                      "jnj",
-                      "unh",
-                      "nflx",
-                      "dis"
-                    ]
-                  },
                   "horizon": {
                     "type": "string",
                     "enum": [
@@ -212,8 +171,13 @@
                   "source_id": {
                     "type": "string",
                     "enum": [
-                      "sec",
-                      "wikimedia"
+                      "cpsc",
+                      "nhtsa",
+                      "openfda",
+                      "fec",
+                      "lda",
+                      "usaspending",
+                      "fred"
                     ]
                   },
                   "horizon": {
@@ -452,83 +416,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/events": {
-      "post": {
-        "summary": "Dated events with source links.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "entity_id": {
-                    "type": "string",
-                    "enum": [
-                      "aapl",
-                      "msft",
-                      "nvda",
-                      "amzn",
-                      "wmt",
-                      "jpm",
-                      "bac",
-                      "xom",
-                      "pfe",
-                      "lly",
-                      "jnj",
-                      "unh",
-                      "nflx",
-                      "dis"
-                    ]
-                  },
-                  "event_type": {
-                    "type": "string"
-                  },
-                  "severity": {
-                    "type": "string",
-                    "enum": [
-                      "low",
-                      "medium",
-                      "high"
-                    ]
-                  },
-                  "since": {
-                    "type": "string",
-                    "format": "date"
-                  },
-                  "limit": {
-                    "type": "integer"
-                  }
-                },
-                "required": []
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

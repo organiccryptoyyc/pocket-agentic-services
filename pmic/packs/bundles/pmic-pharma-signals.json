@@ -1,5 +1,5 @@
 {
-  "_comment": "Health and pharma verticals. Batch 2 adds ClinicalTrials.gov and other free health sources to this same service.",
+  "_comment": "Health and pharma verticals: openFDA safety and approvals, and ClinicalTrials.gov pipelines (batch 2).",
   "service_id": "pmic-pharma-signals",
   "display_name": "PMIC Pharma Safety and Approval Signals",
   "version": "0.2.0",
@@ -7,7 +7,7 @@
   "description": "Scored drug-market and company safety briefs from openFDA: recalls (all and Class I), adverse event reports, label changes, and NDA/BLA and generic approvals for the US drug market, plus per-company recalls, adverse event reports, approvals and label changes for Pfizer, Eli Lilly and Johnson & Johnson. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and openFDA citations.",
   "default_horizon": "90d",
   "cache_seconds": 300,
-  "hub_scope": [{ "source_id": "openfda" }],
+  "hub_scope": [{ "source_id": "openfda", "entity_id": "us-drug-market" }, { "source_id": "openfda", "entity_id": "pfe" }, { "source_id": "openfda", "entity_id": "lly" }, { "source_id": "openfda", "entity_id": "jnj" }, { "source_id": "ctgov" }],
   "events_scope": { "industry": "pharma" },
   "entities": ["pfe", "lly", "jnj"],
   "verticals": [
@@ -43,6 +43,24 @@
         { "metric": "adverse_event_reports_weekly", "weight": 2 },
         { "metric": "approvals_weekly" },
         { "metric": "label_updates_weekly" }
+      ]
+    },
+    {
+      "id": "clinical-pipeline",
+      "title": "Clinical trial pipeline",
+      "question": "Is this drug maker's trial pipeline growing or stalling?",
+      "kind": "entity_composite",
+      "series_pattern": "ctgov:{TICKER}:{metric}",
+      "note": "Higher score means a stronger pipeline than usual for this company: more trials started (monthly) and more trials recruiting or active, fewer trials terminated, withdrawn or suspended, from ClinicalTrials.gov studies it leads. Completions are a watch item. Recently stopped trials are listed under recent_events.",
+      "labels": { "high": "growing", "mid": "steady", "low": "stalling" },
+      "trend_words": { "up": "growing", "down": "slowing" },
+      "include_events": true,
+      "event_types": ["trial_stopped"],
+      "metrics": [
+        { "metric": "trial_starts_monthly", "weight": 2 },
+        { "metric": "active_trials", "weight": 2 },
+        { "metric": "trial_stops_monthly" },
+        { "metric": "trial_completions_monthly" }
       ]
     }
   ]

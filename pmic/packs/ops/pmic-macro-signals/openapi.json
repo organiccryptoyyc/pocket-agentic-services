@@ -74,7 +74,10 @@
                       "consumer",
                       "country-risk",
                       "health-systems",
-                      "education"
+                      "education",
+                      "yield-curve",
+                      "bank-health",
+                      "global-rates-fx"
                     ]
                   },
                   "horizon": {
@@ -189,7 +192,11 @@
                       "fred",
                       "bls",
                       "bea",
-                      "worldbank"
+                      "worldbank",
+                      "ecb",
+                      "fdic",
+                      "cfpb",
+                      "pinksheet"
                     ]
                   },
                   "horizon": {

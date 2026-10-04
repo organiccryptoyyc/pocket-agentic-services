@@ -135,11 +135,35 @@ function curve(members) {
   };
 }
 
+// Treasury yields by tenor, with both slopes markets watch for inversion.
+const TENORS = [["1m", "fred:DGS1MO"], ["3m", "fred:DGS3MO"], ["1y", "fred:DGS1"], ["2y", "fred:DGS2"], ["5y", "fred:DGS5"], ["10y", "fred:DGS10"], ["30y", "fred:DGS30"]];
+function termStructure(members) {
+  const val = (id) => {
+    const m = members.find((x) => x.series_id === id);
+    return m && m.value ? m.value.current : null;
+  };
+  const s3m = val("fred:T10Y3M");
+  const s2y = val("fred:T10Y2Y");
+  return {
+    yields_pct: Object.fromEntries(TENORS.map(([t, id]) => [t, val(id)])),
+    slope_10y_minus_3m_pct: s3m,
+    slope_10y_minus_2y_pct: s2y,
+    inverted_10y_3m: s3m === null ? null : s3m < 0,
+    inverted_10y_2y: s2y === null ? null : s2y < 0,
+  };
+}
+
 async function brief(v, { horizon, entity, countries }) {
   if (v.kind === "composite") {
     const members = (await Promise.all(v.members.map((m) => member(m, horizon)))).filter(Boolean);
     const out = V.combine(v, members, { horizon });
     if ((v.extras || []).includes("curve")) out.curve = curve(members);
+    if ((v.extras || []).includes("term_structure")) out.term_structure = termStructure(members);
+    if (v.events_entities) {
+      // Sector briefs (recalls, bank failures) list the latest events of their sector entities.
+      const lists = await Promise.all(v.events_entities.map((id) => hub("/v1/events", { entity_id: id, since: sinceFor(horizon), limit: 20 })));
+      out.recent_events = lists.flatMap((l) => l.events).sort((a, b) => String(b.event_time).localeCompare(String(a.event_time))).slice(0, 20);
+    }
     return out;
   }
   if (v.kind === "entity_composite") {
@@ -187,8 +211,9 @@ function countriesOf(body) {
 // ---- scope for the raw routes ------------------------------------------------------------
 
 function scopeFilters(body) {
-  const fs = PACK.hub_scope.filter((f) => !body.source_id || f.source_id === body.source_id);
-  if (!fs.length) throw new ClientError(400, "out_of_scope", `field 'source_id' must be one of: ${PACK.hub_scope.map((f) => f.source_id).join(", ")}`);
+  // A scope entry pinned to one entity only answers for that entity.
+  const fs = PACK.hub_scope.filter((f) => (!body.source_id || f.source_id === body.source_id) && (!body.entity_id || !f.entity_id || f.entity_id === body.entity_id));
+  if (!fs.length) throw new ClientError(400, "out_of_scope", `nothing in scope for that source_id/entity_id; 'source_id' must be one of: ${[...new Set(PACK.hub_scope.map((f) => f.source_id))].join(", ")}`);
   return fs;
 }
 

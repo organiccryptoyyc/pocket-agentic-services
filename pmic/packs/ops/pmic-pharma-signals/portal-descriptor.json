@@ -14,7 +14,8 @@
         "type": "string",
         "enum": [
           "drug-market",
-          "company-safety"
+          "company-safety",
+          "clinical-pipeline"
         ],
         "description": "Which brief. POST /v1/verticals describes each."
       },
@@ -25,7 +26,7 @@
           "lly",
           "jnj"
         ],
-        "description": "Company (lower-case ticker); required for company-safety."
+        "description": "Company (lower-case ticker); required for company-safety, clinical-pipeline."
       },
       "horizon": {
         "type": "string",

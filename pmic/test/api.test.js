@@ -92,7 +92,7 @@ test("every query route answers 200 with good input", async () => {
   assert.equal(s.json.status, "ok");
   assert.ok(s.json.provenance.raw_sha256);
   const src = await call("POST", "/v1/sources", {});
-  assert.equal(src.json.count, 6);
+  assert.equal(src.json.count, catalogLib.load().sources.length);
 });
 
 test("bad input is 4xx + JSON, never 5xx", async () => {

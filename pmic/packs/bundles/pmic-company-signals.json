@@ -7,7 +7,7 @@
   "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, a filing risk score from 8-K items, 13D filings and insider Form 4 activity, an insider activity score, a balance sheet strength score, and a peer ranking against the other 13 companies on growth, margins and liquidity. Every input carries its SEC citation.",
   "default_horizon": "365d",
   "cache_seconds": 300,
-  "hub_scope": [{ "source_id": "sec" }],
+  "hub_scope": [{ "source_id": "sec" }, { "source_id": "wikimedia" }],
   "events_scope": {},
   "entities": ["aapl", "msft", "nvda", "amzn", "wmt", "jpm", "bac", "xom", "pfe", "lly", "jnj", "unh", "nflx", "dis"],
   "verticals": [
@@ -47,13 +47,15 @@
       "question": "Are this company's insiders trading more than usual?",
       "kind": "entity_composite",
       "series_pattern": "sec:{TICKER}:{metric}",
-      "note": "Higher score means quieter insider activity than usual: weekly Form 4 filings compared with this company's own trailing year. Form 4 reports insider buys, sells, grants and exercises; a busy week is a reason to read the filings, not a verdict. The latest Form 4 and 13D filings are listed under recent_events.",
+      "note": "Higher score means quieter insider activity than usual: weekly Form 4 filings and the dollar value of open-market sales and purchases (Form 4 codes S and P), each compared with this company's own trailing year. Form 4 reports insider buys, sells, grants and exercises; a busy week is a reason to read the filings, not a verdict. The latest Form 4 and 13D filings are listed under recent_events.",
       "labels": { "high": "quiet", "mid": "normal", "low": "unusually active" },
       "trend_words": { "up": "quieting", "down": "picking up" },
       "include_events": true,
       "event_types": ["insider_form4", "ownership_13d"],
       "metrics": [
-        { "metric": "insider_form4_weekly", "direction": -1 }
+        { "metric": "insider_form4_weekly", "direction": -1 },
+        { "metric": "insider_sell_value_weekly", "direction": -1, "weight": 2 },
+        { "metric": "insider_buy_value_weekly", "direction": -1 }
       ]
     },
     {
@@ -89,6 +91,20 @@
         { "metric": "operating_margin", "polarity": 1, "basis": "level" },
         { "metric": "net_margin", "polarity": 1, "basis": "level" },
         { "metric": "current_ratio", "polarity": 1, "basis": "level" }
+      ]
+    },
+    {
+      "id": "public-attention",
+      "title": "Public attention",
+      "question": "Is public attention on this company spiking?",
+      "kind": "entity_composite",
+      "series_pattern": "wikimedia:{TICKER}:{metric}",
+      "note": "Higher score means more public attention than usual for this company: weekly Wikipedia pageviews (human readers) and edits of its article against its own trailing year. A spike says people are looking, not why; read it next to filing-risk.",
+      "labels": { "high": "spiking", "mid": "normal", "low": "quiet" },
+      "trend_words": { "up": "rising", "down": "fading" },
+      "metrics": [
+        { "metric": "pageviews_weekly", "weight": 2 },
+        { "metric": "edits_weekly" }
       ]
     }
   ]

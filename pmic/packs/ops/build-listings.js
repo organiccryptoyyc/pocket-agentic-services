@@ -43,7 +43,7 @@ const OWNER = "pokt16cqt2tjzec6gsxdncl0v6k2aa7awya0wghevlw";
 const ENDPOINT = "https://agentic.organiccryptoyyc.com";
 const CU = 100000;
 
-const needsEntity = (v) => v.kind === "entity_composite" || v.kind === "entity_events";
+const needsEntity = (v) => v.kind === "entity_composite" || v.kind === "entity_events" || v.kind === "peer_table";
 
 function routesOf(b) {
   const r = ["POST /v1/verticals", "POST /v1/brief", "POST /v1/overview", "POST /v1/signals", "POST /v1/signal", "POST /v1/explain", "POST /v1/catalog"];

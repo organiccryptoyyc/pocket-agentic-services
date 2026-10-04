@@ -64,7 +64,8 @@
                     "type": "string",
                     "enum": [
                       "drug-market",
-                      "company-safety"
+                      "company-safety",
+                      "clinical-pipeline"
                     ]
                   },
                   "entity_id": {
@@ -186,7 +187,11 @@
                   "source_id": {
                     "type": "string",
                     "enum": [
-                      "openfda"
+                      "openfda",
+                      "openfda",
+                      "openfda",
+                      "openfda",
+                      "ctgov"
                     ]
                   },
                   "horizon": {

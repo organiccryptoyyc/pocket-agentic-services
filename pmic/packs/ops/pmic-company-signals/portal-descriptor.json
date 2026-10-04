@@ -17,7 +17,8 @@
           "filing-risk",
           "insider-activity",
           "balance-sheet",
-          "peer-ranking"
+          "peer-ranking",
+          "public-attention"
         ],
         "description": "Which brief. POST /v1/verticals describes each."
       },
@@ -39,7 +40,7 @@
           "nflx",
           "dis"
         ],
-        "description": "Company (lower-case ticker); required for fundamentals, filing-risk, insider-activity, balance-sheet."
+        "description": "Company (lower-case ticker); required for fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking, public-attention."
       },
       "horizon": {
         "type": "string",

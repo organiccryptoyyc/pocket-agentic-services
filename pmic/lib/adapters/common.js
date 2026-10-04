@@ -71,4 +71,92 @@ function quarterStart(year, q) {
   return `${year}-${pad((q - 1) * 3 + 1)}-01`;
 }
 
-module.exports = { SchemaError, num, parseJson, pad, ymd, compact, fromCompact, weekStart, completeWeeks, weeklyCounts, quarterStart };
+// First day of the month containing the date, as YYYY-MM-DD.
+function monthStart(isoDate) {
+  return `${isoDate.slice(0, 7)}-01`;
+}
+
+function addMonths(isoMonthStart, n) {
+  const d = new Date(`${isoMonthStart}T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + n);
+  return ymd(d);
+}
+
+// Complete calendar months from the first month starting on/after `since` to the month before `now`.
+function completeMonths(since, now) {
+  const months = [];
+  let m = monthStart(since);
+  if (m < since) m = addMonths(m, 1);
+  const last = addMonths(monthStart(ymd(now)), -1);
+  while (m <= last) {
+    months.push(m);
+    m = addMonths(m, 1);
+  }
+  return months;
+}
+
+// {date -> count} pairs into complete monthly observations (zeros included).
+function monthlyCounts(datedPairs, since, now) {
+  const totals = new Map(completeMonths(since, now).map((m) => [m, 0]));
+  for (const [date, count] of datedPairs) {
+    const m = monthStart(date);
+    if (totals.has(m)) totals.set(m, totals.get(m) + count);
+  }
+  return [...totals.entries()];
+}
+
+// Calendar quarter start (YYYY-01-01, -04-01, -07-01, -10-01) of a date.
+function quarterOfDate(isoDate) {
+  const q = Math.floor((Number(isoDate.slice(5, 7)) - 1) / 3) + 1;
+  return quarterStart(isoDate.slice(0, 4), q);
+}
+
+// RFC 4180 CSV: quoted fields may hold commas, quotes ("") and newlines. Returns rows of strings.
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false;
+      } else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field);
+      if (row.length > 1 || row[0] !== "") rows.push(row);
+      row = [];
+      field = "";
+    } else field += c;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+// CSV with a header row into objects keyed by header name.
+function csvObjects(text) {
+  const [header, ...rows] = parseCsvRows(text.replace(/^\uFEFF/, ""));
+  if (!header) return [];
+  return rows.map((r) => Object.fromEntries(header.map((h, i) => [h.trim(), r[i] === undefined ? "" : r[i]])));
+}
+
+// Dates as sources write them: 2026-09-30, 2026-09-30T00:00:00, 9/30/2026, 20260930.
+function anyDate(v) {
+  const s = String(v || "").trim();
+  let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s);
+  if (m) return `${m[3]}-${pad(m[1])}-${pad(m[2])}`;
+  m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+
+module.exports = {
+  SchemaError, num, parseJson, pad, ymd, compact, fromCompact, weekStart, completeWeeks, weeklyCounts, quarterStart,
+  monthStart, addMonths, completeMonths, monthlyCounts, quarterOfDate, parseCsvRows, csvObjects, anyDate,
+};

@@ -72,6 +72,138 @@
       "key_env": null,
       "required_key": false,
       "notes": "CC BY 4.0. Annual series, weekly poll."
+    },
+    {
+      "source_id": "ecb",
+      "name": "European Central Bank Data Portal (SDMX API)",
+      "homepage": "https://data.ecb.europa.eu",
+      "terms_url": "https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html",
+      "tier": 1,
+      "reliability_score": 95,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key. ECB statistics may be reused with the source cited. CSV (csvdata) per series key."
+    },
+    {
+      "source_id": "fdic",
+      "name": "FDIC BankFind Suite API (bank failures)",
+      "homepage": "https://api.fdic.gov/banks/docs/",
+      "terms_url": "https://www.fdic.gov/about/website-policies",
+      "tier": 1,
+      "reliability_score": 95,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key. US government work. Failures are rare, so counts are quarterly over ten years."
+    },
+    {
+      "source_id": "cfpb",
+      "name": "CFPB Consumer Complaint Database API",
+      "homepage": "https://cfpb.github.io/api/ccdb/",
+      "terms_url": "https://www.consumerfinance.gov/complaint/data-use/",
+      "tier": 1,
+      "reliability_score": 85,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key. Complaints are not verified by the CFPB and volume reflects awareness as well as problems; read counts as a stress proxy."
+    },
+    {
+      "source_id": "wikimedia",
+      "name": "Wikimedia REST API (pageviews and edits)",
+      "homepage": "https://wikitech.wikimedia.org/wiki/Analytics/AQS/Pageviews",
+      "terms_url": "https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use",
+      "tier": 3,
+      "reliability_score": 80,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key; requests carry a User-Agent with a contact URL per Wikimedia's policy. Data CC0. Human users only (agent=user)."
+    },
+    {
+      "source_id": "ctgov",
+      "name": "ClinicalTrials.gov API v2 (NIH National Library of Medicine)",
+      "homepage": "https://clinicaltrials.gov/data-api/api",
+      "terms_url": "https://clinicaltrials.gov/about-site/terms-conditions",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key, about 50 requests a minute. Registry data entered by sponsors."
+    },
+    {
+      "source_id": "cpsc",
+      "name": "CPSC Recalls API (SaferProducts.gov)",
+      "homepage": "https://www.cpsc.gov/Recalls/CPSC-Recalls-Application-Program-Interface-API-Information",
+      "terms_url": "https://www.cpsc.gov/About-CPSC/Policies-Statements-and-Directives",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key. Units come from each recall's NumberOfUnits text (\"About 12,000\") and are approximate."
+    },
+    {
+      "source_id": "nhtsa",
+      "name": "NHTSA recalls (U.S. DOT open data, Socrata dataset 6axg-epim)",
+      "homepage": "https://datahub.transportation.gov/Automobiles/Recalls-Data/6axg-epim",
+      "terms_url": "https://www.transportation.gov/data/policy",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key (anonymous Socrata rate limits). Vehicle, equipment, tire and child seat recalls by report received date."
+    },
+    {
+      "source_id": "fec",
+      "name": "OpenFEC API (Federal Election Commission)",
+      "homepage": "https://api.open.fec.gov/developers/",
+      "terms_url": "https://www.fec.gov/updates/?update_type=press-release",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 10080,
+      "key_env": "FEC_API_KEY",
+      "required_key": false,
+      "notes": "Free key from api.data.gov (email only). Without one the collector uses DEMO_KEY (about 50 requests a day), which is enough for the weekly poll."
+    },
+    {
+      "source_id": "lda",
+      "name": "U.S. Senate Lobbying Disclosure Act API",
+      "homepage": "https://lda.senate.gov/api/",
+      "terms_url": "https://lda.senate.gov/api/",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 10080,
+      "key_env": "LDA_API_KEY",
+      "required_key": false,
+      "notes": "Free; works without a key at a low rate limit (requests are spaced 4 s apart). An optional free key raises it."
+    },
+    {
+      "source_id": "usaspending",
+      "name": "USAspending.gov API (U.S. Treasury)",
+      "homepage": "https://api.usaspending.gov",
+      "terms_url": "https://www.usaspending.gov/about",
+      "tier": 1,
+      "reliability_score": 85,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key. Award obligations by month; the latest months fill in as agencies report (Defense with a delay), so they are revised upward."
+    },
+    {
+      "source_id": "pinksheet",
+      "name": "World Bank Commodity Price Data (Pink Sheet)",
+      "homepage": "https://www.worldbank.org/en/research/commodity-markets",
+      "terms_url": "https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets",
+      "tier": 2,
+      "reliability_score": 85,
+      "cadence_minutes": 10080,
+      "key_env": null,
+      "required_key": false,
+      "notes": "CC BY 4.0. Monthly averages from the CMO-Historical-Data-Monthly.xlsx workbook; the link is read from the Pink Sheet page each poll because it changes with every release."
     }
   ]
 }

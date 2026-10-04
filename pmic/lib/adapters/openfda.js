@@ -1,5 +1,6 @@
-// openFDA drug endpoints. Count series use the `count=<date field>` aggregation (one request
-// returns daily buckets for the whole window) and are summed into complete Monday-start weeks.
+// openFDA drug endpoints, plus food enforcement reports. Count series use the `count=<date field>`
+// aggregation (one request returns daily buckets for the whole window) and are summed into
+// complete Monday-start weeks.
 // Recalls and original NDA/BLA approvals also become events. FAERS lags: the FDA loads reports in
 // batches, so the newest weeks read low or zero until they arrive. FAERS series therefore stop at
 // the last complete week that has reports, and empty weeks are left out rather than stored as 0.
@@ -39,7 +40,8 @@ function bodyOrEmpty(r, what) {
 
 async function countSeries(ctx, s, endpoint, search, field, key, { lagged = false } = {}) {
   const since = ctx.since(s);
-  const cite = `${BASE}/${endpoint}.json?search=${q(search)}&count=${field}`;
+  // "food/enforcement" and other non-drug endpoints are given with their category.
+  const cite = `${endpoint.includes("/") ? "https://api.fda.gov" : BASE}/${endpoint}.json?search=${q(search)}&count=${field}`;
   const r = await ctx.get(`openfda:${s.series_id}`, withKey(cite, key), {}, { allowStatus: [404] });
   const body = bodyOrEmpty(r, `openfda ${s.series_id}`);
   const daily = body.results.map((b) => [fromCompact(b.time), Number(b.count) || 0]).filter(([d]) => d);
@@ -142,6 +144,8 @@ async function collect(series, ctx) {
     recalls_class1: ["enforcement", (s) => `${range("report_date", ctx.since(s), ctx.now)} AND classification:"Class I"`, "report_date"],
     faers: ["event", (s) => range("receivedate", ctx.since(s), ctx.now), "receivedate"],
     labels: ["label", (s) => range("effective_time", ctx.since(s), ctx.now), "effective_time"],
+    food_recalls: ["food/enforcement", (s) => range("report_date", ctx.since(s), ctx.now), "report_date"],
+    food_recalls_class1: ["food/enforcement", (s) => `${range("report_date", ctx.since(s), ctx.now)} AND classification:"Class I"`, "report_date"],
   };
   for (const [feed, [endpoint, search, field]] of Object.entries(plain)) {
     const s = byFeed.get(feed);

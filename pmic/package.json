@@ -8,7 +8,7 @@
     "start": "node server.js",
     "collect": "node bin/collect.js",
     "collect:loop": "node bin/collect.js --loop",
-    "test": "node --test test/collector.test.js test/api.test.js test/pack.test.js test/packs.test.js test/openfda.test.js test/sync.test.js"
+    "test": "node --test test/collector.test.js test/api.test.js test/pack.test.js test/packs.test.js test/openfda.test.js test/sync.test.js test/batch2.test.js"
   },
   "engines": {
     "node": ">=22.13"

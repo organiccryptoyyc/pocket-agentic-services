@@ -12,6 +12,36 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Packs batch 2, phase 2 (2026-10-04): 8 verticals, 11 new sources, one new service
+
+- New collectors, all free official data with no paid license: ECB Data Portal (policy rates, euro
+  STR, HICP, five euro reference rates), FDIC BankFind (bank failures), CFPB complaint database,
+  Wikimedia pageviews and edits, ClinicalTrials.gov v2, CPSC recalls, NHTSA recalls (DOT open
+  data), OpenFEC (Schedule E; `FEC_API_KEY` optional, DEMO_KEY otherwise), Senate LDA (lobbying;
+  `LDA_API_KEY` optional), USAspending, World Bank Pink Sheet (gold, silver, platinum; the .xlsx is
+  read with a small zero-dependency reader, `lib/xlsx.js`). openFDA adds food recalls. SEC adds
+  Form 4 open-market purchase and sale values (each Form 4 XML read once and remembered; up to
+  2,500 per pass, so the first backfill can take two passes). FRED adds the full Treasury curve,
+  IMF industrial metals and Monthly Treasury Statement outlays, receipts and deficit.
+- `pmic-macro-signals`: `yield-curve` (10y-3m and 10y-2y slopes, every tenor and inversion flags in
+  `term_structure`), `bank-health` (FDIC failures and CFPB complaints, recent failures listed),
+  `global-rates-fx` (ECB rates, euro area inflation, euro FX as watch items). `commodities` now
+  scores aluminum, nickel, zinc and iron ore and watches gold, silver and platinum.
+- `pmic-company-signals`: `insider-activity` also scores the dollar value of open-market sales
+  (weight 2) and purchases; new `public-attention` (Wikipedia pageviews and edits).
+- `pmic-pharma-signals`: `clinical-pipeline` (trial starts, active trials, stopped trials;
+  completions watched; stopped trials listed). The raw routes' scope is now pinned per entity, and an
+  `entity_id` filter is no longer widened by a scope entry for another entity.
+- New service `pmic-public-sector-signals` 0.1.0: `product-recalls` (CPSC, NHTSA, FDA food),
+  `political-money` (FEC independent expenditures, lobbying registrations) and `federal-spending`
+  (USAspending obligations, Treasury outlays; receipts, deficit and eight departments watched). It
+  needs one registration (1,000 POKT, owner's approval) and the supplier re-stake listing all
+  services.
+- Skipped on licensing grounds: Freddie Mac mortgage rates (FRED copy is copyright Freddie Mac).
+- `bin/probe.js` (on the Pi: `sh ops/probe-batch2.sh`) checks every new source live into a
+  throwaway database before anything is deployed.
+- Catalog 417 -> 535 series.
+
 ## Packs batch 2, phase 1 (2026-10-04): 8 verticals, no new registration
 
 - `pmic-company-signals` 0.3.0: `insider-activity` (weekly Form 4 filings against the company's own
@@ -28,8 +58,8 @@
   11 World Bank indicators (WGI is CC BY 4.0). Skipped for copyright: Case-Shiller, Freddie Mac
   mortgage rates, University of Michigan sentiment. China publishes no secondary enrollment
   (`cn:SE.SEC.ENRR` skipped).
-- Still to come in batch 2: `clinical-pipeline` (ClinicalTrials.gov) and `fiscal-health` (Treasury
-  Fiscal Data); both need new collectors.
+- `clinical-pipeline` and the other new collectors followed in phase 2 (above); `fiscal-health` is
+  covered by phase 2's `federal-spending` (Monthly Treasury Statement outlays, receipts, deficit).
 - Deploy: Pi rebuild (collects the new series), PSM Deploy for `pmic-hub` and the macro and company
   packs, then a gas-only Register service update of the two cards. No new fee.
 

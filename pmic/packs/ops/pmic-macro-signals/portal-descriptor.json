@@ -24,7 +24,10 @@
           "consumer",
           "country-risk",
           "health-systems",
-          "education"
+          "education",
+          "yield-curve",
+          "bank-health",
+          "global-rates-fx"
         ],
         "description": "Which brief. POST /v1/verticals describes each."
       },

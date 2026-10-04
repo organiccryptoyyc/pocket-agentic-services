@@ -15,7 +15,7 @@ const { collectOnce } = require("../lib/collect");
 const { makeFetch } = require("./stub-upstream");
 
 const HUB_PORT = 20100 + Math.floor(Math.random() * 300);
-const BUNDLES = ["pmic-macro-signals", "pmic-company-signals", "pmic-pharma-signals"];
+const BUNDLES = ["pmic-macro-signals", "pmic-company-signals", "pmic-pharma-signals", "pmic-public-sector-signals"];
 const PORTS = Object.fromEntries(BUNDLES.map((b, i) => [b, HUB_PORT + 400 + i]));
 const procs = [];
 
@@ -77,8 +77,8 @@ test("probes: version, health and the PSM healthz path", async () => {
 
 test("macro bundle: every vertical is a scored, cited brief", async () => {
   const list = (await call("pmic-macro-signals", "POST", "/v1/verticals", {})).json;
-  assert.equal(list.count, 12);
-  for (const id of ["housing", "consumer", "country-risk", "health-systems", "education"]) assert.ok(list.verticals.some((v) => v.id === id), `batch 2 vertical ${id}`);
+  assert.equal(list.count, 15);
+  for (const id of ["housing", "consumer", "country-risk", "health-systems", "education", "yield-curve", "bank-health", "global-rates-fx"]) assert.ok(list.verticals.some((v) => v.id === id), `batch 2 vertical ${id}`);
   for (const v of list.verticals) {
     const r = await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: v.id });
     assert.equal(r.status, 200, JSON.stringify(r.json));
@@ -89,7 +89,7 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
       continue;
     }
     checkBrief(r.json, "pmic-macro-signals");
-    assert.ok(r.json.inputs.length >= 4);
+    assert.ok(r.json.inputs.length >= 2 && r.json.inputs.length + r.json.watch.length >= 4, `${v.id} inputs`);
     // The stub hub has one scoring pass, so there is no stored score from 90 days ago yet.
     assert.equal(r.json.trend_basis, "input_trends");
     const words = require("../packs/bundles/pmic-macro-signals.json").verticals.find((x) => x.id === v.id).trend_words;
@@ -110,7 +110,7 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
 
 test("macro overview and inflation calculator", async () => {
   const o = (await call("pmic-macro-signals", "POST", "/v1/overview", {})).json;
-  assert.equal(o.count, 12);
+  assert.equal(o.count, 15);
   assert.ok(o.briefs.every((b) => b.status === "ok"));
   const range = (await call("pmic-macro-signals", "POST", "/v1/inflation/adjust", { amount: 100, from: "1990-01" }));
   assert.equal(range.status, 400);
@@ -134,7 +134,7 @@ test("company bundle: fundamentals and filing risk need a covered entity", async
   assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "fundamentals" })).json.error.code, "invalid_input");
   assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "fundamentals", entity_id: "tsla" })).json.error.code, "unknown_entity");
   const o = (await call("pmic-company-signals", "POST", "/v1/overview", { entity_id: "msft" })).json;
-  assert.equal(o.count, 5);
+  assert.equal(o.count, 6);
   assert.equal((await call("pmic-company-signals", "POST", "/v1/events", {})).status, 400, "company events need an entity");
   const ev = await call("pmic-company-signals", "POST", "/v1/events", { entity_id: "aapl", limit: 5 });
   assert.equal(ev.status, 200);
@@ -176,6 +176,60 @@ test("peer table: rank positions, polarity and too few metrics", () => {
   assert.equal(lone.score, null);
 });
 
+test("macro batch 2: yield curve, bank health, euro rates and metals", async () => {
+  const yc = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "yield-curve" })).json;
+  checkBrief(yc, "pmic-macro-signals");
+  assert.deepEqual(Object.keys(yc.term_structure.yields_pct), ["1m", "3m", "1y", "2y", "5y", "10y", "30y"]);
+  assert.equal(typeof yc.term_structure.inverted_10y_3m, "boolean");
+  assert.ok(yc.watch.some((m) => m.series_id === "fred:DGS30"), "tenor yields are watch items");
+  const bank = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "bank-health" })).json;
+  checkBrief(bank, "pmic-macro-signals");
+  assert.ok(bank.inputs.some((m) => m.series_id === "fdic:failures_quarterly") && bank.inputs.some((m) => m.series_id === "cfpb:complaints_total_monthly"));
+  assert.ok(bank.recent_events.length > 0 && bank.recent_events.every((e) => e.event_type === "bank_failure"));
+  const eu = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "global-rates-fx" })).json;
+  checkBrief(eu, "pmic-macro-signals");
+  assert.equal(eu.inputs.find((m) => m.series_id === "ecb:FM.B.U2.EUR.4F.KR.DFR.LEV").scoring, "percentile_inverted", "a higher ECB rate reads as tighter");
+  assert.equal(eu.watch.filter((m) => m.series_id.startsWith("ecb:EXR.")).length, 5);
+  const com = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "commodities" })).json;
+  assert.ok(com.inputs.some((m) => m.series_id === "fred:PALUMUSDM"));
+  assert.ok(com.watch.some((m) => m.series_id === "pinksheet:gold" && m.value.current > 0), "gold from the Pink Sheet workbook");
+});
+
+test("company and pharma batch 2: insider dollar values, public attention, clinical pipeline", async () => {
+  const ins = (await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "insider-activity", entity_id: "nvda" })).json;
+  checkBrief(ins, "pmic-company-signals");
+  assert.ok(ins.inputs.some((m) => m.series_id === "sec:NVDA:insider_sell_value_weekly" && m.weight === 2));
+  const att = (await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "public-attention", entity_id: "jnj" })).json;
+  checkBrief(att, "pmic-company-signals");
+  assert.deepEqual(att.inputs.map((m) => m.series_id).sort(), ["wikimedia:JNJ:edits_weekly", "wikimedia:JNJ:pageviews_weekly"]);
+  const ct = (await call("pmic-pharma-signals", "POST", "/v1/brief", { vertical: "clinical-pipeline", entity_id: "pfe" })).json;
+  checkBrief(ct, "pmic-pharma-signals");
+  assert.ok(ct.inputs.some((m) => m.series_id === "ctgov:PFE:trial_starts_monthly"));
+  assert.ok(ct.watch.some((m) => m.series_id === "ctgov:PFE:trial_completions_monthly"));
+  assert.ok(ct.recent_events.length > 0 && ct.recent_events.every((e) => e.event_type === "trial_stopped"));
+  const pfeOnly = (await call("pmic-pharma-signals", "POST", "/v1/signals", { entity_id: "pfe", limit: 100 })).json;
+  assert.ok(pfeOnly.signals.length > 0 && pfeOnly.signals.every((x) => x.entity.entity_id === "pfe"), "an entity filter is not widened by the bundle's scope");
+});
+
+test("public sector bundle: recalls, political money and federal spending", async () => {
+  const b = "pmic-public-sector-signals";
+  const list = (await call(b, "POST", "/v1/verticals", {})).json;
+  assert.deepEqual(list.verticals.map((v) => v.id), ["product-recalls", "political-money", "federal-spending"]);
+  for (const v of list.verticals) checkBrief((await call(b, "POST", "/v1/brief", { vertical: v.id })).json, b);
+  const rec = (await call(b, "POST", "/v1/brief", { vertical: "product-recalls" })).json;
+  assert.equal(rec.inputs.length, 6);
+  assert.ok(rec.recent_events.length > 0 && rec.recent_events.every((e) => ["product_recall", "vehicle_recall"].includes(e.event_type)));
+  const fed = (await call(b, "POST", "/v1/brief", { vertical: "federal-spending" })).json;
+  assert.ok(fed.watch.some((m) => m.series_id === "usaspending:obligations_dod_monthly"), "agencies are watch items");
+  assert.ok(fed.watch.some((m) => m.series_id === "fred:MTSR133FMS"), "receipts are a watch item");
+  const o = (await call(b, "POST", "/v1/overview", {})).json;
+  assert.equal(o.count, 3);
+  const sig = (await call(b, "POST", "/v1/signals", { limit: 200 })).json;
+  assert.ok(sig.signals.every((x) => /^(cpsc|nhtsa|openfda:food|fec|lda|usaspending|fred:MTS)/.test(x.series_id)), "only public sector series");
+  assert.equal((await call(b, "POST", "/v1/signal", { series_id: "fred:UNRATE" })).json.error.code, "unknown_series");
+  assert.equal((await call(b, "POST", "/v1/events", {})).status, 404, "no raw events route");
+});
+
 test("pharma bundle: market and company briefs", async () => {
   checkBrief((await call("pmic-pharma-signals", "POST", "/v1/brief", { vertical: "drug-market" })).json, "pmic-pharma-signals");
   const c = (await call("pmic-pharma-signals", "POST", "/v1/brief", { vertical: "company-safety", entity_id: "lly" })).json;
@@ -189,7 +243,8 @@ test("pharma bundle: market and company briefs", async () => {
 
 test("raw routes stay inside each bundle's scope; bad input is a 400", async () => {
   const s = (await call("pmic-pharma-signals", "POST", "/v1/signals", { limit: 50 })).json;
-  assert.ok(s.count > 0 && s.signals.every((x) => x.series_id.startsWith("openfda:")));
+  assert.ok(s.count > 0 && s.signals.every((x) => /^(openfda|ctgov):/.test(x.series_id)));
+  assert.ok(s.signals.every((x) => !x.series_id.startsWith("openfda:food:")), "food recalls belong to the public sector bundle");
   assert.equal((await call("pmic-pharma-signals", "POST", "/v1/signal", { series_id: "fred:UNRATE" })).json.error.code, "unknown_series");
   assert.equal((await call("pmic-macro-signals", "POST", "/v1/signal", { series_id: "fred:UNRATE" })).status, 200);
   assert.equal((await call("pmic-macro-signals", "POST", "/v1/signals", { source_id: "sec" })).json.error.code, "out_of_scope");

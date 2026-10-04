@@ -2,15 +2,18 @@
 
 Paid Pocket services that sell scored briefs built on the PMIC hub. Related verticals are bundled
 into one service, so each bundle costs one registration fee and runs one container. Batches 1 and
-2 have 18 verticals in 3 services (batch 2 added 8 to the existing services, so no new fee):
+2 have 26 verticals in 4 services (batch 2 added 13 to the existing services and 3 in one new
+service):
 
 | Service ID | Verticals | Needs `entity_id` |
 |---|---|---|
-| `pmic-macro-signals` | macro-regime, inflation, labor, rates, credit-stress, commodities, global-compare, housing, consumer, country-risk, health-systems, education (+ CPI inflation calculator) | no |
-| `pmic-company-signals` | fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking | yes: aapl, msft, nvda, amzn, wmt, jpm, bac, xom, pfe, lly, jnj, unh, nflx, dis |
-| `pmic-pharma-signals` | drug-market, company-safety | company-safety only: pfe, lly, jnj |
+| `pmic-macro-signals` | macro-regime, inflation, labor, rates, credit-stress, commodities, global-compare, housing, consumer, country-risk, health-systems, education, yield-curve, bank-health, global-rates-fx (+ CPI inflation calculator) | no |
+| `pmic-company-signals` | fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking, public-attention | yes: aapl, msft, nvda, amzn, wmt, jpm, bac, xom, pfe, lly, jnj, unh, nflx, dis |
+| `pmic-pharma-signals` | drug-market, company-safety, clinical-pipeline | company-safety and clinical-pipeline: pfe, lly, jnj |
+| `pmic-public-sector-signals` | product-recalls, political-money, federal-spending | no |
 
-All data is free and public (FRED, BLS, BEA, SEC EDGAR, openFDA, World Bank). Paid or
+All data is free and public (FRED, BLS, BEA, SEC EDGAR, openFDA, World Bank, ECB, FDIC, CFPB, Wikimedia,
+ClinicalTrials.gov, CPSC, NHTSA, FEC, Senate LDA, USAspending). Paid or
 subscription sources are skipped for now; see `pmic/CHANGELOG.md`.
 
 ## What an agent buys

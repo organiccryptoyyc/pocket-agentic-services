@@ -6,7 +6,11 @@
 
 const FETCH_TIMEOUT_MS = Number(process.env.FETCH_TIMEOUT_MS || 20000);
 const RETRY_DELAY_MS = Number(process.env.PMIC_RETRY_DELAY_MS || 2000);
-const MIN_SPACING_MS = { "data.sec.gov": 150, "www.sec.gov": 150, "api.fda.gov": 300, "api.bls.gov": 500 };
+const MIN_SPACING_MS = {
+  "data.sec.gov": 150, "www.sec.gov": 150, "api.fda.gov": 300, "api.bls.gov": 500,
+  "clinicaltrials.gov": 1300, "lda.senate.gov": 4000, "lda.gov": 4000, "api.open.fec.gov": 1000,
+  "wikimedia.org": 100, "data.transportation.gov": 500, "api.usaspending.gov": 300, "www.saferproducts.gov": 500,
+};
 const SECRET_PARAMS = ["api_key", "UserID", "registrationkey", "registrationKey"];
 
 class FetchError extends Error {
@@ -43,8 +47,10 @@ async function once(url, init, timeoutMs) {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { ...init, signal: controller.signal });
-    const text = await res.text();
+    // init.binary: the body is returned base64-encoded (xlsx workbooks), so it can be stored as text.
+    const { binary, ...rest } = init;
+    const res = await fetch(url, { ...rest, signal: controller.signal });
+    const text = binary ? Buffer.from(await res.arrayBuffer()).toString("base64") : await res.text();
     return { status: res.status, ok: res.ok, text, contentType: (res.headers && res.headers.get && res.headers.get("content-type")) || null };
   } catch (e) {
     if (e.name === "AbortError") throw new FetchError(`no response within ${timeoutMs}ms from ${redact(url)}`);

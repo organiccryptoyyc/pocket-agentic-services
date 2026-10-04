@@ -1,0 +1,68 @@
+{
+  "_comment": "Public sector verticals: product safety recalls, political money and federal spending, from free US government APIs (CPSC, NHTSA, FDA, FEC, Senate LDA, USAspending, Treasury). Batch 2's one new service.",
+  "service_id": "pmic-public-sector-signals",
+  "display_name": "PMIC Public Sector Signals",
+  "version": "0.1.0",
+  "category": "government",
+  "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC consumer products, NHTSA vehicles and equipment, FDA food), political money (FEC independent expenditures, Senate lobbying registrations and filings) and federal spending (USAspending award obligations by agency, Monthly Treasury Statement outlays, receipts and deficit). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input.",
+  "default_horizon": "90d",
+  "cache_seconds": 300,
+  "hub_scope": [{ "source_id": "cpsc" }, { "source_id": "nhtsa" }, { "source_id": "openfda", "entity_id": "us-food" }, { "source_id": "fec" }, { "source_id": "lda" }, { "source_id": "usaspending" }, { "source_id": "fred", "entity_id": "us-federal" }],
+  "verticals": [
+    {
+      "id": "product-recalls",
+      "title": "US product safety recalls",
+      "question": "Are consumer product, vehicle or food recalls rising?",
+      "kind": "composite",
+      "note": "Higher score means calmer than usual: fewer recalls and fewer units recalled than each series' own trailing year, across CPSC consumer products, NHTSA vehicles and equipment, and FDA food (Class I = most serious). The largest recent recalls are listed under recent_events.",
+      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
+      "trend_words": { "up": "calming", "down": "rising" },
+      "events_entities": ["us-consumer-products", "us-vehicles"],
+      "members": [
+        { "series_id": "cpsc:recalls_weekly" },
+        { "series_id": "cpsc:recalled_units_weekly" },
+        { "series_id": "nhtsa:recalls_weekly", "weight": 2 },
+        { "series_id": "nhtsa:affected_units_weekly" },
+        { "series_id": "openfda:food:recalls_weekly" },
+        { "series_id": "openfda:food:recalls_class1_weekly", "weight": 2 }
+      ]
+    },
+    {
+      "id": "political-money",
+      "title": "US political money",
+      "question": "Is outside election spending or lobbying activity rising?",
+      "kind": "composite",
+      "note": "Higher score means more political money activity than usual: independent expenditure items reported to the FEC and new lobbying registrations, monthly, against their own history (about two years, so one federal election cycle). All lobbying filings posted is a watch item. Spending clusters before elections, so read the trend with the calendar.",
+      "labels": { "high": "surging", "mid": "normal", "low": "quiet" },
+      "trend_words": { "up": "rising", "down": "falling" },
+      "members": [
+        { "series_id": "fec:independent_expenditures_monthly", "weight": 2 },
+        { "series_id": "lda:registrations_monthly", "weight": 2 },
+        { "series_id": "lda:filings_monthly" }
+      ]
+    },
+    {
+      "id": "federal-spending",
+      "title": "US federal spending",
+      "question": "Is federal spending accelerating, and in which agencies?",
+      "kind": "composite",
+      "note": "Higher score means faster federal spending growth than usual: award obligations (USAspending) and Treasury outlays, year over year. Receipts, the monthly deficit and obligations by the eight largest awarding departments are watch items, so the brief shows which agencies are unusual. Recent months fill in as agencies report.",
+      "labels": { "high": "accelerating", "mid": "steady", "low": "slowing" },
+      "trend_words": { "up": "accelerating", "down": "slowing" },
+      "members": [
+        { "series_id": "usaspending:obligations_monthly", "weight": 2 },
+        { "series_id": "fred:MTSO133FMS", "weight": 2 },
+        { "series_id": "fred:MTSR133FMS", "direction": 0 },
+        { "series_id": "fred:MTSDS133FMS" },
+        { "series_id": "usaspending:obligations_dod_monthly" },
+        { "series_id": "usaspending:obligations_hhs_monthly" },
+        { "series_id": "usaspending:obligations_va_monthly" },
+        { "series_id": "usaspending:obligations_dhs_monthly" },
+        { "series_id": "usaspending:obligations_doe_monthly" },
+        { "series_id": "usaspending:obligations_dot_monthly" },
+        { "series_id": "usaspending:obligations_ed_monthly" },
+        { "series_id": "usaspending:obligations_usda_monthly" }
+      ]
+    }
+  ]
+}

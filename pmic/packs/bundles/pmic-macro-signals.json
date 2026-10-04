@@ -7,7 +7,7 @@
   "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, housing, consumer health, and 8-country comparisons of the economy, governance and stability, health systems and education. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
   "default_horizon": "90d",
   "cache_seconds": 300,
-  "hub_scope": [{ "source_id": "fred" }, { "source_id": "bls" }, { "source_id": "bea" }, { "source_id": "worldbank" }],
+  "hub_scope": [{ "source_id": "fred" }, { "source_id": "bls" }, { "source_id": "bea" }, { "source_id": "worldbank" }, { "source_id": "ecb" }, { "source_id": "fdic" }, { "source_id": "cfpb" }, { "source_id": "pinksheet" }],
   "verticals": [
     {
       "id": "macro-regime",
@@ -95,7 +95,7 @@
       "title": "Commodity and supply chain costs",
       "question": "Are energy, metals and freight adding cost pressure?",
       "kind": "composite",
-      "note": "Higher score means less cost pressure: prices lower than usual for their trailing history, freight activity healthy.",
+      "note": "Higher score means less cost pressure: energy and industrial metal prices (aluminum, nickel, zinc, iron ore, copper) lower than usual for their trailing history, freight activity healthy. Gold, silver and platinum (World Bank Pink Sheet) are watch items.",
       "labels": { "high": "low pressure", "mid": "normal", "low": "high pressure" },
       "trend_words": { "up": "easing", "down": "building" },
       "members": [
@@ -104,7 +104,14 @@
         { "series_id": "fred:PCOPPUSDM", "direction": -1 },
         { "series_id": "fred:IR", "direction": -1 },
         { "series_id": "fred:TSIFRGHT" },
-        { "series_id": "fred:IQ" }
+        { "series_id": "fred:IQ" },
+        { "series_id": "fred:PALUMUSDM", "direction": -1 },
+        { "series_id": "fred:PNICKUSDM", "direction": -1 },
+        { "series_id": "fred:PZINCUSDM", "direction": -1 },
+        { "series_id": "fred:PIORECRUSDM", "direction": -1 },
+        { "series_id": "pinksheet:gold" },
+        { "series_id": "pinksheet:silver" },
+        { "series_id": "pinksheet:platinum" }
       ]
     },
     {
@@ -175,6 +182,66 @@
       "source_id": "worldbank",
       "note": "Annual World Bank data: secondary and tertiary gross enrollment and government education spending (% of GDP). China does not publish secondary enrollment to the World Bank. Ranked values compare countries with each other.",
       "metrics": ["secondary_enrollment_gross", "tertiary_enrollment_gross", "education_spending_pct_gdp"]
+    },
+    {
+      "id": "yield-curve",
+      "title": "US Treasury yield curve",
+      "question": "What shape is the Treasury curve, and is it inverting or steepening?",
+      "kind": "composite",
+      "note": "Higher score means a steeper curve than usual for the trailing year (10-year minus 3-month and minus 2-year spreads). term_structure gives every tenor and whether each slope is inverted (below zero) today; yields by tenor are watch items.",
+      "labels": { "high": "steeper than usual", "mid": "normal", "low": "flatter than usual" },
+      "trend_words": { "up": "steepening", "down": "flattening" },
+      "extras": ["term_structure"],
+      "members": [
+        { "series_id": "fred:T10Y3M", "weight": 2 },
+        { "series_id": "fred:T10Y2Y", "weight": 2 },
+        { "series_id": "fred:DGS1MO" },
+        { "series_id": "fred:DGS3MO" },
+        { "series_id": "fred:DGS1" },
+        { "series_id": "fred:DGS2" },
+        { "series_id": "fred:DGS5" },
+        { "series_id": "fred:DGS10" },
+        { "series_id": "fred:DGS30" }
+      ]
+    },
+    {
+      "id": "bank-health",
+      "title": "US bank health",
+      "question": "Are bank failures or consumer complaints about banks rising?",
+      "kind": "composite",
+      "note": "Higher score means calmer than usual: fewer FDIC bank failures (quarterly, ten-year history) and fewer CFPB consumer complaints (monthly) than their own history. Complaints are unverified and grow with awareness, so read a low score with the drivers. Recent bank failures are listed under recent_events.",
+      "labels": { "high": "calm", "mid": "normal", "low": "stressed" },
+      "trend_words": { "up": "calming", "down": "deteriorating" },
+      "events_entities": ["us-banking"],
+      "members": [
+        { "series_id": "fdic:failures_quarterly", "weight": 2 },
+        { "series_id": "fdic:failed_assets_quarterly" },
+        { "series_id": "cfpb:complaints_total_monthly", "weight": 2 },
+        { "series_id": "cfpb:complaints_bank_account_monthly" },
+        { "series_id": "cfpb:complaints_credit_card_monthly" },
+        { "series_id": "cfpb:complaints_mortgage_monthly" },
+        { "series_id": "cfpb:complaints_credit_reporting_monthly" }
+      ]
+    },
+    {
+      "id": "global-rates-fx",
+      "title": "Euro area rates and major currencies",
+      "question": "Where are ECB rates, euro area inflation and the major currencies versus their history?",
+      "kind": "composite",
+      "note": "Higher score means easier euro area conditions than usual: lower ECB policy rates and euro short-term rate, lower HICP inflation. Euro reference rates against the dollar, pound, yen, yuan and franc are watch items (how unusual today's rate is).",
+      "labels": { "high": "easy", "mid": "neutral", "low": "tight" },
+      "trend_words": { "up": "easing", "down": "tightening" },
+      "members": [
+        { "series_id": "ecb:FM.B.U2.EUR.4F.KR.DFR.LEV", "direction": -1, "weight": 2 },
+        { "series_id": "ecb:FM.B.U2.EUR.4F.KR.MRR_FR.LEV", "direction": -1 },
+        { "series_id": "ecb:EST.B.EU000A2X2A25.WT", "direction": -1 },
+        { "series_id": "ecb:ICP.M.U2.N.000000.4.ANR", "weight": 2 },
+        { "series_id": "ecb:EXR.D.USD.EUR.SP00.A" },
+        { "series_id": "ecb:EXR.D.GBP.EUR.SP00.A" },
+        { "series_id": "ecb:EXR.D.JPY.EUR.SP00.A" },
+        { "series_id": "ecb:EXR.D.CNY.EUR.SP00.A" },
+        { "series_id": "ecb:EXR.D.CHF.EUR.SP00.A" }
+      ]
     }
   ],
   "extra_routes": ["inflation_adjust"]

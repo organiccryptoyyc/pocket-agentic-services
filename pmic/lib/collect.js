@@ -16,6 +16,17 @@ const ADAPTERS = {
   sec: require("./adapters/sec"),
   openfda: require("./adapters/openfda"),
   worldbank: require("./adapters/worldbank"),
+  ecb: require("./adapters/ecb"),
+  fdic: require("./adapters/fdic"),
+  cfpb: require("./adapters/cfpb"),
+  wikimedia: require("./adapters/wikimedia"),
+  ctgov: require("./adapters/ctgov"),
+  cpsc: require("./adapters/cpsc"),
+  nhtsa: require("./adapters/nhtsa"),
+  fec: require("./adapters/fec"),
+  lda: require("./adapters/lda"),
+  usaspending: require("./adapters/usaspending"),
+  pinksheet: require("./adapters/pinksheet"),
 };
 
 const DAY = 86400000;
@@ -90,6 +101,13 @@ function makeCtx(db, catalog, source, { now, dataDir, env, fetchImpl }) {
     },
     missingKey(sourceId, envName, seriesIds) {
       for (const id of seriesIds) failures.set(id, { kind: "missing_key", message: `${envName} is not set; ${sourceId} series are skipped` });
+    },
+    // Small per-source memory between passes (the Form 4 values already read, for example).
+    kvGet(k) {
+      return kvGet(db, `${source.source_id}:${k}`);
+    },
+    kvSet(k, v) {
+      kvSet(db, `${source.source_id}:${k}`, v);
     },
     note(_src, msg) {
       ctx.notes.push(msg);
