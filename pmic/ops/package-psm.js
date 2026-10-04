@@ -55,7 +55,7 @@ console.log(JSON.stringify({
   folder: OUT,
   ingest_route: ROUTE,
   pi_push_url: `https://agentic.organiccryptoyyc.com${ROUTE}/ingest/sync`,
-  pi_push_token: token("PMIC_INGEST_TOKEN"),
+  pi_push_token: "PMIC_INGEST_TOKEN in tokens_file (not printed, so screenshots stay safe)",
   packs_hub_url: `http://${DEPLOY_ID}-backend:8080`,
   tokens_file: SECRET,
 }, null, 2));

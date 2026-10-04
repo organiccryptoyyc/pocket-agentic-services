@@ -22,7 +22,8 @@ node pmic/ops/package-psm.js
 This creates `Downloads\pmic-hub` (with a `service.json`, so PSM lists it) and prints these lines:
 
 - `pi_push_url`, needed in step 3
-- `pi_push_token`, needed in step 3; keep it private
+- where the token is kept: `pmic\.secrets\hub.env`. Open it with `notepad pmic\.secrets\hub.env`;
+  the `PMIC_INGEST_TOKEN` value is the Pi's push token. Keep it private
 - `packs_hub_url`, used later by the service packs
 
 The tokens are saved in `pmic\.secrets\hub.env` (never committed). If you run the command again,
