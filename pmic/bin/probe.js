@@ -6,7 +6,7 @@
 //   node bin/probe.js                         the batch 2 sources
 //   node bin/probe.js --source ecb,fdic       only these
 //
-// On the Pi, without rebuilding the image: bash ops/probe-batch2.sh
+// On the Pi, without rebuilding the image: sh ops/probe-batch2.sh (uses ~/pmic-src/pmic/.env)
 "use strict";
 
 const fs = require("fs");
