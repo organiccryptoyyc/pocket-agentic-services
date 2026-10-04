@@ -1,0 +1,10 @@
+{
+  "name": "pmic-service-packs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PMIC service packs: paid Pocket services that bundle related scored verticals and answer from the PMIC hub.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": {}
+}

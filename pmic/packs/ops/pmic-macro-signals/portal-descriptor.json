@@ -1,0 +1,82 @@
+{
+  "serviceId": "pmic-macro-signals",
+  "displayName": "PMIC Macro and Markets Signals",
+  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, and an 8-country comparison. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
+  "category": "finance",
+  "protocols": [
+    "rest"
+  ],
+  "inputSchema": {
+    "type": "object",
+    "description": "Body for POST /v1/brief (other routes take similar small bodies).",
+    "properties": {
+      "vertical": {
+        "type": "string",
+        "enum": [
+          "macro-regime",
+          "inflation",
+          "labor",
+          "rates",
+          "credit-stress",
+          "commodities",
+          "global-compare"
+        ],
+        "description": "Which brief. POST /v1/verticals describes each."
+      },
+      "horizon": {
+        "type": "string",
+        "enum": [
+          "7d",
+          "30d",
+          "90d",
+          "365d"
+        ],
+        "description": "Comparison window; default 90d."
+      }
+    },
+    "required": [
+      "vertical"
+    ]
+  },
+  "outputSchema": {
+    "type": "object",
+    "description": "{service, vertical, title, status, score (0-100), label, trend, trend_basis, summary, drivers[], risk_flags[], confidence{score,label}, coverage, inputs[], watch[], citations[{url}], method}. Errors return a JSON object with an error field (HTTP 400)."
+  },
+  "methods": {
+    "GET /v1/health": "read",
+    "GET /v1/version": "read",
+    "POST /v1/verticals": "read",
+    "POST /v1/brief": "read",
+    "POST /v1/overview": "read",
+    "POST /v1/signals": "read",
+    "POST /v1/signal": "read",
+    "POST /v1/explain": "read",
+    "POST /v1/catalog": "read",
+    "POST /v1/inflation/adjust": "read"
+  },
+  "example": {
+    "method": "POST",
+    "path": "/v1/brief",
+    "request": {
+      "vertical": "macro-regime"
+    },
+    "responseSummary": {
+      "service": "pmic-macro-signals",
+      "note": "Fill from a live MainNet capture."
+    }
+  },
+  "pocket": {
+    "network": "mainnet",
+    "serviceId": "pmic-macro-signals",
+    "computeUnitsPerRelay": 100000,
+    "supplierOperator": "pokt1a0e9xlhmrpsw44upzmxqj7ct6eh7enqr7tzysx",
+    "supplierEndpoint": "https://agentic.organiccryptoyyc.com",
+    "owner": "pokt16cqt2tjzec6gsxdncl0v6k2aa7awya0wghevlw",
+    "registrationTx": "{{REGISTRATION_TX}}",
+    "healthChecks": [
+      "GET /v1/version contains \"service\":\"pmic-macro-signals\"",
+      "GET /v1/health contains \"status\":\"ok\"",
+      "POST /v1/verticals {} contains \"service\":\"pmic-macro-signals\""
+    ]
+  }
+}

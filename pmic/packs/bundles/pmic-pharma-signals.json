@@ -1,0 +1,43 @@
+{
+  "_comment": "Health and pharma verticals. Batch 2 adds ClinicalTrials.gov and other free health sources to this same service.",
+  "service_id": "pmic-pharma-signals",
+  "display_name": "PMIC Pharma Safety and Approval Signals",
+  "version": "0.1.0",
+  "category": "health",
+  "description": "Scored drug-market and company safety briefs from openFDA: recalls (all and Class I), adverse event reports, label changes, and NDA/BLA and generic approvals for the US drug market, plus per-company recall and approval activity for Pfizer, Eli Lilly and Johnson & Johnson. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and openFDA citations.",
+  "default_horizon": "90d",
+  "cache_seconds": 300,
+  "hub_scope": [{ "source_id": "openfda" }],
+  "events_scope": { "industry": "pharma" },
+  "entities": ["pfe", "lly", "jnj"],
+  "verticals": [
+    {
+      "id": "drug-market",
+      "title": "US drug market safety and approvals",
+      "question": "Are drug safety signals rising, and is the approval pipeline active?",
+      "kind": "composite",
+      "note": "Higher score means calmer safety signals than usual (fewer recalls and adverse event reports) and more approvals.",
+      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
+      "trend_words": { "up": "calming", "down": "escalating" },
+      "members": [
+        { "series_id": "openfda:drug_recalls_class1_weekly", "weight": 2 },
+        { "series_id": "openfda:drug_recalls_weekly" },
+        { "series_id": "openfda:adverse_event_reports_weekly" },
+        { "series_id": "openfda:approvals_nda_bla_weekly" },
+        { "series_id": "openfda:approvals_anda_weekly" },
+        { "series_id": "openfda:label_updates_weekly" }
+      ]
+    },
+    {
+      "id": "company-safety",
+      "title": "Company drug safety",
+      "question": "Are recalls rising for this drug maker, and what has the FDA reported lately?",
+      "kind": "entity_composite",
+      "series_pattern": "openfda:{TICKER}:{metric}",
+      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
+      "trend_words": { "up": "calming", "down": "escalating" },
+      "include_events": true,
+      "metrics": [{ "metric": "drug_recalls_weekly" }]
+    }
+  ]
+}

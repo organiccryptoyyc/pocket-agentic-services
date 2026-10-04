@@ -12,6 +12,17 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Packs batch 1 (2026-10-04)
+
+- `packs/`: 10 verticals bundled into 3 paid services to save registration fees (3,000 POKT instead
+  of 10,000): `pmic-macro-signals` (7 verticals and an inflation calculator), `pmic-company-signals`
+  (fundamentals, filing risk), `pmic-pharma-signals` (drug market, company safety).
+- Each answer is a scored brief: 0-100 score, label, trend, drivers, risk flags, confidence and a
+  citation per input (method `pmic-vertical/1.0`, in `packs/README.md`).
+- Listings are generated per service (card, portal descriptor, SAGE yaml, OpenAPI). PSM folders
+  are built by `node pmic/packs/ops/package-psm.js`.
+- Not yet deployed, registered or staked.
+
 ## 0.1.0 (2026-10-04, branch `market-intel-collector`, draft PR #1)
 
 First build: FRED, BLS, BEA, SEC EDGAR, openFDA and World Bank on a Raspberry Pi 5 (`muttb`).

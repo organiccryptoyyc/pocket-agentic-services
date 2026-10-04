@@ -1,0 +1,121 @@
+{
+  "_comment": "One file per on-chain service. Related verticals are bundled into one service so they share one registration fee and one container. Member scores: when a member's own polarity matches (or no 'direction' is set) the hub's composite_score is used; when 'direction' differs from the hub's polarity (for example a neutral price series read as cost pressure), the pack scores it from the percentile in that direction. Neutral members without a direction are reported under 'watch', not averaged.",
+  "service_id": "pmic-macro-signals",
+  "display_name": "PMIC Macro and Markets Signals",
+  "version": "0.1.0",
+  "category": "finance",
+  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, and an 8-country comparison. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
+  "default_horizon": "90d",
+  "cache_seconds": 300,
+  "hub_scope": [{ "source_id": "fred" }, { "source_id": "bls" }, { "source_id": "bea" }, { "source_id": "worldbank" }],
+  "verticals": [
+    {
+      "id": "macro-regime",
+      "title": "US macro regime",
+      "question": "Is the US economy strengthening or weakening, and why?",
+      "kind": "composite",
+      "labels": { "high": "expanding", "mid": "moderate", "low": "cooling" },
+      "trend_words": { "up": "strengthening", "down": "weakening" },
+      "members": [
+        { "series_id": "fred:GDPC1", "weight": 2 },
+        { "series_id": "fred:PAYEMS", "weight": 2 },
+        { "series_id": "fred:UNRATE", "weight": 2 },
+        { "series_id": "fred:INDPRO" },
+        { "series_id": "fred:RSAFS" },
+        { "series_id": "fred:CPILFESL" },
+        { "series_id": "fred:JTSJOL" },
+        { "series_id": "fred:T10Y2Y" }
+      ]
+    },
+    {
+      "id": "inflation",
+      "title": "US inflation pulse",
+      "question": "Is inflation pressure building or easing?",
+      "kind": "composite",
+      "note": "Higher score means less inflation pressure than usual (all inputs read higher = more inflation = weaker).",
+      "labels": { "high": "easing", "mid": "steady", "low": "building" },
+      "trend_words": { "up": "easing", "down": "building" },
+      "members": [
+        { "series_id": "fred:CPIAUCSL", "weight": 2 },
+        { "series_id": "fred:CPILFESL", "weight": 2 },
+        { "series_id": "bls:WPUFD4" },
+        { "series_id": "fred:PPIACO" },
+        { "series_id": "fred:IR", "direction": -1 },
+        { "series_id": "bls:CES0500000003", "direction": -1 }
+      ]
+    },
+    {
+      "id": "labor",
+      "title": "US labor market",
+      "question": "How strong is the US job market?",
+      "kind": "composite",
+      "labels": { "high": "tight", "mid": "balanced", "low": "loosening" },
+      "trend_words": { "up": "tightening", "down": "loosening" },
+      "members": [
+        { "series_id": "fred:UNRATE", "weight": 2 },
+        { "series_id": "fred:PAYEMS", "weight": 2 },
+        { "series_id": "fred:JTSJOL" },
+        { "series_id": "fred:CIVPART" },
+        { "series_id": "bls:CES0500000003" }
+      ]
+    },
+    {
+      "id": "rates",
+      "title": "US rates and yield curve",
+      "question": "Are financial conditions tightening, and is the yield curve inverted?",
+      "kind": "composite",
+      "note": "Higher score means easier conditions: lower policy and Treasury rates than usual and a steeper curve.",
+      "labels": { "high": "easy", "mid": "neutral", "low": "tight" },
+      "trend_words": { "up": "easing", "down": "tightening" },
+      "extras": ["curve"],
+      "members": [
+        { "series_id": "fred:DFF", "direction": -1, "weight": 2 },
+        { "series_id": "fred:DGS2", "direction": -1 },
+        { "series_id": "fred:DGS10", "direction": -1 },
+        { "series_id": "fred:T10Y2Y", "weight": 2 }
+      ]
+    },
+    {
+      "id": "credit-stress",
+      "title": "US bank credit conditions",
+      "question": "Is consumer or bank credit stress rising?",
+      "kind": "composite",
+      "note": "Higher score means healthier credit: deposit and loan growth above usual, delinquencies below.",
+      "labels": { "high": "healthy", "mid": "normal", "low": "stressed" },
+      "trend_words": { "up": "improving", "down": "deteriorating" },
+      "members": [
+        { "series_id": "fred:DRCCLACBS", "weight": 2 },
+        { "series_id": "fred:DRSFRMACBS", "weight": 2 },
+        { "series_id": "fred:DPSACBW027SBOG" },
+        { "series_id": "fred:TOTLL" }
+      ]
+    },
+    {
+      "id": "commodities",
+      "title": "Commodity and supply chain costs",
+      "question": "Are energy, metals and freight adding cost pressure?",
+      "kind": "composite",
+      "note": "Higher score means less cost pressure: prices lower than usual for their trailing history, freight activity healthy.",
+      "labels": { "high": "low pressure", "mid": "normal", "low": "high pressure" },
+      "trend_words": { "up": "easing", "down": "building" },
+      "members": [
+        { "series_id": "fred:DCOILWTICO", "direction": -1, "weight": 2 },
+        { "series_id": "fred:DHHNGSP", "direction": -1 },
+        { "series_id": "fred:PCOPPUSDM", "direction": -1 },
+        { "series_id": "fred:IR", "direction": -1 },
+        { "series_id": "fred:TSIFRGHT" },
+        { "series_id": "fred:IQ" }
+      ]
+    },
+    {
+      "id": "global-compare",
+      "title": "Country comparison",
+      "question": "How do these economies compare on growth, inflation and jobs?",
+      "kind": "country_table",
+      "source_id": "worldbank",
+      "note": "Annual World Bank data (latest year each country has reported). Country score averages the hub's scores for the directional indicators.",
+      "metrics": ["gdp_growth", "inflation_cpi", "unemployment_rate_ilo", "government_expense_pct_gdp", "education_spending_pct_gdp", "health_spending_pct_gdp", "tertiary_enrollment_gross"]
+    }
+  ],
+  "extra_routes": ["inflation_adjust"]
+}

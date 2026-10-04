@@ -1,0 +1,30 @@
+# SAGE gateway configuration for pmic-company-signals. Send to the Pocket partner channel /
+# portal@pokt.foundation. Gateways do NOT read the service card; without this entry SAGE refuses
+# REST requests for the service and it is not discoverable on agent.pocket.network.
+gateway_config:
+  services:
+    - id: pmic-company-signals
+      type: passthrough
+      rpc_types: ["rest"]
+      timeout_config:
+        relay_timeout: 15s        # relay path is a hub read behind a 5-minute cache
+  active_health_checks:
+    local:
+      - service_id: pmic-company-signals
+        enabled: true
+        checks:
+          - name: version
+            type: rest
+            method: GET
+            path: /v1/version
+            expected_status_code: 200
+            reputation_signal: critical_error
+            timeout: 5s
+          - name: health
+            type: rest
+            method: GET
+            path: /v1/health
+            expected_status_code: 200
+            reputation_signal: major_error
+            timeout: 5s
+        # No sync_check / sync_allowance: not a blockchain service.
