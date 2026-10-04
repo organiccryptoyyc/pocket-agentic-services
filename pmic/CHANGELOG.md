@@ -26,6 +26,8 @@
 - Inputs the hub knows but has never collected are listed under `pending_inputs` (flag
   `inputs_pending`) and left out of coverage, so a newly added input doesn't blank a brief's score
   before the collector backfills it.
+- J&J's FDA searches also match "Janssen" (`fda_aliases` in `config/series.json`), since openFDA
+  lists most J&J drugs under Janssen. Before, J&J's adverse event and label series came back empty.
 - Push fix: when the Pi pushes series the hub doesn't know yet (Pi upgraded before the hub), the hub
   now names them in `unknown_series` and the Pi resends their rows on every push until accepted.
   Before, the cursor moved past them and they never arrived (2026-10-04: fixed by hand by resetting

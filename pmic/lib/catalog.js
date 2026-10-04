@@ -64,7 +64,7 @@ function load() {
     series.push({ ...base, series_id: `sec:${co.ticker}:insider_form4_weekly`, metric_name: "insider_form4_weekly", label: "Insider transaction filings (Form 4), weekly", unit: "count", frequency: "weekly", polarity: 0, category: "market" });
     if (co.fda_firm) {
       for (const f of cfg.openfda.company_feeds) {
-        series.push({ series_id: `openfda:${co.ticker}:${f.metric_name}`, source_id: "openfda", entity_id, metric_name: f.metric_name, label: f.label.replace("{firm}", co.fda_firm), unit: "count", frequency: "weekly", category: "health", industry: "pharma", polarity: f.polarity, transform: "level", params: { feed: f.feed, firm: co.fda_firm } });
+        series.push({ series_id: `openfda:${co.ticker}:${f.metric_name}`, source_id: "openfda", entity_id, metric_name: f.metric_name, label: f.label.replace("{firm}", co.fda_firm), unit: "count", frequency: "weekly", category: "health", industry: "pharma", polarity: f.polarity, transform: "level", params: { feed: f.feed, firm: co.fda_firm, firms: [co.fda_firm, ...(co.fda_aliases || [])] } });
       }
     }
   }

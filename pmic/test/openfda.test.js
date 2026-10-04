@@ -65,3 +65,16 @@ test("per-company approvals count only that company's sponsor", async () => {
     }
   }
 });
+
+test("company aliases: J&J's FDA searches also match Janssen", async () => {
+  const catalog = catalogLib.load();
+  const series = catalog.series.filter((s) => s.source_id === "openfda" && s.entity_id === "jnj");
+  const ctx = ctxFor(catalog, "2026-10-03");
+  const urls = [];
+  const get = ctx.get.bind(ctx);
+  ctx.get = (job, url, ...rest) => { urls.push(decodeURIComponent(url)); return get(job, url, ...rest); };
+  await openfda.collect(series, ctx);
+  for (const field of ["recalling_firm", "patient.drug.openfda.manufacturer_name", "openfda.manufacturer_name"]) {
+    assert.ok(urls.some((u) => u.includes(`${field}:"Johnson & Johnson" OR ${field}:"Janssen"`) || u.includes(`${field}:"Johnson+&+Johnson"+OR+${field}:"Janssen"`)), field);
+  }
+});

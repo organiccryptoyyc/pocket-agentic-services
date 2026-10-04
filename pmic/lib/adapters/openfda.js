@@ -61,7 +61,8 @@ async function countSeries(ctx, s, endpoint, search, field, key, { lagged = fals
 function firmEntity(ctx, firm) {
   const f = String(firm || "").toLowerCase();
   for (const co of ctx.catalog.sec.companies) {
-    if (co.fda_firm && f.includes(co.fda_firm.toLowerCase())) return co.ticker.toLowerCase();
+    if (!co.fda_firm) continue;
+    if ([co.fda_firm, ...(co.fda_aliases || [])].some((n) => f.includes(n.toLowerCase()))) return co.ticker.toLowerCase();
   }
   return "us-drug-market";
 }
@@ -146,10 +147,15 @@ async function collect(series, ctx) {
     const s = byFeed.get(feed);
     if (s) await run([s.series_id], async () => out.observations.push(...(await countSeries(ctx, s, endpoint, search(s), field, key, { lagged: feed === "faers" }))));
   }
+  // A company's products can be listed under other names (J&J's drugs under Janssen), so match any.
+  const anyOf = (field, s) => {
+    const names = s.params.firms || [s.params.firm];
+    return names.length === 1 ? `${field}:"${names[0]}"` : `(${names.map((n) => `${field}:"${n}"`).join(" OR ")})`;
+  };
   const firm = {
-    recalls_firm: (s) => ["enforcement", `${range("report_date", ctx.since(s), ctx.now)} AND recalling_firm:"${s.params.firm}"`, "report_date"],
-    faers_firm: (s) => ["event", `${range("receivedate", ctx.since(s), ctx.now)} AND patient.drug.openfda.manufacturer_name:"${s.params.firm}"`, "receivedate"],
-    labels_firm: (s) => ["label", `${range("effective_time", ctx.since(s), ctx.now)} AND openfda.manufacturer_name:"${s.params.firm}"`, "effective_time"],
+    recalls_firm: (s) => ["enforcement", `${range("report_date", ctx.since(s), ctx.now)} AND ${anyOf("recalling_firm", s)}`, "report_date"],
+    faers_firm: (s) => ["event", `${range("receivedate", ctx.since(s), ctx.now)} AND ${anyOf("patient.drug.openfda.manufacturer_name", s)}`, "receivedate"],
+    labels_firm: (s) => ["label", `${range("effective_time", ctx.since(s), ctx.now)} AND ${anyOf("openfda.manufacturer_name", s)}`, "effective_time"],
   };
   for (const s of series.filter((x) => firm[x.params.feed])) {
     const [endpoint, search, field] = firm[s.params.feed](s);
