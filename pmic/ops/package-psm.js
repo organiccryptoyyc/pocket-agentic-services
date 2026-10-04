@@ -40,7 +40,7 @@ const compose = fs.readFileSync(path.join(SRC, "ops/psm/docker-compose.template.
   .replaceAll("{{API_TOKEN}}", token("PMIC_API_TOKEN"));
 fs.mkdirSync(path.join(OUT, "deploy"), { recursive: true });
 fs.writeFileSync(path.join(OUT, "deploy/docker-compose.yaml"), compose);
-fs.writeFileSync(path.join(OUT, "deploy/routes.json"), JSON.stringify([{ path: ROUTE, port: 8091 }], null, 2) + "\n");
+fs.writeFileSync(path.join(OUT, "deploy/routes.json"), JSON.stringify({ routes: [{ path: ROUTE, port: 8091 }] }, null, 2) + "\n");
 fs.writeFileSync(path.join(OUT, "service.json"), JSON.stringify({
   service_id: DEPLOY_ID, name: "PMIC hub (private, do not register)", card: "card.json", networks: {},
 }, null, 2) + "\n");
