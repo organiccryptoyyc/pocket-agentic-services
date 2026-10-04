@@ -1,7 +1,7 @@
 # TCS-6: listing request for the Pocket partner channel / portal@pokt.foundation
 
 Send from the owner's own account. Attach `sage-service.yaml` and `portal-descriptor.json` (both in this folder).
-Replace `<PR link>` once the health-check PR is open (see GATEWAY_LISTING.md, section 1).
+Replace https://github.com/pokt-network/pocket-network-resources/pull/8 once the health-check PR is open (see GATEWAY_LISTING.md, section 1).
 
 ---
 
@@ -30,7 +30,7 @@ Beta TestNet was used first for every change (relays settled on chain), then Mai
 1. `sage-service.yaml`: SAGE gateway config (passthrough, `rpc_types: ["rest"]`, 15s relay timeout, version and health checks).
 2. `portal-descriptor.json`: suggested portal entry in your descriptor format (display name, description, category, input/output schema, methods, example).
 
-**Health-check PR** to `pocket-network-resources/pocket-health-checks.yaml`: `<PR link>`
+**Health-check PR** to `pocket-network-resources/pocket-health-checks.yaml`: https://github.com/pokt-network/pocket-network-resources/pull/8
 
 **Methodology and schema:** https://github.com/organiccryptoyyc/pocket-agentic-services/tree/main/treasury-capital-score (openapi.json, methodology/).
 
