@@ -1,0 +1,32 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "{{DESCRIPTION}} Signals are computed from official public data (FRED, BLS, BEA, SEC EDGAR, openFDA, World Bank) collected on a schedule; every answer carries a 0-100 composite score, trend, risk flags, a confidence level, rationale text and citation links back to the source. POST /v1/signals for a ranked list, /v1/signal {series_id} for one, /v1/explain for why it moved, /v1/events and /v1/catalog. Every response is a single JSON object. Research signal, not investment advice.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "{{SERVICE_ID}} container on :8080; mount at /",
+      "notes": "POST /v1/signals, /v1/signal, /v1/explain, /v1/events, /v1/catalog; GET /v1/version, /v1/health. JSON body only. Bad input returns 400 + JSON."
+    }
+  ],
+  "apis": ["{{SERVICE_ID}}-signals"],
+  "specs": [
+    { "kind": "docs", "api": "{{SERVICE_ID}}-signals", "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/market-intel-collector/docs/SCORING.md", "notes": "Scoring method." }
+  ],
+  "access": "public",
+  "results": "variable",
+  "serving": {
+    "backend": "Node.js HTTP server (zero npm dependencies) behind a RelayMiner at http://<container>:8080. No caller auth. Answers come from a private hub that is refreshed by a scheduled collector; 5-minute cache.",
+    "implementations": ["{{SERVICE_ID}} >= 0.1"],
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      { "rpc_type": "REST", "request": { "path": "/v1/version", "method": "GET" }, "expect": { "json_path": "$.service", "matches": "^{{SERVICE_ID}}$" }, "notes": "Identity probe." },
+      { "rpc_type": "REST", "request": { "path": "/v1/health", "method": "GET" }, "expect": { "json_path": "$.status", "matches": "^ok$" }, "notes": "Readiness probe." },
+      { "rpc_type": "REST", "request": { "path": "/v1/signals", "method": "POST", "body": { "limit": 1 } }, "expect": { "json_path": "$.service", "matches": "^{{SERVICE_ID}}$" }, "notes": "Functional probe." }
+    ],
+    "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/{{SERVICE_ID}}/README.md",
+  "updated": "{{DATE}}"
+}

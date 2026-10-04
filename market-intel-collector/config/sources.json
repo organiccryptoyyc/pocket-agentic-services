@@ -1,0 +1,77 @@
+{
+  "_comment": "One row per upstream. tier: 1 = official statistical agency / regulator primary data, 2 = official aggregator republishing tier-1 data, 3 = reputable secondary. reliability_score is the base 0-100 used in scoring before fetch-failure penalties. cadence_minutes is the default poll interval for this source's series; a series row may override it. key_env names the env var holding an API key: required_key=true means the adapter skips (and logs) when it is missing.",
+  "sources": [
+    {
+      "source_id": "fred",
+      "name": "FRED, Federal Reserve Bank of St. Louis",
+      "homepage": "https://fred.stlouisfed.org",
+      "terms_url": "https://fred.stlouisfed.org/docs/api/terms_of_use.html",
+      "tier": 2,
+      "reliability_score": 90,
+      "cadence_minutes": 1440,
+      "key_env": "FRED_API_KEY",
+      "required_key": false,
+      "notes": "Uses the JSON API when FRED_API_KEY is set, otherwise the public fredgraph.csv download. Some FRED series carry third-party copyright; the catalog only lists public-domain government series."
+    },
+    {
+      "source_id": "bls",
+      "name": "U.S. Bureau of Labor Statistics Public Data API",
+      "homepage": "https://www.bls.gov/developers/",
+      "terms_url": "https://www.bls.gov/developers/termsOfService.htm",
+      "tier": 1,
+      "reliability_score": 97,
+      "cadence_minutes": 1440,
+      "key_env": "BLS_API_KEY",
+      "required_key": false,
+      "notes": "v2 with a key (500 queries/day, 50 series each); v1 without (25 queries/day, 25 series each). Series are batched into one request per 25."
+    },
+    {
+      "source_id": "bea",
+      "name": "U.S. Bureau of Economic Analysis API",
+      "homepage": "https://apps.bea.gov/api/",
+      "terms_url": "https://apps.bea.gov/API/signup/",
+      "tier": 1,
+      "reliability_score": 97,
+      "cadence_minutes": 10080,
+      "key_env": "BEA_API_KEY",
+      "required_key": true,
+      "notes": "Free UserID required. Slow series: weekly poll is enough; quarterly releases."
+    },
+    {
+      "source_id": "sec",
+      "name": "SEC EDGAR (submissions and XBRL company facts)",
+      "homepage": "https://www.sec.gov/edgar/sec-api-documentation",
+      "terms_url": "https://www.sec.gov/os/accessing-edgar-data",
+      "tier": 1,
+      "reliability_score": 95,
+      "cadence_minutes": 1440,
+      "key_env": "PMIC_SEC_USER_AGENT",
+      "required_key": true,
+      "notes": "No key, but SEC fair access requires a User-Agent naming the operator and a contact email (set PMIC_SEC_USER_AGENT) and at most 10 requests/second. Requests are spaced 150 ms apart."
+    },
+    {
+      "source_id": "openfda",
+      "name": "openFDA (drug enforcement, drugs@FDA, FAERS)",
+      "homepage": "https://open.fda.gov/apis/",
+      "terms_url": "https://open.fda.gov/terms/",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 1440,
+      "key_env": "OPENFDA_API_KEY",
+      "required_key": false,
+      "notes": "1,000 requests/day without a key, 120,000 with. FAERS adverse event reports are unverified voluntary reports; counts are an attention/safety proxy, not incidence. openFDA is not for clinical decisions."
+    },
+    {
+      "source_id": "worldbank",
+      "name": "World Bank Indicators API v2",
+      "homepage": "https://datahelpdesk.worldbank.org/knowledgebase/articles/889392",
+      "terms_url": "https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets",
+      "tier": 2,
+      "reliability_score": 85,
+      "cadence_minutes": 10080,
+      "key_env": null,
+      "required_key": false,
+      "notes": "CC BY 4.0. Annual series, weekly poll."
+    }
+  ]
+}

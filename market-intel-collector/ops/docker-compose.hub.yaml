@@ -1,0 +1,48 @@
+# Hub on the Pocket supplier server (agentic.organiccryptoyyc.com), next to the RelayMiner.
+# It does not fetch anything: the Pi pushes to its ingest listener and the service packs read
+# its query API over the pocket-supplier docker network at http://pmic-hub:8088.
+#
+# The hub is never a RelayMiner backend itself. Each paid service pack is its own container and
+# its own backend_url; the packs call the hub internally.
+#
+#   PMIC_INGEST_TOKEN  shared with the Pi's PMIC_PUSH_TOKEN (openssl rand -hex 32)
+#   PMIC_API_TOKEN     shared with the service packs
+# Expose the ingest port to the Pi through Caddy on its own route (like /tcs6-ingest), never the relay path.
+services:
+  hub:
+    build: ..
+    image: market-intel-collector:latest
+    container_name: pmic-hub
+    command: ["node", "server.js"]
+    environment:
+      PORT: "8088"
+      PMIC_INGEST_HOST: 0.0.0.0
+      PMIC_INGEST_PORT: "8091"
+      PMIC_INGEST_TOKEN: "${PMIC_INGEST_TOKEN}"
+      PMIC_API_TOKEN: "${PMIC_API_TOKEN}"
+    volumes:
+      - pmic-hub-data:/var/lib/pmic
+    expose:
+      - "8088"
+      - "8091"
+    networks: [supplier]
+    restart: unless-stopped
+
+  # The hub prunes and backs up on its own schedule (the Pi's maintenance does not replicate).
+  hub-maintenance:
+    image: market-intel-collector:latest
+    container_name: pmic-hub-maintenance
+    entrypoint: ["sh", "-c", "while true; do node bin/collect.js --maintain; sleep 86400; done"]
+    volumes:
+      - pmic-hub-data:/var/lib/pmic
+    depends_on: [hub]
+    networks: [supplier]
+    restart: unless-stopped
+
+volumes:
+  pmic-hub-data:
+
+networks:
+  supplier:
+    external: true
+    name: pocket-supplier
