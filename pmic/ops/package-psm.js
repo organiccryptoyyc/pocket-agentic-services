@@ -3,8 +3,9 @@
 //   node pmic/ops/package-psm.js            -> ~/Downloads/pmic-hub/   (deploy id pmic-hub)
 //   node pmic/ops/package-psm.js <parent>   -> <parent>/pmic-hub/
 //
-// Layout: backend/ (the same image the Pi runs), deploy/docker-compose.yaml, deploy/routes.json.
-// The hub is not a paid service, so there is no card.json and nothing to register or stake.
+// Layout: service.json + card.json (so PSM lists it under Deploy service), backend/ (the same image
+// the Pi runs), deploy/docker-compose.yaml, deploy/routes.json. The hub is not a paid service: the
+// card is only there for PSM's listing, and it is never registered or staked.
 "use strict";
 
 const crypto = require("crypto");
@@ -40,6 +41,15 @@ const compose = fs.readFileSync(path.join(SRC, "ops/psm/docker-compose.template.
 fs.mkdirSync(path.join(OUT, "deploy"), { recursive: true });
 fs.writeFileSync(path.join(OUT, "deploy/docker-compose.yaml"), compose);
 fs.writeFileSync(path.join(OUT, "deploy/routes.json"), JSON.stringify([{ path: ROUTE, port: 8091 }], null, 2) + "\n");
+fs.writeFileSync(path.join(OUT, "service.json"), JSON.stringify({
+  service_id: DEPLOY_ID, name: "PMIC hub (private, do not register)", card: "card.json", networks: {},
+}, null, 2) + "\n");
+fs.writeFileSync(path.join(OUT, "card.json"), JSON.stringify({
+  schema: "pocket-service-card/v1",
+  description: "PMIC hub: the private data layer under the PMIC service packs. It receives pushes from the Pi collector and answers the packs over the pocket-supplier network. Not a relay service: never register or stake it.",
+  rpc_types: [{ type: "REST", intent: "expected", backend_hint: "pmic-hub-backend on :8080", notes: "Private. GET /v1/health; POST /v1/* with a bearer token." }],
+  access: "private",
+}, null, 2) + "\n");
 console.log(JSON.stringify({
   deploy_id: DEPLOY_ID,
   folder: OUT,

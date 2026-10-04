@@ -19,7 +19,7 @@ git pull
 node pmic/ops/package-psm.js
 ```
 
-This creates `Downloads\pmic-hub` and prints these lines:
+This creates `Downloads\pmic-hub` (with a `service.json`, so PSM lists it) and prints these lines:
 
 - `pi_push_url`, needed in step 3
 - `pi_push_token`, needed in step 3; keep it private
@@ -30,11 +30,11 @@ it keeps the same tokens.
 
 ## 2. Deploy it in PSM (MainNet tab, server `hetzner-mainnet`)
 
-1. **Deploy-ship** the `Downloads\pmic-hub` folder with deploy ID `pmic-hub`.
-2. **Deploy** `pmic-hub` (health path `/v1/health`).
-3. **Add-routes** on the MainNet stack: `/pmic-ingest → 8091`.
+1. Open **Services → Deploy service**.
+2. Choose **Service** `pmic-hub` and **Server** `hetzner-mainnet`, then click **Deploy**. The route
+   `/pmic-ingest → 8091` comes from `deploy/routes.json` in the folder.
 
-Skip add-service and staking. The hub is not a relay backend.
+Never use Register service, Suppliers or Stake for `pmic-hub`. The hub is not a relay backend.
 
 Check on the server (Hetzner SSH):
 
