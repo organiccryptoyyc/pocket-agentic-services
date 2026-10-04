@@ -29,6 +29,11 @@
   `pmic-pharma-signals` tx `F5ABC787554042422697E628E834592EA280E2D416B41B3794A1B440F276667E` (block 950342).
 - Supplier re-staked (tx `8FD22819F5E842E567E47E009050A5012E7D0592771DAC9BCA6AA86AD8E37622`, block 950343),
   stake unchanged at 60,000 POKT, five REST services active from block 950361. `pmic-hub` is not on chain.
+- Paid relay tests passed on MainNet 2026-10-04 (6 of 6 HTTP 200, about 2.5-2.9 s): `/v1/verticals` and
+  `/v1/brief` on each pack. Test apps, 1,100 POKT each (returned about 3 sessions after unstaking):
+  owner wallet for macro (tx `0F2FC67ED6291608D7D7698FC17BDE11300724288F8668EC4883F5B65B18047D`),
+  `pmic-company-app` (tx `82281EE093DE55C0A420FABA4DEE9BF6B9F29A464F14C77372A5C1B99BF1174F`),
+  `pmic-pharma-app` (tx `5E949A689D60135FC705E97B585B61E1F09DCC303D07BB9A0B9201B8067BEE04`).
 - Known data quirk: openFDA FAERS counts for the latest weeks read near 0 because of reporting lag,
   which lifts the drug-market score. To fix in a later version.
 
