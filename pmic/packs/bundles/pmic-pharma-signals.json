@@ -2,7 +2,7 @@
   "_comment": "Health and pharma verticals: openFDA safety and approvals, and ClinicalTrials.gov pipelines (batch 2).",
   "service_id": "pmic-pharma-signals",
   "display_name": "PMIC Pharma Safety and Approval Signals",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "category": "health",
   "description": "Scored drug-market and company safety briefs from openFDA: recalls (all and Class I), adverse event reports, label changes, and NDA/BLA and generic approvals for the US drug market, plus per-company recalls, adverse event reports, approvals and label changes for Pfizer, Eli Lilly and Johnson & Johnson. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and openFDA citations.",
   "default_horizon": "90d",
