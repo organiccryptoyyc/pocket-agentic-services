@@ -17,7 +17,7 @@ I'd like to list a MainNet agentic service on the Agentic Portal (agent.pocket.n
 - **Registered:** MainNet tx `AC7998B289936BA666D770B59EAC3778F9FF55E1FAD955C5FA40D01366830B35`, 100,000 CU per relay
 - **Category:** finance
 
-**What it does:** treasury-strength reports for DeFi protocols and DAOs. It covers 26 protocols; 18 have a full score and 4 more a treasury-only (partial) report. Each report gives net realizable treasury after realization haircuts, liquid runway against approved spending, obligations, a stress test, a peer ranking and governance controls. Every figure is cited. `POST /v1/tcs6/score {"entity_id":"compound"}` returns the report; `POST /v1/tcs6/entities {}` lists the protocols. Every response is a single JSON object. Reports refresh every 12 hours and are served from cache (about 2.5 to 3.5 seconds end to end through a relay).
+**What it does:** treasury-strength reports for DeFi protocols and DAOs. It lists 26 protocols: 18 have a full score, 4 a treasury-only (partial) report, and the rest are awaiting vetting. Each report gives net realizable treasury after realization haircuts, liquid runway against approved spending, obligations, a stress test, a peer ranking and governance controls. Every figure is cited. `POST /v1/tcs6/score {"entity_id":"compound"}` returns the report; `POST /v1/tcs6/entities {}` lists the protocols. Every response is a single JSON object. Reports refresh every 12 hours and are served from cache (about 2.5 to 3.5 seconds end to end through a relay).
 
 **Verified on MainNet relays (2026-10-03, via pocket-ap):**
 - `GET /v1/version` → 200, contains `"treasury-capital-score"`
