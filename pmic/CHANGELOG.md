@@ -34,6 +34,8 @@
   `push_cursor`). Takes effect after the next Pi rebuild and hub deploy.
 - Deploy: Pi rebuild (collector), then PSM Deploy for `pmic-hub` and the three packs. No
   re-registration and no POKT.
+- Pharma card updated on MainNet to the 0.2.0 card (Register service, gas only, about 0.16 POKT):
+  tx `7A5E7FC257DC1BAC931B86E736C1104E78577DE9CF6F85294B8373EF7094D62A` (block 950479).
 
 ## Packs batch 1 (2026-10-04)
 
