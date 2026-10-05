@@ -69,6 +69,10 @@
   minute timeout). After the first run, one new 13F window a quarter and one 990 year a year.
 - New keys, both optional: `CONGRESS_API_KEY` (falls back to `FEC_API_KEY`; without either, only
   laws are counted). ECHO needs a browser-like User-Agent (Node's default gets a 503).
+- Pi probe (2026-10-05): every batch 4 source passed except EPA ECHO, which answered 429 after
+  about 15 requests. ECHO now reads newest month first, 3 seconds apart, keeps finished months
+  between passes (only the last six are re-read), and on a 429 keeps what it has and carries on
+  next pass, like FEC.
 - Card descriptions list verticals by id only when the list with questions would go over the
   2,048-character on-chain limit (macro now does). Public sector is 2,028 characters.
 

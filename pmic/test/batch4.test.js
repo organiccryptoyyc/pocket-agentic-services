@@ -174,3 +174,18 @@ test("13F dates and data set links", () => {
   const w = windowsOf('<a href="/files/x/data/form-13f-data-sets/01dec2025-28feb2026_form13f.zip">x</a><a href="/files/x/2023q4_form13f.zip">old</a>');
   assert.deepEqual(w.map((x) => x.end), ["2026-02-28"]);
 });
+
+test("echo: a 429 keeps the months already read, newest first, and the next pass carries on", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pmic-b4echo-"));
+  const db = dbLib.open({ dataDir: dir });
+  const base = makeFetch(catalog, { now: NOW });
+  let calls = 0;
+  const limited = async (url, init) => (new URL(url).host === "echodata.epa.gov" && ++calls > 20 ? { status: 429, ok: false, text: "Too Many Requests" } : base(url, init));
+  const first = await collectOnce(db, catalog, { now: NOW, dataDir: dir, env: {}, fetchImpl: limited, sources: ["echo"] });
+  assert.equal(first.sources[0].failed.length, 0, JSON.stringify(first.sources[0].failed[0]));
+  const got = obs(db, "echo:cases_monthly");
+  assert.ok(got.length > 3 && got.length < 20, `partial: ${got.length}`);
+  assert.equal(got[got.length - 1].t, "2026-09-01", "the newest month is read first");
+  await collectOnce(db, catalog, { now: NOW, dataDir: dir, env: {}, fetchImpl: base, sources: ["echo"], force: true });
+  assert.ok(obs(db, "echo:cases_monthly").length >= 25, "the next pass fills in the rest");
+});
