@@ -40,6 +40,7 @@
   WGTSTUS1, WPULEUS3) and for the Census BFS ids, so those six now come straight from the
   publishers with no key: new `eia` adapter (dnav weekly history table) and `census` adapter (BFS
   monthly CSV, US total, seasonally adjusted). Gasoline and diesel prices and trade stay on FRED.
+- Live on MainNet 2026-10-05: hub and the four packs deployed with /v1/selftest health (36/36 verticals pass; macro, company and pharma over paid MainNet relays, public sector via its Beta app). Macro's description was shortened so its card stays under the 2,048-character description limit. Card updates (gas only): macro C5897E5C0EE779FFE4D26886F365F8BF6B9527C7ECA8E7D99600811F10B08101, company BE232CF93F9BA6EA1C493ADDBDF37AF0DB49708071533FD3640948F251683E80, pharma B63DC1D4A3C772309E2DB1FC21E9B97D220A86ECF85FF1B05DE1E17B06D5EE61, public sector A95B345539E771156D4C3AEA322492C7A2095DDE6925A7E409A9E608DE49F547.
 - Catalog 536 -> 597 series. Tests 55/55 (new `test/batch3.test.js`, stub `test/stub-batch3.js`).
 - Pi check: `sh ops/probe-batch3.sh`. Deploy: Pi rebuild, PSM Deploy `pmic-hub` and the four
   packs, then gas-only card updates for all four. No new fee.
