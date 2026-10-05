@@ -1,7 +1,7 @@
 {
   "serviceId": "pmic-company-signals",
   "displayName": "PMIC Company Fundamentals and Filing Risk",
-  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, a filing risk score from 8-K items, 13D filings and insider Form 4 activity, an insider activity score, a balance sheet strength score, a peer ranking against the other 13 companies on growth, margins and liquidity, and an earnings quality score (are profits backed by cash). Every input carries its SEC citation. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
+  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): fundamentals, filing risk (8-K items, 13D, Form 4), insider activity, balance sheet strength, a peer ranking, earnings quality, shareholder returns (buybacks and dividends), interest coverage, the investment cycle (capex) and settlement fails (SEC fails-to-deliver). Every input carries its SEC citation. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
   "category": "finance",
   "protocols": [
     "rest"
@@ -19,7 +19,11 @@
           "balance-sheet",
           "peer-ranking",
           "public-attention",
-          "earnings-quality"
+          "earnings-quality",
+          "shareholder-returns",
+          "interest-coverage",
+          "investment-cycle",
+          "settlement-fails"
         ],
         "description": "Which brief. POST /v1/verticals describes each."
       },
@@ -41,7 +45,7 @@
           "nflx",
           "dis"
         ],
-        "description": "Company (lower-case ticker); required for fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking, public-attention, earnings-quality."
+        "description": "Company (lower-case ticker); required for fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking, public-attention, earnings-quality, shareholder-returns, interest-coverage, investment-cycle, settlement-fails."
       },
       "horizon": {
         "type": "string",

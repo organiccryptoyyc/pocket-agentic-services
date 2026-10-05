@@ -146,10 +146,13 @@ async function collect(series, ctx) {
     labels: ["label", (s) => range("effective_time", ctx.since(s), ctx.now), "effective_time"],
     food_recalls: ["food/enforcement", (s) => range("report_date", ctx.since(s), ctx.now), "report_date"],
     food_recalls_class1: ["food/enforcement", (s) => `${range("report_date", ctx.since(s), ctx.now)} AND classification:"Class I"`, "report_date"],
+    device_recalls: ["device/enforcement", (s) => range("report_date", ctx.since(s), ctx.now), "report_date"],
+    device_recalls_class1: ["device/enforcement", (s) => `${range("report_date", ctx.since(s), ctx.now)} AND classification:"Class I"`, "report_date"],
+    device_events: ["device/event", (s) => range("date_received", ctx.since(s), ctx.now), "date_received"],
   };
   for (const [feed, [endpoint, search, field]] of Object.entries(plain)) {
     const s = byFeed.get(feed);
-    if (s) await run([s.series_id], async () => out.observations.push(...(await countSeries(ctx, s, endpoint, search(s), field, key, { lagged: feed === "faers" }))));
+    if (s) await run([s.series_id], async () => out.observations.push(...(await countSeries(ctx, s, endpoint, search(s), field, key, { lagged: feed === "faers" || feed === "device_events" }))));
   }
   // A company's products can be listed under other names (J&J's drugs under Janssen), so match any.
   const anyOf = (field, s) => {

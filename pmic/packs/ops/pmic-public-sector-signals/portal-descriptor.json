@@ -1,7 +1,7 @@
 {
   "serviceId": "pmic-public-sector-signals",
   "displayName": "PMIC Public Sector Signals",
-  "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC consumer products, NHTSA vehicles and equipment, FDA food), political money (FEC independent expenditures, Senate lobbying registrations and filings) and federal spending (USAspending award obligations by agency, Monthly Treasury Statement outlays, receipts and deficit), natural hazards (FEMA disaster declarations, USGS earthquakes, NWS severe alerts), cyber threat (CISA Known Exploited Vulnerabilities, NIST NVD critical CVEs) and respiratory illness (CDC emergency department visits for COVID-19, flu and RSV). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
+  "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC, NHTSA, FDA food), political money (FEC, Senate lobbying), federal spending (USAspending, Treasury), natural hazards (FEMA, USGS, NWS), cyber threat (CISA KEV, NVD), respiratory illness (CDC), wildfire activity (NIFC), climate anomaly (NOAA), crime (FBI), air travel demand (TSA), federal rulemaking (Federal Register) and Medicare enrollment (CMS). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
   "category": "government",
   "protocols": [
     "rest"
@@ -18,7 +18,13 @@
           "federal-spending",
           "natural-hazards",
           "cyber-threat",
-          "disease-activity"
+          "disease-activity",
+          "wildfire-activity",
+          "climate-anomaly",
+          "public-safety",
+          "travel-demand",
+          "rulemaking",
+          "medicare-providers"
         ],
         "description": "Which brief. POST /v1/verticals describes each."
       },

@@ -2,12 +2,12 @@
   "_comment": "Company verticals take an entity_id (lower-case ticker). Members are expanded per company from the metric list; metrics a company does not report are left out of that company's score rather than counted as missing.",
   "service_id": "pmic-company-signals",
   "display_name": "PMIC Company Fundamentals and Filing Risk",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "category": "finance",
-  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): a fundamentals score built from XBRL revenue, income, cash flow, cash, debt, margins and liquidity, a filing risk score from 8-K items, 13D filings and insider Form 4 activity, an insider activity score, a balance sheet strength score, a peer ranking against the other 13 companies on growth, margins and liquidity, and an earnings quality score (are profits backed by cash). Every input carries its SEC citation.",
+  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): fundamentals, filing risk (8-K items, 13D, Form 4), insider activity, balance sheet strength, a peer ranking, earnings quality, shareholder returns (buybacks and dividends), interest coverage, the investment cycle (capex) and settlement fails (SEC fails-to-deliver). Every input carries its SEC citation.",
   "default_horizon": "365d",
   "cache_seconds": 300,
-  "hub_scope": [{ "source_id": "sec" }, { "source_id": "wikimedia" }],
+  "hub_scope": [{"source_id": "sec"}, {"source_id": "wikimedia"}, {"source_id": "secftd"}],
   "events_scope": {},
   "entities": ["aapl", "msft", "nvda", "amzn", "wmt", "jpm", "bac", "xom", "pfe", "lly", "jnj", "unh", "nflx", "dis"],
   "verticals": [
@@ -17,18 +17,18 @@
       "question": "How healthy are this company's financials versus its own recent history?",
       "kind": "entity_composite",
       "series_pattern": "sec:{TICKER}:{metric}",
-      "labels": { "high": "strong", "mid": "stable", "low": "weakening" },
-      "trend_words": { "up": "improving", "down": "deteriorating" },
+      "labels": {"high": "strong", "mid": "stable", "low": "weakening"},
+      "trend_words": {"up": "improving", "down": "deteriorating"},
       "metrics": [
-        { "metric": "revenue_q", "weight": 2 },
-        { "metric": "operating_income_q" },
-        { "metric": "net_income_q" },
-        { "metric": "operating_cash_flow_q", "weight": 2 },
-        { "metric": "net_margin" },
-        { "metric": "operating_margin" },
-        { "metric": "cash" },
-        { "metric": "current_ratio" },
-        { "metric": "long_term_debt" }
+        {"metric": "revenue_q", "weight": 2},
+        {"metric": "operating_income_q"},
+        {"metric": "net_income_q"},
+        {"metric": "operating_cash_flow_q", "weight": 2},
+        {"metric": "net_margin"},
+        {"metric": "operating_margin"},
+        {"metric": "cash"},
+        {"metric": "current_ratio"},
+        {"metric": "long_term_debt"}
       ]
     },
     {
@@ -37,8 +37,8 @@
       "question": "Has this company filed anything risky lately?",
       "kind": "entity_events",
       "note": "Score starts at 100 and drops for each 8-K with a high-severity item (bankruptcy, impairment, delisting, auditor change, restatement): -25, medium-severity item or 13D: -8, other 8-K: -1. Routine 10-K, 10-Q and 13G filings do not count. Insider Form 4 activity is reported under watch.",
-      "labels": { "high": "quiet", "mid": "active", "low": "elevated" },
-      "penalties": { "high": 25, "medium": 8, "low_8k": 1 },
+      "labels": {"high": "quiet", "mid": "active", "low": "elevated"},
+      "penalties": {"high": 25, "medium": 8, "low_8k": 1},
       "watch_metric": "insider_form4_weekly"
     },
     {
@@ -48,14 +48,14 @@
       "kind": "entity_composite",
       "series_pattern": "sec:{TICKER}:{metric}",
       "note": "Higher score means quieter insider activity than usual: weekly Form 4 filings and the dollar value of open-market sales and purchases (Form 4 codes S and P), each compared with this company's own trailing year. Form 4 reports insider buys, sells, grants and exercises; a busy week is a reason to read the filings, not a verdict. The latest Form 4 and 13D filings are listed under recent_events.",
-      "labels": { "high": "quiet", "mid": "normal", "low": "unusually active" },
-      "trend_words": { "up": "quieting", "down": "picking up" },
+      "labels": {"high": "quiet", "mid": "normal", "low": "unusually active"},
+      "trend_words": {"up": "quieting", "down": "picking up"},
       "include_events": true,
       "event_types": ["insider_form4", "ownership_13d"],
       "metrics": [
-        { "metric": "insider_form4_weekly", "direction": -1 },
-        { "metric": "insider_sell_value_weekly", "direction": -1, "weight": 2 },
-        { "metric": "insider_buy_value_weekly", "direction": -1 }
+        {"metric": "insider_form4_weekly", "direction": -1},
+        {"metric": "insider_sell_value_weekly", "direction": -1, "weight": 2},
+        {"metric": "insider_buy_value_weekly", "direction": -1}
       ]
     },
     {
@@ -65,15 +65,15 @@
       "kind": "entity_composite",
       "series_pattern": "sec:{TICKER}:{metric}",
       "note": "Higher score means a stronger balance sheet than usual for this company: more cash and current assets, a higher current ratio, less long-term debt and fewer current liabilities, each compared with its own recent quarters. Banks report differently; metrics a company does not file are left out of its score.",
-      "labels": { "high": "strong", "mid": "stable", "low": "stretched" },
-      "trend_words": { "up": "strengthening", "down": "weakening" },
+      "labels": {"high": "strong", "mid": "stable", "low": "stretched"},
+      "trend_words": {"up": "strengthening", "down": "weakening"},
       "metrics": [
-        { "metric": "current_ratio", "weight": 2 },
-        { "metric": "cash", "weight": 2 },
-        { "metric": "long_term_debt", "weight": 2 },
-        { "metric": "assets_current" },
-        { "metric": "liabilities_current" },
-        { "metric": "total_assets" }
+        {"metric": "current_ratio", "weight": 2},
+        {"metric": "cash", "weight": 2},
+        {"metric": "long_term_debt", "weight": 2},
+        {"metric": "assets_current"},
+        {"metric": "liabilities_current"},
+        {"metric": "total_assets"}
       ]
     },
     {
@@ -83,14 +83,14 @@
       "kind": "peer_table",
       "source_id": "sec",
       "note": "Ranks all 14 companies on the latest reported value of each metric (year-over-year growth for revenue, operating income and cash flow; levels for margins and the current ratio). A company's score is its average rank position: 100 = first on every metric, 0 = last. This compares companies with each other, unlike the other company verticals, which compare a company with its own history.",
-      "labels": { "high": "leader", "mid": "middle of the pack", "low": "laggard" },
+      "labels": {"high": "leader", "mid": "middle of the pack", "low": "laggard"},
       "metrics": [
-        { "metric": "revenue_q", "polarity": 1, "basis": "yoy growth" },
-        { "metric": "operating_income_q", "polarity": 1, "basis": "yoy growth" },
-        { "metric": "operating_cash_flow_q", "polarity": 1, "basis": "yoy growth" },
-        { "metric": "operating_margin", "polarity": 1, "basis": "level" },
-        { "metric": "net_margin", "polarity": 1, "basis": "level" },
-        { "metric": "current_ratio", "polarity": 1, "basis": "level" }
+        {"metric": "revenue_q", "polarity": 1, "basis": "yoy growth"},
+        {"metric": "operating_income_q", "polarity": 1, "basis": "yoy growth"},
+        {"metric": "operating_cash_flow_q", "polarity": 1, "basis": "yoy growth"},
+        {"metric": "operating_margin", "polarity": 1, "basis": "level"},
+        {"metric": "net_margin", "polarity": 1, "basis": "level"},
+        {"metric": "current_ratio", "polarity": 1, "basis": "level"}
       ]
     },
     {
@@ -100,12 +100,9 @@
       "kind": "entity_composite",
       "series_pattern": "wikimedia:{TICKER}:{metric}",
       "note": "Higher score means more public attention than usual for this company: weekly Wikipedia pageviews (human readers) and edits of its article against its own trailing year. A spike says people are looking, not why; read it next to filing-risk.",
-      "labels": { "high": "spiking", "mid": "normal", "low": "quiet" },
-      "trend_words": { "up": "rising", "down": "fading" },
-      "metrics": [
-        { "metric": "pageviews_weekly", "weight": 2 },
-        { "metric": "edits_weekly" }
-      ]
+      "labels": {"high": "spiking", "mid": "normal", "low": "quiet"},
+      "trend_words": {"up": "rising", "down": "fading"},
+      "metrics": [{"metric": "pageviews_weekly", "weight": 2}, {"metric": "edits_weekly"}]
     },
     {
       "id": "earnings-quality",
@@ -114,14 +111,58 @@
       "kind": "entity_composite",
       "series_pattern": "sec:{TICKER}:{metric}",
       "note": "Higher score means profits are better backed by cash than usual for this company: operating cash flow relative to net income (cash conversion) and to revenue (cash flow margin), each against its own recent quarters. Quarters with a net loss have no cash conversion and are left out of that input.",
-      "labels": { "high": "high quality", "mid": "normal", "low": "weak" },
-      "trend_words": { "up": "improving", "down": "deteriorating" },
+      "labels": {"high": "high quality", "mid": "normal", "low": "weak"},
+      "trend_words": {"up": "improving", "down": "deteriorating"},
       "metrics": [
-        { "metric": "cash_conversion", "weight": 2 },
-        { "metric": "cash_flow_margin", "weight": 2 },
-        { "metric": "operating_cash_flow_q" },
-        { "metric": "net_margin" }
+        {"metric": "cash_conversion", "weight": 2},
+        {"metric": "cash_flow_margin", "weight": 2},
+        {"metric": "operating_cash_flow_q"},
+        {"metric": "net_margin"}
       ]
+    },
+    {
+      "id": "shareholder-returns",
+      "title": "Shareholder returns",
+      "question": "Is this company returning more cash to shareholders than usual?",
+      "kind": "entity_composite",
+      "series_pattern": "sec:{TICKER}:{metric}",
+      "note": "Higher score means more cash returned than usual for this company: share buybacks and dividends paid each quarter (SEC XBRL cash flow statement), year over year, against its own history. Companies that do not buy back shares or pay dividends show those inputs as missing.",
+      "labels": {"high": "generous", "mid": "normal", "low": "pulling back"},
+      "trend_words": {"up": "rising", "down": "falling"},
+      "metrics": [{"metric": "buybacks_q", "weight": 2}, {"metric": "dividends_q", "weight": 2}]
+    },
+    {
+      "id": "interest-coverage",
+      "title": "Interest coverage",
+      "question": "Can this company comfortably cover its interest bill?",
+      "kind": "entity_composite",
+      "series_pattern": "sec:{TICKER}:{metric}",
+      "note": "Higher score means more comfortable debt service than usual for this company: operating income divided by interest expense (coverage), and interest expense growth year over year (lower is better), each against its own recent quarters. Banks (JPM, BAC) report interest as a business line, so it is left out for them.",
+      "labels": {"high": "comfortable", "mid": "adequate", "low": "strained"},
+      "trend_words": {"up": "improving", "down": "deteriorating"},
+      "metrics": [{"metric": "interest_coverage", "weight": 2}, {"metric": "interest_expense_q", "direction": -1}]
+    },
+    {
+      "id": "investment-cycle",
+      "title": "Investment cycle",
+      "question": "Is this company investing more in plant and equipment than usual?",
+      "kind": "entity_composite",
+      "series_pattern": "sec:{TICKER}:{metric}",
+      "note": "Higher score means heavier investment than usual for this company: capital expenditure each quarter, year over year, and capex as a share of revenue (capex intensity), each against its own history (SEC XBRL).",
+      "labels": {"high": "expanding", "mid": "steady", "low": "cutting back"},
+      "trend_words": {"up": "accelerating", "down": "slowing"},
+      "metrics": [{"metric": "capex_q", "weight": 2}, {"metric": "capex_intensity"}]
+    },
+    {
+      "id": "settlement-fails",
+      "title": "Settlement fails",
+      "question": "Are trades in this stock failing to settle more than usual?",
+      "kind": "entity_composite",
+      "series_pattern": "secftd:{TICKER}:{metric}",
+      "note": "Higher score means fewer settlement fails than usual: the dollar value of shares that failed to deliver each month (SEC fails-to-deliver data, quantity times price over both half-month files), against the stock's own history. Persistent fails can point to short selling or settlement stress, but most are operational. Not investment advice.",
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "easing", "down": "rising"},
+      "metrics": [{"metric": "fails_to_deliver_value_monthly"}]
     }
   ]
 }

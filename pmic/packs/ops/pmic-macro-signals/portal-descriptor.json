@@ -1,7 +1,7 @@
 {
   "serviceId": "pmic-macro-signals",
   "displayName": "PMIC Macro and Markets Signals",
-  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
+  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF), plus Pocket Network health and crypto liquidity (DefiLlama). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
   "category": "finance",
   "protocols": [
     "rest"
@@ -31,7 +31,13 @@
           "treasury-demand",
           "energy-supply",
           "trade-flows",
-          "business-formation"
+          "business-formation",
+          "pokt-network-health",
+          "crypto-liquidity",
+          "supply-chain-pressure",
+          "food-inflation",
+          "state-labor",
+          "imf-outlook"
         ],
         "description": "Which brief. POST /v1/verticals describes each."
       },

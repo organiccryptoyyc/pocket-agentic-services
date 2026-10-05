@@ -57,11 +57,23 @@ function example(b) {
   return { vertical: v.id, ...(needsEntity(v) ? { entity_id: b.entities[0] } : {}) };
 }
 
+// The card description is capped at 2,048 characters on chain. Verticals are listed with their
+// questions when that fits, and by id only when it does not (POST /v1/verticals has the questions).
+const CARD_DESCRIPTION_MAX = 2048;
+
+function cardDescription(b) {
+  const text = (verts) => `${b.description} POST /v1/brief {vertical${b.entities ? ", entity_id" : ""}} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: ${verts}. Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${b.events_scope ? ", /v1/events" : ""}. Every response is a single JSON object. Research signal, not investment advice.`;
+  const long = text(b.verticals.map((v) => `${v.id} (${v.question})`).join("; "));
+  if (long.length <= CARD_DESCRIPTION_MAX) return long;
+  const short = text(b.verticals.map((v) => v.id).join(", "));
+  if (short.length > CARD_DESCRIPTION_MAX) throw new Error(`${b.service_id}: card description is ${short.length} characters, over ${CARD_DESCRIPTION_MAX}`);
+  return short;
+}
+
 function card(b) {
-  const verts = b.verticals.map((v) => `${v.id} (${v.question})`).join("; ");
   return {
     schema: "pocket-service-card/v1",
-    description: `${b.description} POST /v1/brief {vertical${b.entities ? ", entity_id" : ""}} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: ${verts}. Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${b.events_scope ? ", /v1/events" : ""}. Every response is a single JSON object. Research signal, not investment advice.`,
+    description: cardDescription(b),
     rpc_types: [{ type: "REST", intent: "expected", backend_hint: `${b.service_id}-backend on :8080; mount at /`, notes: `${routesOf(b).join(", ")}; GET /v1/version, /v1/health. JSON body only. Bad input returns 400 + JSON.` }],
     apis: [`${b.service_id}-briefs`],
     specs: [

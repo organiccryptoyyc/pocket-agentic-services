@@ -7,6 +7,7 @@
 
 const { batch2 } = require("./stub-batch2");
 const { batch3 } = require("./stub-batch3");
+const { batch4 } = require("./stub-batch4");
 
 const DAY = 86400000;
 
@@ -188,6 +189,11 @@ function makeFetch(catalog, opts = {}) {
           AssetsCurrent: usd("ac", 1.4e11, true),
           LiabilitiesCurrent: usd("lc", 1.3e11, true),
           Assets: usd("assets", 3.5e11, true),
+          PaymentsToAcquirePropertyPlantAndEquipment: usd("capex", 3e9, false),
+          PaymentsForRepurchaseOfCommonStock: usd("buyback", 2e10, false),
+          PaymentsOfDividendsCommonStock: usd("div", 4e9, false),
+          // Interest on the nonoperating concept (as Amazon reports it): exercises the concept fallback.
+          InterestExpenseNonoperating: usd("int", 1e9, false),
         };
         return json({ cik: Number(cik), entityName: `Company ${cik}`, facts: { dei: {}, "us-gaap": gaap } });
       }
@@ -283,6 +289,8 @@ function makeFetch(catalog, opts = {}) {
     if (b2) return b2;
     const b3 = batch3(u, init, now, json);
     if (b3) return b3;
+    const b4 = batch4(u, init, now, json);
+    if (b4) return b4;
     return { status: 404, ok: false, text: `stub has no route for ${url}` };
   }
   fetchImpl.calls = calls;

@@ -77,7 +77,7 @@ test("probes: version, health and the PSM healthz path", async () => {
 
 test("macro bundle: every vertical is a scored, cited brief", async () => {
   const list = (await call("pmic-macro-signals", "POST", "/v1/verticals", {})).json;
-  assert.equal(list.count, 19);
+  assert.equal(list.count, 25);
   for (const id of ["housing", "consumer", "country-risk", "health-systems", "education", "yield-curve", "bank-health", "global-rates-fx"]) assert.ok(list.verticals.some((v) => v.id === id), `batch 2 vertical ${id}`);
   for (const v of list.verticals) {
     const r = await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: v.id });
@@ -89,7 +89,8 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
       continue;
     }
     checkBrief(r.json, "pmic-macro-signals");
-    assert.ok(r.json.inputs.length >= 2 && r.json.inputs.length + r.json.watch.length >= 3, `${v.id} inputs`);
+    const members = require("../packs/bundles/pmic-macro-signals.json").verticals.find((x) => x.id === v.id).members.length;
+    assert.ok(r.json.inputs.length >= 2 && r.json.inputs.length + r.json.watch.length >= Math.min(3, members), `${v.id} inputs`);
     // The stub hub has one scoring pass, so there is no stored score from 90 days ago yet.
     assert.equal(r.json.trend_basis, "input_trends");
     const words = require("../packs/bundles/pmic-macro-signals.json").verticals.find((x) => x.id === v.id).trend_words;
@@ -110,7 +111,7 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
 
 test("macro overview and inflation calculator", async () => {
   const o = (await call("pmic-macro-signals", "POST", "/v1/overview", {})).json;
-  assert.equal(o.count, 19);
+  assert.equal(o.count, 25);
   assert.ok(o.briefs.every((b) => b.status === "ok"));
   const range = (await call("pmic-macro-signals", "POST", "/v1/inflation/adjust", { amount: 100, from: "1990-01" }));
   assert.equal(range.status, 400);
@@ -134,7 +135,7 @@ test("company bundle: fundamentals and filing risk need a covered entity", async
   assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "fundamentals" })).json.error.code, "invalid_input");
   assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "fundamentals", entity_id: "tsla" })).json.error.code, "unknown_entity");
   const o = (await call("pmic-company-signals", "POST", "/v1/overview", { entity_id: "msft" })).json;
-  assert.equal(o.count, 7);
+  assert.equal(o.count, 11);
   assert.equal((await call("pmic-company-signals", "POST", "/v1/events", {})).status, 400, "company events need an entity");
   const ev = await call("pmic-company-signals", "POST", "/v1/events", { entity_id: "aapl", limit: 5 });
   assert.equal(ev.status, 200);
@@ -214,7 +215,7 @@ test("company and pharma batch 2: insider dollar values, public attention, clini
 test("public sector bundle: recalls, political money and federal spending", async () => {
   const b = "pmic-public-sector-signals";
   const list = (await call(b, "POST", "/v1/verticals", {})).json;
-  assert.deepEqual(list.verticals.map((v) => v.id), ["product-recalls", "political-money", "federal-spending", "natural-hazards", "cyber-threat", "disease-activity"]);
+  assert.deepEqual(list.verticals.map((v) => v.id), ["product-recalls", "political-money", "federal-spending", "natural-hazards", "cyber-threat", "disease-activity", "wildfire-activity", "climate-anomaly", "public-safety", "travel-demand", "rulemaking", "medicare-providers"]);
   for (const v of list.verticals) checkBrief((await call(b, "POST", "/v1/brief", { vertical: v.id })).json, b);
   const rec = (await call(b, "POST", "/v1/brief", { vertical: "product-recalls" })).json;
   assert.equal(rec.inputs.length, 6);
@@ -223,9 +224,9 @@ test("public sector bundle: recalls, political money and federal spending", asyn
   assert.ok(fed.watch.some((m) => m.series_id === "usaspending:obligations_dod_monthly"), "agencies are watch items");
   assert.ok(fed.watch.some((m) => m.series_id === "fred:MTSR133FMS"), "receipts are a watch item");
   const o = (await call(b, "POST", "/v1/overview", {})).json;
-  assert.equal(o.count, 6);
+  assert.equal(o.count, 12);
   const sig = (await call(b, "POST", "/v1/signals", { limit: 200 })).json;
-  assert.ok(sig.signals.every((x) => /^(cpsc|nhtsa|openfda:food|fec|lda|usaspending|fred:MTS|fema|usgs|nws|cisa|nvd|cdc)/.test(x.series_id)), "only public sector series");
+  assert.ok(sig.signals.every((x) => /^(cpsc|nhtsa|openfda:food|fec|lda|usaspending|fred:MTS|fema|usgs|nws|cisa|nvd|cdc|nifc|noaa|fbi|tsa|fedreg|cms)/.test(x.series_id)), "only public sector series");
   assert.equal((await call(b, "POST", "/v1/signal", { series_id: "fred:UNRATE" })).json.error.code, "unknown_series");
   assert.equal((await call(b, "POST", "/v1/events", {})).status, 404, "no raw events route");
 });
@@ -274,7 +275,7 @@ test("pharma bundle: market and company briefs", async () => {
 
 test("raw routes stay inside each bundle's scope; bad input is a 400", async () => {
   const s = (await call("pmic-pharma-signals", "POST", "/v1/signals", { limit: 50 })).json;
-  assert.ok(s.count > 0 && s.signals.every((x) => /^(openfda|ctgov):/.test(x.series_id)));
+  assert.ok(s.count > 0 && s.signals.every((x) => /^(openfda|ctgov|bls):/.test(x.series_id)));
   assert.ok(s.signals.every((x) => !x.series_id.startsWith("openfda:food:")), "food recalls belong to the public sector bundle");
   assert.equal((await call("pmic-pharma-signals", "POST", "/v1/signal", { series_id: "fred:UNRATE" })).json.error.code, "unknown_series");
   assert.equal((await call("pmic-macro-signals", "POST", "/v1/signal", { series_id: "fred:UNRATE" })).status, 200);
@@ -288,6 +289,44 @@ test("raw routes stay inside each bundle's scope; bad input is a 400", async () 
   for (const body of [{ amount: -1, from: "2026-01" }, { amount: 5, from: "2026-13" }, { amount: "5", from: "2026-01" }]) {
     assert.equal((await call("pmic-macro-signals", "POST", "/v1/inflation/adjust", body)).status, 400, JSON.stringify(body));
   }
+});
+
+test("batch 4 verticals: every one is a scored, cited brief", async () => {
+  const plain = {
+    "pmic-macro-signals": ["pokt-network-health", "crypto-liquidity", "supply-chain-pressure", "food-inflation"],
+    "pmic-pharma-signals": ["device-safety", "drug-prices"],
+    "pmic-public-sector-signals": ["wildfire-activity", "climate-anomaly", "public-safety", "travel-demand", "rulemaking", "medicare-providers"],
+  };
+  for (const [bundle, ids] of Object.entries(plain)) {
+    for (const id of ids) {
+      const r = await call(bundle, "POST", "/v1/brief", { vertical: id });
+      assert.equal(r.status, 200, JSON.stringify(r.json));
+      checkBrief(r.json, bundle);
+    }
+  }
+  for (const id of ["shareholder-returns", "interest-coverage", "investment-cycle", "settlement-fails"]) {
+    const r = await call("pmic-company-signals", "POST", "/v1/brief", { vertical: id, entity_id: "msft" });
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    checkBrief(r.json, "pmic-company-signals");
+  }
+  const climate = (await call("pmic-public-sector-signals", "POST", "/v1/brief", { vertical: "climate-anomaly" })).json;
+  assert.ok(climate.inputs.every((m) => m.scoring === "unusualness_inverted"), "departures score as closeness to normal");
+  const rules = (await call("pmic-public-sector-signals", "POST", "/v1/brief", { vertical: "rulemaking" })).json;
+  assert.equal(rules.inputs.length, 3, "neutral counts read as activity");
+  assert.ok(rules.recent_events.length > 0 && rules.recent_events.every((e) => e.event_type === "significant_rule"));
+  const states = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "state-labor" })).json;
+  assert.equal(states.status, "ok");
+  assert.equal(states.country_scores.length, 12);
+  assert.match(states.summary, /^12 states /);
+  assert.ok(states.citations.every((c) => c.source === "fred"));
+  const two = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "state-labor", countries: ["us-ca", "us-tx"] })).json;
+  assert.equal(two.country_scores.length, 2);
+  const imf = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "imf-outlook" })).json;
+  assert.equal(imf.status, "ok");
+  assert.equal(imf.country_scores.length, 8);
+  assert.equal(imf.metrics.length, 4);
+  const jpm = (await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "interest-coverage", entity_id: "jpm" })).json;
+  assert.ok(jpm.status !== "ok" || jpm.inputs.every((m) => !/interest_expense/.test(m.series_id)), "banks have no interest expense input");
 });
 
 test("inputs the hub has never collected are pending, not missing", () => {

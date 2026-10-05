@@ -53,7 +53,13 @@ function scoreMember(cfg, current, previous) {
     source: current.provenance && current.provenance.source ? current.provenance.source.id : null,
   };
   // no_data: the hub knows the series but has never collected it (a new input not yet backfilled).
-  if (current.status !== "ok") return { ...base, role: dir === 0 ? "watch" : "input", scoring: null, score: null, previous_score: null, ...(current.status === "no_data" ? { pending: true } : {}) };
+  if (current.status !== "ok") return { ...base, role: dir === 0 && !cfg.score_unusualness ? "watch" : "input", scoring: null, score: null, previous_score: null, ...(current.status === "no_data" ? { pending: true } : {}) };
+  // score_unusualness: a neutral series (a departure from normal) counted as an input, scored
+  // 100 - the hub's unusualness, so "near normal" reads high and "extreme either way" low.
+  if (dir === 0 && cfg.score_unusualness) {
+    const inv = (v) => (v === null || v === undefined ? null : 100 - v);
+    return { ...base, direction: 1, role: "input", scoring: "unusualness_inverted", score: inv(current.composite_score), previous_score: previous ? inv(previous.composite_score) : null };
+  }
   if (dir === 0) return { ...base, role: "watch", scoring: "hub_unusualness", score: current.composite_score, previous_score: previous ? previous.composite_score : null };
   if (dir === hubPolarity) return { ...base, role: "input", scoring: "hub_composite", score: current.composite_score, previous_score: previous ? previous.composite_score : null };
   const score = fromPercentile(current.percentile, dir);
@@ -238,12 +244,14 @@ function filingRisk(vertical, events, { horizon, entity, watch = [] }) {
 // Country table: one hub signal per (country, metric). Ranks countries on each metric and gives
 // each country the mean of its directional scores.
 function countryTable(vertical, signalsByMetric, { horizon, countries = null }) {
+  const unit = vertical.unit_word || "countries";
   const metrics = [];
   const byCountry = new Map();
   for (const [metric, sigs] of signalsByMetric) {
     const rows = sigs
       .filter((s) => s.status === "ok" && (!countries || countries.includes(s.entity.entity_id)))
-      .map((s) => ({ country: s.entity.entity_id, name: s.entity.name, value: s.value.current, as_of: s.value.as_of, score: s.composite_score, trend: s.trend, citation_url: s.provenance.citation_url, polarity: s.metric.polarity, label: s.metric.label }))
+      // Growth series (yoy, diff) rank by their growth, levels by the level.
+      .map((s) => ({ country: s.entity.entity_id, name: s.entity.name, value: s.metric.transform && s.metric.transform !== "level" && s.value.transformed !== null && s.value.transformed !== undefined ? s.value.transformed : s.value.current, as_of: s.value.as_of, score: s.composite_score, trend: s.trend, citation_url: s.provenance.citation_url, polarity: s.metric.polarity, label: s.metric.label }))
       .sort((a, b) => b.value - a.value)
       .map((r, i) => ({ rank: i + 1, ...r }));
     if (!rows.length) continue;
@@ -265,12 +273,12 @@ function countryTable(vertical, signalsByMetric, { horizon, countries = null }) 
     horizon,
     status: metrics.length ? "ok" : "insufficient_data",
     summary: metrics.length
-      ? `${ranking.length} countries on ${metrics.length} indicators. Highest country score: ${top.name || top.country} (${top.score}); lowest: ${bottom.name || bottom.country} (${bottom.score}). Scores compare each country with its own history, not with each other; use the ranked values for cross-country levels.`
-      : "No World Bank data has been collected yet.",
+      ? `${ranking.length} ${unit} on ${metrics.length} indicators. Highest score: ${top.name || top.country} (${top.score}); lowest: ${bottom.name || bottom.country} (${bottom.score}). Scores compare each one with its own history, not with each other; use the ranked values for cross-${unit === "countries" ? "country" : "state"} levels.`
+      : "No data has been collected yet for this table.",
     note: vertical.note,
     country_scores: ranking,
     metrics,
-    citations: metrics.flatMap((m) => m.rows.map((r) => ({ label: `${m.label}, ${r.name || r.country}`, url: r.citation_url, as_of: r.as_of, source: "worldbank" }))),
+    citations: metrics.flatMap((m) => m.rows.map((r) => ({ label: `${m.label}, ${r.name || r.country}`, url: r.citation_url, as_of: r.as_of, source: vertical.source_id || "worldbank" }))),
     method: { version: VERSION, docs: "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/pmic/packs/README.md" },
   };
 }

@@ -1,7 +1,7 @@
 {
   "serviceId": "pmic-pharma-signals",
   "displayName": "PMIC Pharma Safety and Approval Signals",
-  "description": "Scored drug-market and company safety briefs from openFDA: recalls (all and Class I), adverse event reports, label changes, and NDA/BLA and generic approvals for the US drug market, plus per-company recalls, adverse event reports, approvals and label changes for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipeline activity, and US drug shortages and discontinuations. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and openFDA citations. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
+  "description": "Scored drug-market and company safety briefs from openFDA and BLS: drug recalls, adverse event reports, label changes and approvals for the US drug market and for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipelines (ClinicalTrials.gov), drug shortages, medical device recalls and adverse events, and drug price inflation (CPI and PPI). Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and citations. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
   "category": "health",
   "protocols": [
     "rest"
@@ -16,7 +16,9 @@
           "drug-market",
           "company-safety",
           "clinical-pipeline",
-          "drug-shortages"
+          "drug-shortages",
+          "device-safety",
+          "drug-prices"
         ],
         "description": "Which brief. POST /v1/verticals describes each."
       },

@@ -2,13 +2,21 @@
   "_comment": "Health and pharma verticals: openFDA safety and approvals, and ClinicalTrials.gov pipelines (batch 2).",
   "service_id": "pmic-pharma-signals",
   "display_name": "PMIC Pharma Safety and Approval Signals",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "category": "health",
-  "description": "Scored drug-market and company safety briefs from openFDA: recalls (all and Class I), adverse event reports, label changes, and NDA/BLA and generic approvals for the US drug market, plus per-company recalls, adverse event reports, approvals and label changes for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipeline activity, and US drug shortages and discontinuations. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and openFDA citations.",
+  "description": "Scored drug-market and company safety briefs from openFDA and BLS: drug recalls, adverse event reports, label changes and approvals for the US drug market and for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipelines (ClinicalTrials.gov), drug shortages, medical device recalls and adverse events, and drug price inflation (CPI and PPI). Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and citations.",
   "default_horizon": "90d",
   "cache_seconds": 300,
-  "hub_scope": [{ "source_id": "openfda", "entity_id": "us-drug-market" }, { "source_id": "openfda", "entity_id": "pfe" }, { "source_id": "openfda", "entity_id": "lly" }, { "source_id": "openfda", "entity_id": "jnj" }, { "source_id": "ctgov" }],
-  "events_scope": { "industry": "pharma" },
+  "hub_scope": [
+    {"source_id": "openfda", "entity_id": "us-drug-market"},
+    {"source_id": "openfda", "entity_id": "pfe"},
+    {"source_id": "openfda", "entity_id": "lly"},
+    {"source_id": "openfda", "entity_id": "jnj"},
+    {"source_id": "ctgov"},
+    {"source_id": "openfda", "entity_id": "us-devices"},
+    {"source_id": "bls", "entity_id": "us-drug-market"}
+  ],
+  "events_scope": {"industry": "pharma"},
   "entities": ["pfe", "lly", "jnj"],
   "verticals": [
     {
@@ -17,15 +25,15 @@
       "question": "Are drug safety signals rising, and is the approval pipeline active?",
       "kind": "composite",
       "note": "Higher score means calmer safety signals than usual (fewer recalls and adverse event reports) and more approvals.",
-      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
-      "trend_words": { "up": "calming", "down": "escalating" },
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "calming", "down": "escalating"},
       "members": [
-        { "series_id": "openfda:drug_recalls_class1_weekly", "weight": 2 },
-        { "series_id": "openfda:drug_recalls_weekly" },
-        { "series_id": "openfda:adverse_event_reports_weekly" },
-        { "series_id": "openfda:approvals_nda_bla_weekly" },
-        { "series_id": "openfda:approvals_anda_weekly" },
-        { "series_id": "openfda:label_updates_weekly" }
+        {"series_id": "openfda:drug_recalls_class1_weekly", "weight": 2},
+        {"series_id": "openfda:drug_recalls_weekly"},
+        {"series_id": "openfda:adverse_event_reports_weekly"},
+        {"series_id": "openfda:approvals_nda_bla_weekly"},
+        {"series_id": "openfda:approvals_anda_weekly"},
+        {"series_id": "openfda:label_updates_weekly"}
       ]
     },
     {
@@ -35,14 +43,14 @@
       "note": "Higher score means calmer than usual for this company: fewer recalls and adverse event reports, more approvals. Label changes are a watch item.",
       "kind": "entity_composite",
       "series_pattern": "openfda:{TICKER}:{metric}",
-      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
-      "trend_words": { "up": "calming", "down": "escalating" },
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "calming", "down": "escalating"},
       "include_events": true,
       "metrics": [
-        { "metric": "drug_recalls_weekly", "weight": 2 },
-        { "metric": "adverse_event_reports_weekly", "weight": 2 },
-        { "metric": "approvals_weekly" },
-        { "metric": "label_updates_weekly" }
+        {"metric": "drug_recalls_weekly", "weight": 2},
+        {"metric": "adverse_event_reports_weekly", "weight": 2},
+        {"metric": "approvals_weekly"},
+        {"metric": "label_updates_weekly"}
       ]
     },
     {
@@ -52,15 +60,15 @@
       "kind": "entity_composite",
       "series_pattern": "ctgov:{TICKER}:{metric}",
       "note": "Higher score means a stronger pipeline than usual for this company: more trials started (monthly) and more trials recruiting or active, fewer trials terminated, withdrawn or suspended, from ClinicalTrials.gov studies it leads. Completions are a watch item. Recently stopped trials are listed under recent_events.",
-      "labels": { "high": "growing", "mid": "steady", "low": "stalling" },
-      "trend_words": { "up": "growing", "down": "slowing" },
+      "labels": {"high": "growing", "mid": "steady", "low": "stalling"},
+      "trend_words": {"up": "growing", "down": "slowing"},
       "include_events": true,
       "event_types": ["trial_stopped"],
       "metrics": [
-        { "metric": "trial_starts_monthly", "weight": 2 },
-        { "metric": "active_trials", "weight": 2 },
-        { "metric": "trial_stops_monthly" },
-        { "metric": "trial_completions_monthly" }
+        {"metric": "trial_starts_monthly", "weight": 2},
+        {"metric": "active_trials", "weight": 2},
+        {"metric": "trial_stops_monthly"},
+        {"metric": "trial_completions_monthly"}
       ]
     },
     {
@@ -69,14 +77,42 @@
       "question": "Are drug shortages and discontinuations rising in the US?",
       "kind": "composite",
       "note": "Higher score means calmer than usual: fewer new drug shortages and discontinuations posted by the FDA each week than over the trailing year. Resolved shortages are a watch item (the FDA keeps few resolved records). The latest postings are listed under recent_events.",
-      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
-      "trend_words": { "up": "easing", "down": "worsening" },
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "easing", "down": "worsening"},
       "events_entities": ["us-drug-market", "pfe", "lly", "jnj"],
       "event_types": ["drug_shortage"],
       "members": [
-        { "series_id": "openfda:drug_shortages_new_weekly", "weight": 2 },
-        { "series_id": "openfda:drug_discontinuations_weekly" },
-        { "series_id": "openfda:drug_shortages_resolved_weekly" }
+        {"series_id": "openfda:drug_shortages_new_weekly", "weight": 2},
+        {"series_id": "openfda:drug_discontinuations_weekly"},
+        {"series_id": "openfda:drug_shortages_resolved_weekly"}
+      ]
+    },
+    {
+      "id": "device-safety",
+      "title": "US medical device safety",
+      "question": "Are medical device recalls and adverse event reports rising?",
+      "kind": "composite",
+      "note": "Higher score means calmer than usual: weekly FDA medical device recalls (all, and Class I = most serious) and device adverse event reports (MAUDE), each against its trailing year. Adverse event reports arrive with a lag, so the newest weeks are left out until they fill in.",
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "calming", "down": "rising"},
+      "members": [
+        {"series_id": "openfda:device:recalls_weekly"},
+        {"series_id": "openfda:device:recalls_class1_weekly", "weight": 2},
+        {"series_id": "openfda:device:events_weekly"}
+      ]
+    },
+    {
+      "id": "drug-prices",
+      "title": "US drug prices",
+      "question": "Are prescription drug prices rising faster than usual?",
+      "kind": "composite",
+      "note": "Higher score means calmer drug price inflation than usual: CPI for prescription drugs and for medical care commodities (what consumers pay) and the producer price index for pharmaceutical preparations (what makers charge), year over year, each against its own history (BLS).",
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "cooling", "down": "heating up"},
+      "members": [
+        {"series_id": "bls:CUSR0000SEMF01", "weight": 2},
+        {"series_id": "bls:CUSR0000SAM1"},
+        {"series_id": "bls:PCU325412325412", "weight": 2}
       ]
     }
   ]

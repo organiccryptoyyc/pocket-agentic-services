@@ -36,6 +36,16 @@ const ADAPTERS = {
   cdc: require("./adapters/cdc"),
   eia: require("./adapters/eia"),
   census: require("./adapters/census"),
+  pokt: require("./adapters/pokt"),
+  defillama: require("./adapters/defillama"),
+  nifc: require("./adapters/nifc"),
+  noaa: require("./adapters/noaa"),
+  fbi: require("./adapters/fbi"),
+  tsa: require("./adapters/tsa"),
+  imf: require("./adapters/imf"),
+  fedreg: require("./adapters/fedreg"),
+  cms: require("./adapters/cms"),
+  secftd: require("./adapters/secftd"),
 };
 
 const DAY = 86400000;

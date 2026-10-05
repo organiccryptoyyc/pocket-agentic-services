@@ -2,12 +2,32 @@
   "_comment": "Public sector verticals: product safety recalls, political money and federal spending, from free US government APIs (CPSC, NHTSA, FDA, FEC, Senate LDA, USAspending, Treasury). Batch 2's one new service.",
   "service_id": "pmic-public-sector-signals",
   "display_name": "PMIC Public Sector Signals",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "category": "government",
-  "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC consumer products, NHTSA vehicles and equipment, FDA food), political money (FEC independent expenditures, Senate lobbying registrations and filings) and federal spending (USAspending award obligations by agency, Monthly Treasury Statement outlays, receipts and deficit), natural hazards (FEMA disaster declarations, USGS earthquakes, NWS severe alerts), cyber threat (CISA Known Exploited Vulnerabilities, NIST NVD critical CVEs) and respiratory illness (CDC emergency department visits for COVID-19, flu and RSV). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input.",
+  "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC, NHTSA, FDA food), political money (FEC, Senate lobbying), federal spending (USAspending, Treasury), natural hazards (FEMA, USGS, NWS), cyber threat (CISA KEV, NVD), respiratory illness (CDC), wildfire activity (NIFC), climate anomaly (NOAA), crime (FBI), air travel demand (TSA), federal rulemaking (Federal Register) and Medicare enrollment (CMS). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input.",
   "default_horizon": "90d",
   "cache_seconds": 300,
-  "hub_scope": [{ "source_id": "cpsc" }, { "source_id": "nhtsa" }, { "source_id": "openfda", "entity_id": "us-food" }, { "source_id": "fec" }, { "source_id": "lda" }, { "source_id": "usaspending" }, { "source_id": "fred", "entity_id": "us-federal" }, {"source_id": "fema"}, {"source_id": "usgs"}, {"source_id": "nws"}, {"source_id": "cisa"}, {"source_id": "nvd"}, {"source_id": "cdc"}],
+  "hub_scope": [
+    {"source_id": "cpsc"},
+    {"source_id": "nhtsa"},
+    {"source_id": "openfda", "entity_id": "us-food"},
+    {"source_id": "fec"},
+    {"source_id": "lda"},
+    {"source_id": "usaspending"},
+    {"source_id": "fred", "entity_id": "us-federal"},
+    {"source_id": "fema"},
+    {"source_id": "usgs"},
+    {"source_id": "nws"},
+    {"source_id": "cisa"},
+    {"source_id": "nvd"},
+    {"source_id": "cdc"},
+    {"source_id": "nifc"},
+    {"source_id": "noaa"},
+    {"source_id": "fbi"},
+    {"source_id": "tsa"},
+    {"source_id": "fedreg"},
+    {"source_id": "cms"}
+  ],
   "verticals": [
     {
       "id": "product-recalls",
@@ -15,16 +35,16 @@
       "question": "Are consumer product, vehicle or food recalls rising?",
       "kind": "composite",
       "note": "Higher score means calmer than usual: fewer recalls and fewer units recalled than each series' own trailing year, across CPSC consumer products, NHTSA vehicles and equipment, and FDA food (Class I = most serious). The largest recent recalls are listed under recent_events.",
-      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
-      "trend_words": { "up": "calming", "down": "rising" },
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "calming", "down": "rising"},
       "events_entities": ["us-consumer-products", "us-vehicles"],
       "members": [
-        { "series_id": "cpsc:recalls_weekly" },
-        { "series_id": "cpsc:recalled_units_weekly" },
-        { "series_id": "nhtsa:recalls_weekly", "weight": 2 },
-        { "series_id": "nhtsa:affected_units_weekly" },
-        { "series_id": "openfda:food:recalls_weekly" },
-        { "series_id": "openfda:food:recalls_class1_weekly", "weight": 2 }
+        {"series_id": "cpsc:recalls_weekly"},
+        {"series_id": "cpsc:recalled_units_weekly"},
+        {"series_id": "nhtsa:recalls_weekly", "weight": 2},
+        {"series_id": "nhtsa:affected_units_weekly"},
+        {"series_id": "openfda:food:recalls_weekly"},
+        {"series_id": "openfda:food:recalls_class1_weekly", "weight": 2}
       ]
     },
     {
@@ -33,12 +53,12 @@
       "question": "Is outside election spending or lobbying activity rising?",
       "kind": "composite",
       "note": "Higher score means more political money activity than usual: independent expenditure items reported to the FEC and new lobbying registrations, monthly, against their own history (about two years, so one federal election cycle). All lobbying filings posted is a watch item. Spending clusters before elections, so read the trend with the calendar.",
-      "labels": { "high": "surging", "mid": "normal", "low": "quiet" },
-      "trend_words": { "up": "rising", "down": "falling" },
+      "labels": {"high": "surging", "mid": "normal", "low": "quiet"},
+      "trend_words": {"up": "rising", "down": "falling"},
       "members": [
-        { "series_id": "fec:independent_expenditures_monthly", "weight": 2 },
-        { "series_id": "lda:registrations_monthly", "weight": 2 },
-        { "series_id": "lda:filings_monthly" }
+        {"series_id": "fec:independent_expenditures_monthly", "weight": 2},
+        {"series_id": "lda:registrations_monthly", "weight": 2},
+        {"series_id": "lda:filings_monthly"}
       ]
     },
     {
@@ -47,21 +67,21 @@
       "question": "Is federal spending accelerating, and in which agencies?",
       "kind": "composite",
       "note": "Higher score means faster federal spending growth than usual: award obligations (USAspending) and Treasury outlays, year over year. Receipts, the monthly deficit and obligations by the eight largest awarding departments are watch items, so the brief shows which agencies are unusual. Recent months fill in as agencies report.",
-      "labels": { "high": "accelerating", "mid": "steady", "low": "slowing" },
-      "trend_words": { "up": "accelerating", "down": "slowing" },
+      "labels": {"high": "accelerating", "mid": "steady", "low": "slowing"},
+      "trend_words": {"up": "accelerating", "down": "slowing"},
       "members": [
-        { "series_id": "usaspending:obligations_monthly", "weight": 2 },
-        { "series_id": "fred:MTSO133FMS", "weight": 2 },
-        { "series_id": "fred:MTSR133FMS", "direction": 0 },
-        { "series_id": "fred:MTSDS133FMS" },
-        { "series_id": "usaspending:obligations_dod_monthly" },
-        { "series_id": "usaspending:obligations_hhs_monthly" },
-        { "series_id": "usaspending:obligations_va_monthly" },
-        { "series_id": "usaspending:obligations_dhs_monthly" },
-        { "series_id": "usaspending:obligations_doe_monthly" },
-        { "series_id": "usaspending:obligations_dot_monthly" },
-        { "series_id": "usaspending:obligations_ed_monthly" },
-        { "series_id": "usaspending:obligations_usda_monthly" }
+        {"series_id": "usaspending:obligations_monthly", "weight": 2},
+        {"series_id": "fred:MTSO133FMS", "weight": 2},
+        {"series_id": "fred:MTSR133FMS", "direction": 0},
+        {"series_id": "fred:MTSDS133FMS"},
+        {"series_id": "usaspending:obligations_dod_monthly"},
+        {"series_id": "usaspending:obligations_hhs_monthly"},
+        {"series_id": "usaspending:obligations_va_monthly"},
+        {"series_id": "usaspending:obligations_dhs_monthly"},
+        {"series_id": "usaspending:obligations_doe_monthly"},
+        {"series_id": "usaspending:obligations_dot_monthly"},
+        {"series_id": "usaspending:obligations_ed_monthly"},
+        {"series_id": "usaspending:obligations_usda_monthly"}
       ]
     },
     {
@@ -70,15 +90,15 @@
       "question": "Are disasters, severe weather and earthquakes running above normal?",
       "kind": "composite",
       "note": "Higher score means calmer than usual: fewer FEMA disaster declarations and fewer earthquakes (magnitude 4+ in the US region, 6+ worldwide) than each series' trailing two years. Active severe or extreme NWS weather alerts are a daily watch item that builds history from the first run. Declarations and major quakes are listed under recent_events.",
-      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
-      "trend_words": { "up": "calming", "down": "intensifying" },
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "calming", "down": "intensifying"},
       "events_entities": ["us-hazards"],
       "members": [
-        { "series_id": "fema:declarations_monthly", "weight": 2 },
-        { "series_id": "fema:major_disasters_monthly", "weight": 2 },
-        { "series_id": "usgs:us_quakes_m4_monthly" },
-        { "series_id": "usgs:global_quakes_m6_monthly" },
-        { "series_id": "nws:severe_alerts_active" }
+        {"series_id": "fema:declarations_monthly", "weight": 2},
+        {"series_id": "fema:major_disasters_monthly", "weight": 2},
+        {"series_id": "usgs:us_quakes_m4_monthly"},
+        {"series_id": "usgs:global_quakes_m6_monthly"},
+        {"series_id": "nws:severe_alerts_active"}
       ]
     },
     {
@@ -87,14 +107,14 @@
       "question": "Are actively exploited software flaws rising?",
       "kind": "composite",
       "note": "Higher score means calmer than usual: fewer vulnerabilities added to CISA's Known Exploited catalog (all, and those used in ransomware) each week, and fewer critical CVEs published in the NVD each month, against their trailing history. All CVEs published is a watch item. The newest exploited vulnerabilities are listed under recent_events.",
-      "labels": { "high": "calm", "mid": "normal", "low": "elevated" },
-      "trend_words": { "up": "calming", "down": "intensifying" },
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "calming", "down": "intensifying"},
       "events_entities": ["us-cyber"],
       "members": [
-        { "series_id": "cisa:kev_added_weekly", "weight": 2 },
-        { "series_id": "cisa:kev_ransomware_weekly", "weight": 2 },
-        { "series_id": "nvd:critical_cves_monthly" },
-        { "series_id": "nvd:cves_monthly" }
+        {"series_id": "cisa:kev_added_weekly", "weight": 2},
+        {"series_id": "cisa:kev_ransomware_weekly", "weight": 2},
+        {"series_id": "nvd:critical_cves_monthly"},
+        {"series_id": "nvd:cves_monthly"}
       ]
     },
     {
@@ -103,12 +123,81 @@
       "question": "Is respiratory illness (COVID-19, flu, RSV) rising in the US?",
       "kind": "composite",
       "note": "Higher score means less respiratory illness than usual: the weekly share of US emergency department visits diagnosed as COVID-19, influenza or RSV (CDC National Syndromic Surveillance Program), each against its own trailing year. Seasonal: winter peaks are normal, so read the trend with the calendar. Not for clinical decisions.",
-      "labels": { "high": "low activity", "mid": "moderate", "low": "high activity" },
-      "trend_words": { "up": "easing", "down": "rising" },
+      "labels": {"high": "low activity", "mid": "moderate", "low": "high activity"},
+      "trend_words": {"up": "easing", "down": "rising"},
+      "members": [{"series_id": "cdc:ed_covid_weekly"}, {"series_id": "cdc:ed_flu_weekly"}, {"series_id": "cdc:ed_rsv_weekly"}]
+    },
+    {
+      "id": "wildfire-activity",
+      "title": "US wildfire activity",
+      "question": "Is the US wildfire season running above normal?",
+      "kind": "composite",
+      "note": "Higher score means calmer than usual: wildfire incidents reported and acres burned each month (NIFC WFIGS incident locations), against the trailing years. Strongly seasonal: summer peaks are normal, so read the trend with the calendar.",
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "calming", "down": "intensifying"},
+      "members": [{"series_id": "nifc:incidents_monthly"}, {"series_id": "nifc:acres_monthly", "weight": 2}]
+    },
+    {
+      "id": "climate-anomaly",
+      "title": "US climate anomaly",
+      "question": "How far are US temperature and precipitation from normal?",
+      "kind": "composite",
+      "note": "Higher score means closer to normal: the monthly contiguous-US average temperature and precipitation departures from the 1991-2020 normal (NOAA NCEI Climate at a Glance). Unusually hot or cold, wet or dry all score low; the departures themselves are in each input's value.",
+      "labels": {"high": "near normal", "mid": "somewhat unusual", "low": "extreme"},
+      "trend_words": {"up": "normalizing", "down": "diverging"},
       "members": [
-        { "series_id": "cdc:ed_covid_weekly" },
-        { "series_id": "cdc:ed_flu_weekly" },
-        { "series_id": "cdc:ed_rsv_weekly" }
+        {"series_id": "noaa:temperature_departure", "score_unusualness": true, "weight": 2},
+        {"series_id": "noaa:precipitation_departure", "score_unusualness": true}
+      ]
+    },
+    {
+      "id": "public-safety",
+      "title": "US crime",
+      "question": "Is US crime rising or falling?",
+      "kind": "composite",
+      "note": "Higher score means safer than usual: national violent and property crime rates per 100,000 people each month (FBI Crime Data Explorer), against their history. Agencies report late, so the two newest months are left out until they fill in.",
+      "labels": {"high": "safer", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "improving", "down": "worsening"},
+      "members": [{"series_id": "fbi:violent_crime_rate", "weight": 2}, {"series_id": "fbi:property_crime_rate"}]
+    },
+    {
+      "id": "travel-demand",
+      "title": "US air travel demand",
+      "question": "Are more people flying than a year ago?",
+      "kind": "composite",
+      "note": "Higher score means stronger air travel demand than usual: people screened at TSA checkpoints each week, year over year, against its own history. Holiday weeks shift between years, so a single week can swing.",
+      "labels": {"high": "strong", "mid": "normal", "low": "weak"},
+      "trend_words": {"up": "rising", "down": "falling"},
+      "members": [{"series_id": "tsa:passengers_weekly"}]
+    },
+    {
+      "id": "rulemaking",
+      "title": "US federal rulemaking",
+      "question": "Is the federal government issuing more regulations than usual?",
+      "kind": "composite",
+      "note": "Higher score means more rulemaking than usual: final rules, proposed rules and significant final rules (Executive Order 12866) published in the Federal Register each month, against the trailing years. More is neither good nor bad; it measures regulatory activity. The latest significant rules are listed under recent_events.",
+      "labels": {"high": "busy", "mid": "normal", "low": "quiet"},
+      "trend_words": {"up": "accelerating", "down": "slowing"},
+      "events_entities": ["us-federal"],
+      "event_types": ["significant_rule"],
+      "members": [
+        {"series_id": "fedreg:final_rules_monthly", "direction": 1, "weight": 2},
+        {"series_id": "fedreg:proposed_rules_monthly", "direction": 1},
+        {"series_id": "fedreg:significant_rules_monthly", "direction": 1, "weight": 2}
+      ]
+    },
+    {
+      "id": "medicare-providers",
+      "title": "Medicare enrollment",
+      "question": "Is Medicare enrollment growing, and is it shifting to Medicare Advantage?",
+      "kind": "composite",
+      "note": "Higher score means faster Medicare growth than usual: total beneficiaries and Medicare Advantage (and other health plan) enrollment each month, year over year (CMS Medicare Monthly Enrollment). Original Medicare enrollment is a watch item, so the brief shows the shift between the two.",
+      "labels": {"high": "growing fast", "mid": "steady", "low": "slowing"},
+      "trend_words": {"up": "accelerating", "down": "slowing"},
+      "members": [
+        {"series_id": "cms:medicare_beneficiaries", "weight": 2},
+        {"series_id": "cms:medicare_advantage"},
+        {"series_id": "cms:original_medicare"}
       ]
     }
   ]

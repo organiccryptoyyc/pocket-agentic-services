@@ -12,6 +12,44 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Packs batch 4 (2026-10-05): 18 verticals, 10 new sources, no new registration
+
+- Probed live from the PC before building (2026-10-05): the Pocket Network indexer
+  (data.pocket.network GraphQL), DefiLlama, NIFC WFIGS (ArcGIS), NOAA NCEI Climate at a Glance,
+  FBI Crime Data Explorer (api.usa.gov, `FBI_API_KEY` optional, DEMO_KEY otherwise), TSA checkpoint
+  numbers, IMF WEO (api.imf.org SDMX; imf.org and data.imf.org block scripts), Federal Register,
+  CMS Medicare Monthly Enrollment (data.cms.gov) and SEC fails-to-deliver zips all answer with no
+  paid key. 17 new BLS series checked. The FRED state series and ISRATIO are checked from the Pi
+  (`ops/probe-batch4.sh`) because FRED times out from the PC.
+- `pmic-macro-signals` 0.5.0: `pokt-network-health` (weekly estimated relays, staked suppliers and
+  apps; claimed relays as a watch item), `crypto-liquidity` (stablecoin supply, DeFi TVL),
+  `supply-chain-pressure` (BLS PPI truckload, deep sea, air freight, transportation services;
+  inventories-to-sales and the freight index as watch items), `food-inflation` (CPI food at home,
+  away from home, meats/poultry/fish/eggs, dairy), `state-labor` (12-state table: unemployment and
+  payroll growth from FRED) and `imf-outlook` (8-country table: WEO growth, inflation,
+  unemployment, government debt including the projection for next year).
+- `pmic-company-signals` 0.5.0: `shareholder-returns` (buybacks, dividends), `interest-coverage`
+  (new ratio operating income / interest expense; banks leave interest expense out),
+  `investment-cycle` (capex, new ratio capex / revenue) and `settlement-fails` (SEC fails-to-deliver
+  dollar value per month; a month is stored only when both half-month files are out).
+- `pmic-pharma-signals` 0.5.0: `device-safety` (openFDA device recalls, Class I recalls, MAUDE
+  adverse events with the same lag rule as FAERS) and `drug-prices` (CPI prescription drugs and
+  medical care commodities, PPI pharmaceutical preparations).
+- `pmic-public-sector-signals` 0.3.0: `wildfire-activity`, `climate-anomaly` (departures from the
+  1991-2020 normal, scored as closeness to normal via the new `score_unusualness` member option),
+  `public-safety` (FBI violent and property crime rates; the two newest months wait for late
+  reporters), `travel-demand` (TSA weekly passengers, year over year), `rulemaking` (final,
+  proposed and significant rules; significant rules as events) and `medicare-providers` (Medicare
+  enrollment in total and in Medicare Advantage; Original Medicare as a watch item).
+- Swapped sources, owner informed (2026-10-05): short-interest became `settlement-fails` because
+  FINRA's free data is "not intended for commercial purposes"; the NY Fed GSCPI became BLS freight
+  PPIs (federal data with an API); NADAC drug prices became BLS CPI/PPI; CMS
+  provider enrollment became Medicare monthly enrollment (a time series, not a provider list).
+- Not built yet: `nonprofit-finance` (IRS SOI 990 extracts, about 55 MB a year). Last in line; the
+  owner can drop it.
+- Card descriptions list verticals by id only when the list with questions would go over the
+  2,048-character on-chain limit (macro now does).
+
 ## Packs batch 3 (2026-10-04): 9 verticals, 9 new sources, no new registration
 
 - Probed live from the PC before building (2026-10-04): TreasuryDirect, OpenFEMA, USGS, NWS, CISA

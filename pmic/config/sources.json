@@ -312,6 +312,126 @@
       "key_env": null,
       "required_key": false,
       "notes": "Public domain, no key. One monthly CSV; US totals, seasonally adjusted. FRED does not serve these ids."
+    },
+    {
+      "source_id": "pokt",
+      "name": "Pocket Network indexer (data.pocket.network GraphQL)",
+      "homepage": "https://data.pocket.network/graphql",
+      "terms_url": "https://pocket.network/",
+      "tier": 2,
+      "reliability_score": 90,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key. Weekly sums of estimated (throughput) and claimed relays, staked supplier and app counts on each week's last block."
+    },
+    {
+      "source_id": "defillama",
+      "name": "DefiLlama open API (stablecoins and TVL)",
+      "homepage": "https://defillama.com/docs/api",
+      "terms_url": "https://defillama.com/docs/api",
+      "tier": 3,
+      "reliability_score": 80,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key. Total pegged-USD stablecoin supply and total DeFi value locked, daily."
+    },
+    {
+      "source_id": "nifc",
+      "name": "National Interagency Fire Center, WFIGS incident locations",
+      "homepage": "https://data-nifc.opendata.arcgis.com/",
+      "terms_url": "https://data-nifc.opendata.arcgis.com/",
+      "tier": 1,
+      "reliability_score": 85,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. Monthly wildfire incidents and acres (as last reported; recent months revise upward)."
+    },
+    {
+      "source_id": "noaa",
+      "name": "NOAA NCEI Climate at a Glance (national)",
+      "homepage": "https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/",
+      "terms_url": "https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/",
+      "tier": 1,
+      "reliability_score": 95,
+      "cadence_minutes": 10080,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. Contiguous US monthly temperature and precipitation departures from the 1991-2020 normal. Weekly poll."
+    },
+    {
+      "source_id": "fbi",
+      "name": "FBI Crime Data Explorer API (api.usa.gov)",
+      "homepage": "https://cde.ucr.cjis.gov/",
+      "terms_url": "https://api.data.gov/docs/",
+      "tier": 1,
+      "reliability_score": 85,
+      "cadence_minutes": 10080,
+      "key_env": "FBI_API_KEY",
+      "required_key": false,
+      "notes": "Free api.data.gov key (FBI_API_KEY, falls back to FEC_API_KEY, then DEMO_KEY). National monthly offense rates; the two newest months are left out until agencies report. Weekly poll."
+    },
+    {
+      "source_id": "tsa",
+      "name": "TSA checkpoint travel numbers",
+      "homepage": "https://www.tsa.gov/travel/passenger-volumes",
+      "terms_url": "https://www.tsa.gov/website-policies",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. Daily passengers screened, summed into weeks."
+    },
+    {
+      "source_id": "imf",
+      "name": "IMF World Economic Outlook (SDMX data API)",
+      "homepage": "https://data.imf.org/",
+      "terms_url": "https://www.imf.org/en/About/copyright-and-terms",
+      "tier": 2,
+      "reliability_score": 90,
+      "cadence_minutes": 10080,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key (api.imf.org). Annual values with IMF projections; kept up to next year. Weekly poll; WEO updates twice a year."
+    },
+    {
+      "source_id": "fedreg",
+      "name": "Federal Register API (National Archives)",
+      "homepage": "https://www.federalregister.gov/developers/documentation/api/v1",
+      "terms_url": "https://www.federalregister.gov/reader-aids/developer-resources/rest-api",
+      "tier": 1,
+      "reliability_score": 95,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. Monthly counts of final, proposed and significant rules."
+    },
+    {
+      "source_id": "cms",
+      "name": "CMS Medicare Monthly Enrollment (data.cms.gov)",
+      "homepage": "https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-and-medicaid-reports/medicare-monthly-enrollment",
+      "terms_url": "https://data.cms.gov/about",
+      "tier": 1,
+      "reliability_score": 92,
+      "cadence_minutes": 10080,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. National Medicare beneficiaries by month: total, Original Medicare, Medicare Advantage. Weekly poll."
+    },
+    {
+      "source_id": "secftd",
+      "name": "SEC fails-to-deliver data",
+      "homepage": "https://www.sec.gov/data-research/sec-markets-data/fails-deliver-data",
+      "terms_url": "https://www.sec.gov/privacy",
+      "tier": 1,
+      "reliability_score": 92,
+      "cadence_minutes": 10080,
+      "key_env": "PMIC_SEC_USER_AGENT",
+      "required_key": true,
+      "notes": "Public domain; SEC fair access needs a User-Agent with contact (PMIC_SEC_USER_AGENT). Half-monthly zips summed per company and month as dollar value. Weekly poll."
     }
   ]
 }
