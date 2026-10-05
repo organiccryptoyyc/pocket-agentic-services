@@ -85,6 +85,10 @@
   `--resend-source echo` every observation of a source (one-off repairs).
 - The company selftest tried Pfizer only, which has no interest coverage (no operating income tag).
   The selftest now tries up to three companies per company vertical (`selftest_entities`).
+- TSA posts each day a day or two late, so the newest calendar-complete week read short (9.5M
+  instead of about 17M) and travel-demand scored 0. Only weeks with all seven days are stored now;
+  the short week is revised once its days are out.
+- MainNet selftests (2026-10-05): macro 27/27, company 12/12, pharma 7/7, public sector 14/14.
 - Card descriptions list verticals by id only when the list with questions would go over the
   2,048-character on-chain limit (macro now does). Public sector is 2,028 characters.
 

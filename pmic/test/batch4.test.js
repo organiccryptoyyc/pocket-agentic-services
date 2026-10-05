@@ -189,3 +189,13 @@ test("echo: a 429 keeps the months already read, newest first, and the next pass
   await collectOnce(db, catalog, { now: NOW, dataDir: dir, env: {}, fetchImpl: base, sources: ["echo"], force: true });
   assert.ok(obs(db, "echo:cases_monthly").length >= 25, "the next pass fills in the rest");
 });
+
+test("tsa: a week whose days are not all published yet is left out", async () => {
+  const monday = new Date("2026-10-05T06:00:00Z");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pmic-b4tsa-"));
+  const db = dbLib.open({ dataDir: dir });
+  await collectOnce(db, catalog, { now: monday, dataDir: dir, env: {}, fetchImpl: makeFetch(catalog, { now: monday }), sources: ["tsa"] });
+  const w = obs(db, "tsa:passengers_weekly");
+  assert.equal(w[w.length - 1].t, "2026-09-21", "the week of 9/28 is missing Oct 2-4");
+  assert.ok(w.every((o) => o.v > 1.5e7), "no short weeks");
+});

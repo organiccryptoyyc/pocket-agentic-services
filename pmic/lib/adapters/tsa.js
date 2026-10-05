@@ -34,9 +34,13 @@ async function collect(series, ctx) {
       if (!rows.length) throw new SchemaError(`tsa ${y}: no daily rows`);
       for (const [d, v] of rows) daily.set(d, v);
     }
+    // TSA posts each day a day or two late, so a calendar-complete week can still be short:
+    // only weeks with all seven days published are stored.
+    const days = weeklyCounts([...daily.keys()].map((d) => [d, 1]), "2000-01-01", ctx.now);
+    const full = new Set(days.filter(([, n]) => n === 7).map(([w]) => w));
     for (const s of series) {
       for (const [w, n] of weeklyCounts([...daily.entries()], ctx.since(s), ctx.now)) {
-        if (!n) continue; // a week with no published days is missing, not zero
+        if (!n || !full.has(w)) continue; // a week missing published days is left out, not counted short
         out.observations.push({ series_id: s.series_id, observation_time: w, period: `week of ${w}`, value: n, source_url: BASE, raw_sha256: sha });
       }
     }

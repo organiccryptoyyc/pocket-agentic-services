@@ -80,7 +80,7 @@ function batch4(u, init, now, json) {
     const year = yr ? Number(yr[1]) : now.getUTCFullYear();
     const rows = [];
     for (let d = Date.UTC(year, 11, 31); d >= Date.UTC(year, 0, 1); d -= DAY) {
-      if (d >= t - DAY) continue;
+      if (d >= t - 3 * DAY) continue; // TSA posts a few days behind
       const x = new Date(d);
       rows.push(`<tr><td class="views-field">${x.getUTCMonth() + 1}/${x.getUTCDate()}/${year}</td><td class="views-field">${(2400000 + (hash(d) % 400000)).toLocaleString("en-US")}</td></tr>`);
     }
