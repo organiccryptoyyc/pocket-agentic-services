@@ -201,7 +201,9 @@
                       "fdic",
                       "cfpb",
                       "pinksheet",
-                      "treasury"
+                      "treasury",
+                      "eia",
+                      "census"
                     ]
                   },
                   "horizon": {

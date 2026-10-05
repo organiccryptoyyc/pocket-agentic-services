@@ -47,7 +47,7 @@ test("fema counts each disaster once, not once per county", () => {
 });
 
 test("batch 3 sources collect against the stub, with events", async () => {
-  const { db, summary } = await run(["treasury", "fema", "usgs", "nws", "cisa", "nvd", "cdc"]);
+  const { db, summary } = await run(["treasury", "fema", "usgs", "nws", "cisa", "nvd", "cdc", "eia", "census"]);
   for (const s of summary.sources) assert.equal(s.failed.length, 0, `${s.source_id}: ${JSON.stringify(s.failed[0])}`);
   assert.ok(obs(db, "treasury:bid_to_cover_monthly").length >= 20);
   assert.ok(obs(db, "fema:declarations_monthly").length >= 20);
@@ -56,8 +56,17 @@ test("batch 3 sources collect against the stub, with events", async () => {
   assert.ok(obs(db, "cisa:kev_added_weekly").length >= 50);
   assert.ok(obs(db, "nvd:critical_cves_monthly").every((o) => o.v >= 150 && o.v < 210));
   assert.ok(obs(db, "cdc:ed_flu_weekly").length >= 50);
+  assert.ok(obs(db, "eia:WCESTUS1").length >= 50, "EIA weekly history table");
+  assert.ok(obs(db, "census:BA_HBA").length >= 20, "Census BFS, seasonally adjusted US total only");
+  assert.ok(obs(db, "census:BA_HBA").every((o) => o.v > 1000), "sector rows are not mixed in");
   const types = new Set(db.prepare("SELECT DISTINCT event_type t FROM events").all().map((r) => r.t));
   for (const t of ["disaster_declaration", "earthquake", "exploited_vulnerability"]) assert.ok(types.has(t), t);
+});
+
+test("eia history table: month rows into week-ending dates", () => {
+  const { weeklyTable } = require("../lib/adapters/eia");
+  const html = "<tr> <td class='B6'>&nbsp;&nbsp;2026-Sep</td> <td class='B5'>09/04&nbsp;</td> <td class='B3'>424,069&nbsp;</td> <td class='B5'>&nbsp;</td> <td class='B3'>&nbsp;</td> </tr>";
+  assert.deepEqual(weeklyTable(html), [{ date: "2026-09-04", value: 424069 }]);
 });
 
 test("drug shortages: new postings and discontinuations by first posting date", async () => {

@@ -64,6 +64,34 @@ function batch3(u, init, now, json) {
     }
     return json(rows);
   }
+  if (u.host === "www.eia.gov") {
+    // dnav history table: a month row, then week-ending MM/DD and value cells.
+    const id = u.searchParams.get("s");
+    const base = id === "WPULEUS3" ? 90 : id === "WGTSTUS1" ? 210000 : 420000;
+    const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const byMonth = new Map();
+    for (let k = 110; k >= 1; k--) {
+      const d = new Date(t - (k * 7 + 2) * DAY);
+      const key = `${d.getUTCFullYear()}-${MON[d.getUTCMonth()]}`;
+      if (!byMonth.has(key)) byMonth.set(key, []);
+      const v = base * (1 + 0.03 * Math.sin(k / 5));
+      byMonth.get(key).push(`<td class='B5'>${String(d.getUTCMonth() + 1).padStart(2, "0")}/${String(d.getUTCDate()).padStart(2, "0")}&nbsp;</td> <td class='B3'>${v.toLocaleString("en-US", { maximumFractionDigits: 1 })}&nbsp;&nbsp;</td>`);
+    }
+    const rows = [...byMonth.entries()].map(([m, cells]) => `<tr> <td class='B6'>&nbsp;&nbsp;${m}</td> ${cells.join(" ")} </tr>`).join("\n");
+    return { status: 200, ok: true, text: `<html><table>${rows}</table></html>`, contentType: "text/html" };
+  }
+  if (u.host === "www.census.gov") {
+    const lines = ["sa,naics_sector,series,geo,year,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec"];
+    const y = now.getUTCFullYear();
+    const last = now.getUTCMonth() - 1; // last complete month published
+    for (const [code, base] of [["BA_BA", 500000], ["BA_HBA", 145000], ["BF_PBF4Q", 29000]]) {
+      for (const yr of [y - 2, y - 1, y]) {
+        const vals = Array.from({ length: 12 }, (_, m) => (yr < y || m <= last ? String(Math.round(base * (1 + 0.04 * Math.sin((yr * 12 + m) / 4)))) : ""));
+        lines.push(`A,TOTAL,${code},US,${yr},${vals.join(",")}`, `U,TOTAL,${code},US,${yr},${vals.join(",")}`, `A,NAICS11,${code},US,${yr},${vals.map((v) => (v ? "10" : "")).join(",")}`);
+      }
+    }
+    return { status: 200, ok: true, text: lines.join("\n") + "\n", contentType: "text/csv" };
+  }
   return null;
 }
 

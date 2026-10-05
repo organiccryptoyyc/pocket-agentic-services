@@ -12,7 +12,7 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
-## Packs batch 3 (2026-10-04): 9 verticals, 7 new sources, no new registration
+## Packs batch 3 (2026-10-04): 9 verticals, 9 new sources, no new registration
 
 - Probed live from the PC before building (2026-10-04): TreasuryDirect, OpenFEMA, USGS, NWS, CISA
   KEV, NIST NVD, CDC NSSP (data.cdc.gov vutn-jzwm) and openFDA drug shortages all answer with no
@@ -36,6 +36,10 @@
   `disease-activity` (CDC emergency department share for COVID-19, flu and RSV).
 - Composite verticals take `event_types` to narrow `events_entities` (drug-shortages lists
   shortages, not the market's recalls).
+- Pi probe (2026-10-05): FRED answered 404 for the EIA weekly stock and refinery series (WCESTUS1,
+  WGTSTUS1, WPULEUS3) and for the Census BFS ids, so those six now come straight from the
+  publishers with no key: new `eia` adapter (dnav weekly history table) and `census` adapter (BFS
+  monthly CSV, US total, seasonally adjusted). Gasoline and diesel prices and trade stay on FRED.
 - Catalog 536 -> 597 series. Tests 55/55 (new `test/batch3.test.js`, stub `test/stub-batch3.js`).
 - Pi check: `sh ops/probe-batch3.sh`. Deploy: Pi rebuild, PSM Deploy `pmic-hub` and the four
   packs, then gas-only card updates for all four. No new fee.

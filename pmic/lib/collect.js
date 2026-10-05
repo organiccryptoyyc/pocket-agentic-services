@@ -34,6 +34,8 @@ const ADAPTERS = {
   cisa: require("./adapters/cisa"),
   nvd: require("./adapters/nvd"),
   cdc: require("./adapters/cdc"),
+  eia: require("./adapters/eia"),
+  census: require("./adapters/census"),
 };
 
 const DAY = 86400000;

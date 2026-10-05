@@ -241,7 +241,7 @@ test("batch 3 verticals: every one is a scored, cited brief", async () => {
   assert.ok(Array.isArray(td.recent_events) && td.recent_events.every((e) => e.event_type === "weak_treasury_auction"), "only weak auctions are listed");
   const energy = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "energy-supply" })).json;
   assert.equal(energy.inputs.find((m) => m.series_id === "fred:GASREGW").direction, -1, "pump prices read as tightness");
-  assert.ok(energy.watch.some((m) => m.series_id === "fred:WPULEUS3"));
+  assert.ok(energy.watch.some((m) => m.series_id === "eia:WPULEUS3"));
   for (const id of ["earnings-quality"]) {
     const r = await call("pmic-company-signals", "POST", "/v1/brief", { vertical: id, entity_id: "aapl" });
     assert.equal(r.status, 200, JSON.stringify(r.json));

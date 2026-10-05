@@ -7,7 +7,7 @@
   "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, housing, consumer health, Treasury auction demand (TreasuryDirect), US fuel supply (EIA), trade flows by partner, business formation (Census), and 8-country comparisons of the economy, governance and stability, health systems and education. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
   "default_horizon": "90d",
   "cache_seconds": 300,
-  "hub_scope": [{ "source_id": "fred" }, { "source_id": "bls" }, { "source_id": "bea" }, { "source_id": "worldbank" }, { "source_id": "ecb" }, { "source_id": "fdic" }, { "source_id": "cfpb" }, { "source_id": "pinksheet" }, {"source_id": "treasury"}],
+  "hub_scope": [{ "source_id": "fred" }, { "source_id": "bls" }, { "source_id": "bea" }, { "source_id": "worldbank" }, { "source_id": "ecb" }, { "source_id": "fdic" }, { "source_id": "cfpb" }, { "source_id": "pinksheet" }, {"source_id": "treasury"}, {"source_id": "eia"}, {"source_id": "census"}],
   "verticals": [
     {
       "id": "macro-regime",
@@ -266,15 +266,15 @@
       "title": "US fuel supply",
       "question": "Are US fuel supplies tight, and are pump prices rising?",
       "kind": "composite",
-      "note": "Higher score means better supplied than usual: more commercial crude and gasoline in storage and lower gasoline and diesel prices than their own trailing year (weekly EIA data via FRED). Refinery utilization is a watch item.",
+      "note": "Higher score means better supplied than usual: more commercial crude and gasoline in storage and lower gasoline and diesel prices than their own trailing year (weekly EIA data). Refinery utilization is a watch item.",
       "labels": { "high": "well supplied", "mid": "balanced", "low": "tight" },
       "trend_words": { "up": "easing", "down": "tightening" },
       "members": [
-        { "series_id": "fred:WCESTUS1", "weight": 2 },
-        { "series_id": "fred:WGTSTUS1", "weight": 2 },
+        { "series_id": "eia:WCESTUS1", "weight": 2 },
+        { "series_id": "eia:WGTSTUS1", "weight": 2 },
         { "series_id": "fred:GASREGW", "direction": -1, "weight": 2 },
         { "series_id": "fred:GASDESW", "direction": -1 },
-        { "series_id": "fred:WPULEUS3" }
+        { "series_id": "eia:WPULEUS3" }
       ]
     },
     {
@@ -299,13 +299,13 @@
       "title": "US business formation",
       "question": "Are Americans starting businesses faster or slower than usual?",
       "kind": "composite",
-      "note": "Higher score means faster business formation than usual: new business applications, high-propensity applications (those likely to hire) and the Census projection of businesses that will form within four quarters, year over year (Census Business Formation Statistics via FRED).",
+      "note": "Higher score means faster business formation than usual: new business applications, high-propensity applications (those likely to hire) and the Census projection of businesses that will form within four quarters, year over year (Census Business Formation Statistics).",
       "labels": { "high": "booming", "mid": "steady", "low": "slowing" },
       "trend_words": { "up": "accelerating", "down": "slowing" },
       "members": [
-        { "series_id": "fred:BABATOTALSA" },
-        { "series_id": "fred:BAHBATOTALSA", "weight": 2 },
-        { "series_id": "fred:BFBF4QTOTALSA", "weight": 2 }
+        { "series_id": "census:BA_BA" },
+        { "series_id": "census:BA_HBA", "weight": 2 },
+        { "series_id": "census:BF_PBF4Q", "weight": 2 }
       ]
     }
   ],
