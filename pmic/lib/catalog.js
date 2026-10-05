@@ -51,8 +51,9 @@ function load() {
     for (const m of cfg.sec.metrics) {
       if (skip.has(m.metric_name)) continue;
       if (m.kind === "duration") {
-        series.push({ ...base, series_id: `sec:${co.ticker}:${m.metric_name}_q`, metric_name: `${m.metric_name}_q`, label: `${m.label}, quarterly`, unit: m.unit, frequency: "quarterly", polarity: m.polarity, transform: "yoy_pct" });
-        series.push({ ...base, series_id: `sec:${co.ticker}:${m.metric_name}_fy`, metric_name: `${m.metric_name}_fy`, label: `${m.label}, fiscal year`, unit: m.unit, frequency: "annual", polarity: m.polarity, transform: "yoy_pct" });
+        // skip_metrics may also name one side (dividends_q: Disney pays twice a year, so no quarters).
+        if (!skip.has(`${m.metric_name}_q`)) series.push({ ...base, series_id: `sec:${co.ticker}:${m.metric_name}_q`, metric_name: `${m.metric_name}_q`, label: `${m.label}, quarterly`, unit: m.unit, frequency: "quarterly", polarity: m.polarity, transform: "yoy_pct" });
+        if (!skip.has(`${m.metric_name}_fy`)) series.push({ ...base, series_id: `sec:${co.ticker}:${m.metric_name}_fy`, metric_name: `${m.metric_name}_fy`, label: `${m.label}, fiscal year`, unit: m.unit, frequency: "annual", polarity: m.polarity, transform: "yoy_pct" });
       } else {
         series.push({ ...base, series_id: `sec:${co.ticker}:${m.metric_name}`, metric_name: m.metric_name, label: m.label, unit: m.unit, frequency: "quarterly", polarity: m.polarity });
       }

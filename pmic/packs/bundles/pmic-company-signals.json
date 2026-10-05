@@ -148,7 +148,7 @@
       "question": "Is this company investing more in plant and equipment than usual?",
       "kind": "entity_composite",
       "series_pattern": "sec:{TICKER}:{metric}",
-      "note": "Higher score means heavier investment than usual for this company: capital expenditure each quarter, year over year, and capex as a share of revenue (capex intensity), each against its own history (SEC XBRL).",
+      "note": "Higher score means heavier investment than usual for this company: capital expenditure each quarter, year over year, and capex as a share of revenue (capex intensity), each against its own history (SEC XBRL). Banks (JPM, BAC) report no capex, so this vertical has no reading for them.",
       "labels": {"high": "expanding", "mid": "steady", "low": "cutting back"},
       "trend_words": {"up": "accelerating", "down": "slowing"},
       "metrics": [{"metric": "capex_q", "weight": 2}, {"metric": "capex_intensity"}]

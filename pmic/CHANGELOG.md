@@ -73,6 +73,11 @@
   about 15 requests. ECHO now reads newest month first, 3 seconds apart, keeps finished months
   between passes (only the last six are re-read), and on a 429 keeps what it has and carries on
   next pass, like FEC.
+- First full collect on the Pi (2026-10-05): every source ok, including 13F and Form 990. 16 SEC
+  series had no data: Amazon and Netflix pay no dividends, Disney pays twice a year (no quarterly
+  dividends), banks report no capex (all now in skip_metrics), and Pfizer and J&J tag dividends as
+  PaymentsOfOrdinaryDividends and Lilly tags capex as PaymentsToAcquireOtherPropertyPlantAndEquipment
+  (both added as fallback concepts).
 - Card descriptions list verticals by id only when the list with questions would go over the
   2,048-character on-chain limit (macro now does). Public sector is 2,028 characters.
 
