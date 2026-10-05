@@ -89,6 +89,10 @@
   instead of about 17M) and travel-demand scored 0. Only weeks with all seven days are stored now;
   the short week is revised once its days are out.
 - MainNet selftests (2026-10-05): macro 27/27, company 12/12, pharma 7/7, public sector 14/14.
+- Live on MainNet (2026-10-05): packs deployed with `/v1/selftest`; card updates (gas only, owner
+  confirmed in PSM): macro C69D2689...9EED (sent with a wrong display name) and D13DFA45...0318
+  (name restored to "PMIC Macro and Markets Signals"), company 8AEA23B4...BFA8, pharma
+  64EF2D8D...8423, public sector 916C0B1B...FC05.
 - Card descriptions list verticals by id only when the list with questions would go over the
   2,048-character on-chain limit (macro now does). Public sector is 2,028 characters.
 
