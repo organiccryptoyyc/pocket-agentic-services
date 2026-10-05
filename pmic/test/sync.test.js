@@ -47,3 +47,30 @@ test("series unknown to the hub are resent once the hub knows them", async () =>
   assert.ok(sent.observations > 0);
   assert.deepEqual(dbLib.kvGet(pi, "push_unknown_series"), []);
 });
+
+test("events for entities unknown to the hub are resent once the hub knows them; --resend-events sends all", async () => {
+  const catalog = catalogLib.load();
+  const now = new Date("2026-10-04T06:00:00Z");
+  const piDir = fs.mkdtempSync(path.join(os.tmpdir(), "pmic-pi-"));
+  const pi = dbLib.open({ dataDir: piDir });
+  await collectOnce(pi, catalog, { now, dataDir: piDir, env: {}, sources: ["releases", "fedreg"], fetchImpl: makeFetch(catalog, { now }) });
+  const oldCatalog = { ...catalog, entities: catalog.entities.filter((e) => e.entity_id !== "us-calendar"), series: catalog.series.filter((s) => s.entity_id !== "us-calendar") };
+  const hub = dbLib.open({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "pmic-hub-")) });
+  let hubCatalog = oldCatalog;
+  dbLib.syncCatalog(hub, hubCatalog, now.toISOString());
+  const fetchImpl = async (url, init) => ({ ok: true, status: 200, text: async () => JSON.stringify(apply(hub, hubCatalog, JSON.parse(init.body), now)) });
+  const cal = () => hub.prepare("SELECT COUNT(*) n FROM events WHERE entity_id = 'us-calendar'").get().n;
+  await push(pi, { url: "http://hub", token: "t", fetchImpl });
+  assert.equal(cal(), 0);
+  assert.deepEqual(dbLib.kvGet(pi, "push_unknown_entities"), ["us-calendar"]);
+  hubCatalog = catalog;
+  dbLib.syncCatalog(hub, hubCatalog, now.toISOString());
+  await push(pi, { url: "http://hub", token: "t", fetchImpl });
+  const all = pi.prepare("SELECT COUNT(*) n FROM events WHERE entity_id = 'us-calendar'").get().n;
+  assert.equal(cal(), all, "every calendar event arrives once the hub knows the entity");
+  assert.deepEqual(dbLib.kvGet(pi, "push_unknown_entities"), []);
+  hub.exec("DELETE FROM events");
+  const sent = await push(pi, { url: "http://hub", token: "t", fetchImpl, resendEvents: true });
+  assert.equal(sent.events, pi.prepare("SELECT COUNT(*) n FROM events").get().n);
+  assert.equal(hub.prepare("SELECT COUNT(*) n FROM events").get().n, sent.events);
+});

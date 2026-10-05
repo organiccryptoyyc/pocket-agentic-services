@@ -24,9 +24,11 @@ function page(db, table, cols, cursor) {
     .all(cursor.t, cursor.t, cursor.id, BATCH);
 }
 
-async function push(db, { url, token, fetchImpl = fetch, statusExtra = {} } = {}) {
+async function push(db, { url, token, fetchImpl = fetch, statusExtra = {}, resendEvents = false } = {}) {
   if (!url || !token) throw new Error("PMIC_PUSH_URL and PMIC_PUSH_TOKEN are required to push");
   const cur = kvGet(db, "push_cursor") || { obs: { t: "", id: 0 }, evt: { t: "", id: 0 } };
+  // --resend-events: send every stored event again (events skipped by a hub that lagged the Pi).
+  if (resendEvents) cur.evt = { t: "", id: 0 };
   let sent = { observations: 0, events: 0, requests: 0 };
   // Series the hub didn't know yet (its catalog lagged the Pi's) are resent from scratch on every
   // push until the hub accepts them, since the cursor has already moved past their rows.
@@ -37,8 +39,20 @@ async function push(db, { url, token, fetchImpl = fetch, statusExtra = {} } = {}
     sent.requests++;
     let r = {};
     try { r = JSON.parse(text); } catch { r = {}; }
+    // Events for entities the hub didn't know yet are resent the same way, by entity.
+    if (Array.isArray(r.unknown_entities) && r.unknown_entities.length) kvSet(db, "push_unknown_entities", [...new Set([...(kvGet(db, "push_unknown_entities") || []), ...r.unknown_entities])]);
     return Array.isArray(r.unknown_series) ? r.unknown_series : [];
   };
+  const unknownEntities = kvGet(db, "push_unknown_entities") || [];
+  if (unknownEntities.length) {
+    kvSet(db, "push_unknown_entities", []);
+    const rows = db.prepare(`SELECT id, ${EVT_COLS.join(", ")} FROM events WHERE entity_id IN (${unknownEntities.map(() => "?").join(",")}) ORDER BY id`).all(...unknownEntities);
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const chunk = rows.slice(i, i + BATCH);
+      await post({ pushed_at: new Date().toISOString(), observations: [], revisions: [], events: chunk.map(({ id, ...r }) => r), collector_status: null });
+      sent.events += chunk.length;
+    }
+  }
   const unknown = new Set(kvGet(db, "push_unknown_series") || []);
   if (unknown.size) {
     const ids = [...unknown];
@@ -89,6 +103,7 @@ function apply(db, catalog, body, now = new Date()) {
   const touched = new Set();
   let skipped = 0;
   const unknownSeries = new Set();
+  const unknownEntities = new Set();
   tx(db, () => {
     const upObs = db.prepare(`INSERT INTO observations (${OBS_COLS.join(", ")}) VALUES (${OBS_COLS.map(() => "?").join(", ")})
       ON CONFLICT (source_id, entity_id, observation_time, metric_name) DO UPDATE SET ${OBS_COLS.filter((c) => !["source_id", "entity_id", "observation_time", "metric_name"].includes(c)).map((c) => `${c}=excluded.${c}`).join(", ")}`);
@@ -104,14 +119,14 @@ function apply(db, catalog, body, now = new Date()) {
     const upEvt = db.prepare(`INSERT INTO events (${EVT_COLS.join(", ")}) VALUES (${EVT_COLS.map(() => "?").join(", ")})
       ON CONFLICT (source_id, external_id) DO UPDATE SET ${EVT_COLS.filter((c) => !["source_id", "external_id"].includes(c)).map((c) => `${c}=excluded.${c}`).join(", ")}`);
     for (const e of body.events) {
-      if (!knownEntities.has(e.entity_id)) { skipped++; continue; }
+      if (!knownEntities.has(e.entity_id)) { skipped++; unknownEntities.add(e.entity_id); continue; }
       upEvt.run(...EVT_COLS.map((c) => (e[c] === undefined ? null : e[c])));
     }
     if (body.collector_status) kvSet(db, "collector_status", { received_at: now.toISOString(), ...body.collector_status });
     kvSet(db, "last_sync", { at: now.toISOString(), observations: body.observations.length, events: body.events.length, skipped });
   });
   const rescored = touched.size ? rescoreAll(db, catalog, { now, seriesIds: [...touched] }) : 0;
-  return { accepted_observations: body.observations.length - skipped, events: body.events.length, skipped, rescored, ...(unknownSeries.size ? { unknown_series: [...unknownSeries] } : {}) };
+  return { accepted_observations: body.observations.length - skipped, events: body.events.length, skipped, rescored, ...(unknownSeries.size ? { unknown_series: [...unknownSeries] } : {}), ...(unknownEntities.size ? { unknown_entities: [...unknownEntities] } : {}) };
 }
 
 function tokenOk(header, token) {
