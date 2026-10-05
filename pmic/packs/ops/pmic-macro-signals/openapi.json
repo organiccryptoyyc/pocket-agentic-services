@@ -3,7 +3,7 @@
   "info": {
     "title": "PMIC Macro and Markets Signals",
     "version": "0.4.0",
-    "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, World Bank): economic regime, inflation, labor market, rates and yield curve, bank credit stress, commodities and supply chain, housing, consumer health, Treasury auction demand (TreasuryDirect), US fuel supply (EIA), trade flows by partner, business formation (Census), and 8-country comparisons of the economy, governance and stability, health systems and education. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator."
+    "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator."
   },
   "servers": [
     {
