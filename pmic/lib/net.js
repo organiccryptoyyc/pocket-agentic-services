@@ -10,7 +10,7 @@ const MIN_SPACING_MS = {
   "data.sec.gov": 150, "www.sec.gov": 150, "api.fda.gov": 300, "api.bls.gov": 500,
   "clinicaltrials.gov": 1300, "lda.senate.gov": 4000, "lda.gov": 4000, "api.open.fec.gov": 1000,
   "wikimedia.org": 100, "data.transportation.gov": 500, "api.usaspending.gov": 300, "www.saferproducts.gov": 500,
-  "echodata.epa.gov": 3000, "sdmx.oecd.org": 3000, "api.congress.gov": 750,
+  "echodata.epa.gov": 5000, "sdmx.oecd.org": 3000, "api.congress.gov": 750,
 };
 const SECRET_PARAMS = ["api_key", "UserID", "registrationkey", "registrationKey"];
 

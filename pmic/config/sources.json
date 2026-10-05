@@ -476,10 +476,10 @@
       "terms_url": "https://www.epa.gov/web-policies-and-procedures",
       "tier": 1,
       "reliability_score": 85,
-      "cadence_minutes": 10080,
+      "cadence_minutes": 1440,
       "key_env": null,
       "required_key": false,
-      "notes": "Public domain, no key. Civil enforcement cases with a milestone in each month, those with a federal penalty, judicial cases, and the penalties assessed. Recent months fill in as cases are entered. Weekly poll."
+      "notes": "Public domain, no key. Civil enforcement cases with a milestone in each month, those with a federal penalty, judicial cases, and the penalties assessed. Recent months fill in as cases are entered. Daily poll: finished months are kept, so a pass cut short by a rate limit carries on the next day."
     },
     {
       "source_id": "irs990",

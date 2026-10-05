@@ -13,7 +13,7 @@ const FEEDS = [
 const UA = "Mozilla/5.0 (compatible; PMIC-collector/1.0)";
 // Market-moving releases. Matched on the start of the title (BEA titles add the period).
 const MAJOR = [/^Employment Situation/, /^Consumer Price Index/, /^Producer Price Index/, /^Job Openings and Labor Turnover/, /^Employment Cost Index/,
-  /^Gross Domestic Product/, /^GDP/, /^Personal Income and Outlays/, /^U\.S\. International Trade in Goods and Services/, /^Productivity and Costs/];
+  /^Gross Domestic Product(?! by)/, /^GDP \(/, /^Personal Income and Outlays/, /^U\.S\. International Trade in Goods and Services/, /^Productivity and Costs/];
 
 // Unfolded VEVENT blocks as {UID, SUMMARY, DTSTART, DTSTART_TZID}.
 function icsEvents(text) {
