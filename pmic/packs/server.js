@@ -367,17 +367,30 @@ if ((PACK.extra_routes || []).includes("inflation_adjust")) routes.set("POST /v1
 
 // Every vertical end to end through the hub. 200 only if each one answers status ok with a score,
 // so a deploy probed at /v1/selftest proves the service on the server without a shell there.
+// Company verticals do not apply to every company (banks report no capex, Pfizer no operating
+// income), so an entity vertical passes when any of up to three companies scores, tried in order:
+// the bundle's selftest_entities, then the rest.
 async function selftest() {
-  const entity = (PACK.entities || []).includes("pfe") ? "pfe" : (PACK.entities || [])[0];
-  const results = await Promise.all(PACK.verticals.map(async (v) => {
+  const preferred = PACK.selftest_entities || ((PACK.entities || []).includes("pfe") ? ["pfe"] : []);
+  const order = [...new Set([...preferred, ...(PACK.entities || [])])].slice(0, 3);
+  const one = async (v, entity) => {
     try {
-      const b = await brief(v, { horizon: PACK.default_horizon, entity: needsEntity(v) ? entity : null, countries: null });
+      const b = await brief(v, { horizon: PACK.default_horizon, entity, countries: null });
       const score = typeof b.score === "number" ? b.score : (b.country_scores || []).find((c) => typeof c.score === "number")?.score ?? null;
-      return { vertical: v.id, ...(needsEntity(v) ? { entity_id: entity } : {}), status: b.status, score, pass: b.status === "ok" && score !== null };
+      return { vertical: v.id, ...(entity ? { entity_id: entity } : {}), status: b.status, score, pass: b.status === "ok" && score !== null };
     } catch (e) {
       // Only the error code: hub messages can name internal hosts, and this route is public.
-      return { vertical: v.id, status: "error", code: e instanceof ClientError ? e.code : "unavailable", pass: false };
+      return { vertical: v.id, ...(entity ? { entity_id: entity } : {}), status: "error", code: e instanceof ClientError ? e.code : "unavailable", pass: false };
     }
+  };
+  const results = await Promise.all(PACK.verticals.map(async (v) => {
+    if (!needsEntity(v)) return one(v, null);
+    let r;
+    for (const entity of order) {
+      r = await one(v, entity);
+      if (r.pass) break;
+    }
+    return r;
   }));
   const out = { service: PACK.service_id, pack_version: PACK.version, pass: results.every((r) => r.pass), results };
   if (!out.pass) throw new ClientError(400, "selftest_failed", results.filter((r) => !r.pass).map((r) => `${r.vertical}: ${r.code || r.status}`).join("; "));

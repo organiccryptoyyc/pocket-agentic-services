@@ -10,6 +10,7 @@
   "hub_scope": [{"source_id": "sec"}, {"source_id": "wikimedia"}, {"source_id": "secftd"}, {"source_id": "sec13f"}],
   "events_scope": {},
   "entities": ["aapl", "msft", "nvda", "amzn", "wmt", "jpm", "bac", "xom", "pfe", "lly", "jnj", "unh", "nflx", "dis"],
+  "selftest_entities": ["msft", "aapl", "pfe"],
   "verticals": [
     {
       "id": "fundamentals",

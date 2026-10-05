@@ -341,6 +341,16 @@ test("batch 4 verticals: every one is a scored, cited brief", async () => {
   assert.ok(jpm.status !== "ok" || jpm.inputs.every((m) => !/interest_expense/.test(m.series_id)), "banks have no interest expense input");
 });
 
+test("selftest: every bundle passes end to end", async () => {
+  for (const b of BUNDLES) {
+    const r = await call(b, "GET", "/v1/selftest");
+    assert.equal(r.status, 200, `${b}: ${JSON.stringify(r.json)}`);
+    assert.equal(r.json.pass, true);
+  }
+  const c = (await call("pmic-company-signals", "GET", "/v1/selftest")).json;
+  assert.ok(c.results.filter((x) => x.entity_id).every((x) => ["msft", "aapl", "pfe"].includes(x.entity_id)));
+});
+
 test("inputs the hub has never collected are pending, not missing", () => {
   const V = require("../packs/lib/verticals");
   const cur = (id, status, score) => ({ series_id: id, status, metric: { label: id, polarity: 1 }, composite_score: score, percentile: 50, trend: "flat", confidence: { score: 90 }, risk_flags: [] });
