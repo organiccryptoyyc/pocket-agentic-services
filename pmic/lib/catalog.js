@@ -75,11 +75,6 @@ function load() {
         series.push({ series_id: `ctgov:${co.ticker}:${m.metric_name}`, source_id: "ctgov", entity_id, metric_name: m.metric_name, label: m.label, unit: "count", frequency: m.frequency, category: "health", industry: "pharma", polarity: m.polarity, transform: "level", params: { sponsors: co.ctgov_sponsors } });
       }
     }
-    if (co.patent_assignees && cfg.patents) {
-      for (const m of cfg.patents.metrics) {
-        series.push({ series_id: `patentsview:${co.ticker}:${m.metric_name}`, source_id: "patentsview", entity_id, metric_name: m.metric_name, label: m.label, unit: "count", frequency: "monthly", category: "innovation", industry: co.industry, polarity: m.polarity, transform: "level", params: { assignees: co.patent_assignees } });
-      }
-    }
     if (co.fda_firm) {
       for (const f of cfg.openfda.company_feeds) {
         series.push({ series_id: `openfda:${co.ticker}:${f.metric_name}`, source_id: "openfda", entity_id, metric_name: f.metric_name, label: f.label.replace("{firm}", co.fda_firm), unit: "count", frequency: "weekly", category: "health", industry: "pharma", polarity: f.polarity, transform: "level", params: { feed: f.feed, firm: co.fda_firm, firms: [co.fda_firm, ...(co.fda_aliases || [])] } });

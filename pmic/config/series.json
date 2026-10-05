@@ -215,20 +215,20 @@
   "sec": {
     "_comment": "One company facts pull and one submissions pull per company per day. skip_metrics lists concepts a company does not report (confirmed on the first live run, 2026-10-04: banks have no operating income or current assets/liabilities; XOM, PFE, LLY and JNJ do not tag OperatingIncomeLoss; JPM has no framed long-term debt and XOM none after 2017); ratios built on a skipped metric are skipped too. Metrics come from XBRL frames (CYyyyyQn for quarters, CYyyyy for fiscal years, ...I for instants) so every value is the one SEC deduplicated across filings. concepts lists fallbacks in order.",
     "companies": [
-      { "ticker": "AAPL", "cik": "0000320193", "name": "Apple Inc.", "industry": "technology", "wiki": "Apple_Inc.", "patent_assignees": ["Apple Inc."] },
-      { "ticker": "MSFT", "cik": "0000789019", "name": "Microsoft Corp.", "industry": "technology", "wiki": "Microsoft", "patent_assignees": ["Microsoft Technology Licensing, LLC", "Microsoft Corporation"] },
-      { "ticker": "NVDA", "cik": "0001045810", "name": "NVIDIA Corp.", "industry": "semiconductors", "wiki": "Nvidia", "patent_assignees": ["NVIDIA Corporation"] },
-      { "ticker": "AMZN", "cik": "0001018724", "name": "Amazon.com Inc.", "industry": "retail", "wiki": "Amazon_(company)", "patent_assignees": ["Amazon Technologies, Inc."] },
-      { "ticker": "WMT", "cik": "0000104169", "name": "Walmart Inc.", "industry": "retail", "wiki": "Walmart", "patent_assignees": ["Walmart Apollo, LLC"] },
-      { "ticker": "JPM", "cik": "0000019617", "name": "JPMorgan Chase & Co.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current", "long_term_debt"], "wiki": "JPMorgan_Chase", "patent_assignees": ["JPMorgan Chase Bank, N.A."] },
-      { "ticker": "BAC", "cik": "0000070858", "name": "Bank of America Corp.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current"], "wiki": "Bank_of_America", "patent_assignees": ["Bank of America Corporation"] },
-      { "ticker": "XOM", "cik": "0000034088", "name": "Exxon Mobil Corp.", "industry": "energy", "skip_metrics": ["operating_income", "long_term_debt"], "wiki": "ExxonMobil", "patent_assignees": ["ExxonMobil Technology and Engineering Company", "ExxonMobil Upstream Research Company", "Exxon Mobil Corporation"] },
-      { "ticker": "PFE", "cik": "0000078003", "name": "Pfizer Inc.", "industry": "pharma", "fda_firm": "Pfizer", "ctgov_sponsors": ["Pfizer"], "skip_metrics": ["operating_income"], "wiki": "Pfizer", "patent_assignees": ["Pfizer Inc."] },
-      { "ticker": "LLY", "cik": "0000059478", "name": "Eli Lilly and Co.", "industry": "pharma", "fda_firm": "Eli Lilly", "ctgov_sponsors": ["Eli Lilly and Company"], "skip_metrics": ["operating_income"], "wiki": "Eli_Lilly_and_Company", "patent_assignees": ["Eli Lilly and Company"] },
-      { "ticker": "JNJ", "cik": "0000200406", "name": "Johnson & Johnson", "industry": "pharma", "fda_firm": "Johnson & Johnson", "fda_aliases": ["Janssen"], "ctgov_sponsors": ["Janssen", "Johnson & Johnson"], "skip_metrics": ["operating_income"], "wiki": "Johnson_&_Johnson", "patent_assignees": ["Janssen Biotech, Inc.", "Janssen Pharmaceutica NV", "Johnson & Johnson"] },
-      { "ticker": "UNH", "cik": "0000731766", "name": "UnitedHealth Group Inc.", "industry": "health_care", "wiki": "UnitedHealth_Group", "patent_assignees": ["Optum, Inc.", "Optum Services (Ireland) Limited", "UnitedHealth Group Incorporated"] },
-      { "ticker": "NFLX", "cik": "0001065280", "name": "Netflix Inc.", "industry": "media", "wiki": "Netflix", "patent_assignees": ["Netflix, Inc."] },
-      { "ticker": "DIS", "cik": "0001744489", "name": "The Walt Disney Co.", "industry": "media", "wiki": "The_Walt_Disney_Company", "patent_assignees": ["Disney Enterprises, Inc."] }
+      { "ticker": "AAPL", "cik": "0000320193", "name": "Apple Inc.", "industry": "technology", "wiki": "Apple_Inc." },
+      { "ticker": "MSFT", "cik": "0000789019", "name": "Microsoft Corp.", "industry": "technology", "wiki": "Microsoft" },
+      { "ticker": "NVDA", "cik": "0001045810", "name": "NVIDIA Corp.", "industry": "semiconductors", "wiki": "Nvidia" },
+      { "ticker": "AMZN", "cik": "0001018724", "name": "Amazon.com Inc.", "industry": "retail", "wiki": "Amazon_(company)" },
+      { "ticker": "WMT", "cik": "0000104169", "name": "Walmart Inc.", "industry": "retail", "wiki": "Walmart" },
+      { "ticker": "JPM", "cik": "0000019617", "name": "JPMorgan Chase & Co.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current", "long_term_debt"], "wiki": "JPMorgan_Chase" },
+      { "ticker": "BAC", "cik": "0000070858", "name": "Bank of America Corp.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current"], "wiki": "Bank_of_America" },
+      { "ticker": "XOM", "cik": "0000034088", "name": "Exxon Mobil Corp.", "industry": "energy", "skip_metrics": ["operating_income", "long_term_debt"], "wiki": "ExxonMobil" },
+      { "ticker": "PFE", "cik": "0000078003", "name": "Pfizer Inc.", "industry": "pharma", "fda_firm": "Pfizer", "ctgov_sponsors": ["Pfizer"], "skip_metrics": ["operating_income"], "wiki": "Pfizer" },
+      { "ticker": "LLY", "cik": "0000059478", "name": "Eli Lilly and Co.", "industry": "pharma", "fda_firm": "Eli Lilly", "ctgov_sponsors": ["Eli Lilly and Company"], "skip_metrics": ["operating_income"], "wiki": "Eli_Lilly_and_Company" },
+      { "ticker": "JNJ", "cik": "0000200406", "name": "Johnson & Johnson", "industry": "pharma", "fda_firm": "Johnson & Johnson", "fda_aliases": ["Janssen"], "ctgov_sponsors": ["Janssen", "Johnson & Johnson"], "skip_metrics": ["operating_income"], "wiki": "Johnson_&_Johnson" },
+      { "ticker": "UNH", "cik": "0000731766", "name": "UnitedHealth Group Inc.", "industry": "health_care", "wiki": "UnitedHealth_Group" },
+      { "ticker": "NFLX", "cik": "0001065280", "name": "Netflix Inc.", "industry": "media", "wiki": "Netflix" },
+      { "ticker": "DIS", "cik": "0001744489", "name": "The Walt Disney Co.", "industry": "media", "wiki": "The_Walt_Disney_Company" }
     ],
     "metrics": [
       { "metric_name": "revenue", "label": "Revenue", "unit": "usd", "polarity": 1, "concepts": ["RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues", "SalesRevenueNet", "RevenuesNetOfInterestExpense"], "kind": "duration" },
@@ -263,13 +263,6 @@
     "metrics": [
       { "metric_name": "pageviews_weekly", "label": "Wikipedia pageviews of the company article, weekly", "feed": "pageviews" },
       { "metric_name": "edits_weekly", "label": "Wikipedia edits of the company article, weekly", "feed": "edits" }
-    ]
-  },
-
-  "patents": {
-    "_comment": "USPTO PatentsView: utility patents granted each month to the company's assignee names (sec.companies[].patent_assignees). Big companies file through IP-holding subsidiaries (Microsoft Technology Licensing, Amazon Technologies, Walmart Apollo), so those names are listed. Needs PATENTSVIEW_API_KEY.",
-    "metrics": [
-      { "metric_name": "patent_grants_monthly", "label": "Utility patents granted to the company (USPTO), monthly", "polarity": 1 }
     ]
   },
 

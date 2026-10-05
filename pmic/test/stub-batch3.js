@@ -1,7 +1,7 @@
 // Test-only upstream stub for the batch 3 sources, in each API's response shape as seen live on
 // 2026-10-04: TreasuryDirect auction arrays, OpenFEMA {DisasterDeclarationsSummaries}, USGS
 // {count} and GeoJSON events, NWS GeoJSON alerts, the CISA KEV file, NVD {totalResults}, CDC
-// Socrata rows and PatentsView {total_hits}.
+// Socrata rows.
 "use strict";
 
 const DAY = 86400000;
@@ -63,11 +63,6 @@ function batch3(u, init, now, json) {
       for (const [p, base] of [["COVID-19", 1.2], ["Influenza", 0.9], ["RSV", 0.3]]) rows.push({ week_end: `${week}T00:00:00.000`, pathogen: p, geography: "United States", percent_visits: (base * (1 + 0.5 * Math.sin(k / 6))).toFixed(1) });
     }
     return json(rows);
-  }
-  if (u.host === "search.patentsview.org") {
-    if (!init.headers || !init.headers["X-Api-Key"]) return json({ error: true, detail: "missing key" }, 403);
-    const q = JSON.parse(u.searchParams.get("q"));
-    return json({ error: false, count: 1, total_hits: 80 + (hash(JSON.stringify(q)) % 60), patents: [{ patent_id: "12000000" }] });
   }
   return null;
 }

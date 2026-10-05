@@ -27,7 +27,7 @@ before(async () => {
   const catalog = catalogLib.load();
   const db = dbLib.open({ dataDir: dir });
   const now = new Date("2026-10-04T06:00:00Z");
-  await collectOnce(db, catalog, { now, dataDir: dir, env: { BEA_API_KEY: "k", PMIC_SEC_USER_AGENT: "t t@example.com", PATENTSVIEW_API_KEY: "k", PMIC_NVD_GAP_MS: "0", PMIC_PATENTSVIEW_GAP_MS: "0" }, fetchImpl: makeFetch(catalog, { now, blsMirrorsFred: true }) });
+  await collectOnce(db, catalog, { now, dataDir: dir, env: { BEA_API_KEY: "k", PMIC_SEC_USER_AGENT: "t t@example.com", PMIC_NVD_GAP_MS: "0" }, fetchImpl: makeFetch(catalog, { now, blsMirrorsFred: true }) });
   db.close();
   child = await new Promise((resolve, reject) => {
     const p = spawn(process.execPath, ["server.js"], {

@@ -23,7 +23,7 @@ const { transformed } = require("../lib/derive");
 const { makeFetch } = require("./stub-upstream");
 
 const NOW = new Date("2026-10-04T06:00:00Z");
-const ENV = { BEA_API_KEY: "test-key", PMIC_SEC_USER_AGENT: "PMIC test test@example.com", PATENTSVIEW_API_KEY: "test-key", PMIC_NVD_GAP_MS: "0", PMIC_PATENTSVIEW_GAP_MS: "0" };
+const ENV = { BEA_API_KEY: "test-key", PMIC_SEC_USER_AGENT: "PMIC test test@example.com", PMIC_NVD_GAP_MS: "0" };
 const catalog = catalogLib.load();
 
 function tmp() {

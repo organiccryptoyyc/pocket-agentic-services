@@ -288,18 +288,6 @@
       "key_env": "CDC_APP_TOKEN",
       "required_key": false,
       "notes": "Public domain. Socrata API; an app token is optional and only raises rate limits."
-    },
-    {
-      "source_id": "patentsview",
-      "name": "USPTO PatentsView PatentSearch API",
-      "homepage": "https://search.patentsview.org/docs/",
-      "terms_url": "https://patentsview.org/terms-of-use",
-      "tier": 2,
-      "reliability_score": 85,
-      "cadence_minutes": 10080,
-      "key_env": "PATENTSVIEW_API_KEY",
-      "required_key": true,
-      "notes": "Free key required (request at patentsview.org). Granted utility patents by assignee name, monthly; 45 requests a minute. Weekly poll."
     }
   ]
 }

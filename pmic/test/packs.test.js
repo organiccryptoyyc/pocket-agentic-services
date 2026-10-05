@@ -35,7 +35,7 @@ before(async () => {
   const catalog = catalogLib.load();
   const db = dbLib.open({ dataDir: dir });
   const now = new Date("2026-10-04T06:00:00Z");
-  await collectOnce(db, catalog, { now, dataDir: dir, env: { BEA_API_KEY: "k", PMIC_SEC_USER_AGENT: "t t@example.com", PATENTSVIEW_API_KEY: "k", PMIC_NVD_GAP_MS: "0", PMIC_PATENTSVIEW_GAP_MS: "0" }, fetchImpl: makeFetch(catalog, { now, blsMirrorsFred: true }) });
+  await collectOnce(db, catalog, { now, dataDir: dir, env: { BEA_API_KEY: "k", PMIC_SEC_USER_AGENT: "t t@example.com", PMIC_NVD_GAP_MS: "0" }, fetchImpl: makeFetch(catalog, { now, blsMirrorsFred: true }) });
   db.close();
   await start("server.js", path.join(__dirname, ".."), { PORT: String(HUB_PORT), PMIC_DATA_DIR: dir, PMIC_API_TOKEN: "hub-token", PMIC_INGEST_TOKEN: "" }, '"listening":true');
   for (const b of BUNDLES) {
@@ -134,7 +134,7 @@ test("company bundle: fundamentals and filing risk need a covered entity", async
   assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "fundamentals" })).json.error.code, "invalid_input");
   assert.equal((await call("pmic-company-signals", "POST", "/v1/brief", { vertical: "fundamentals", entity_id: "tsla" })).json.error.code, "unknown_entity");
   const o = (await call("pmic-company-signals", "POST", "/v1/overview", { entity_id: "msft" })).json;
-  assert.equal(o.count, 8);
+  assert.equal(o.count, 7);
   assert.equal((await call("pmic-company-signals", "POST", "/v1/events", {})).status, 400, "company events need an entity");
   const ev = await call("pmic-company-signals", "POST", "/v1/events", { entity_id: "aapl", limit: 5 });
   assert.equal(ev.status, 200);
@@ -242,7 +242,7 @@ test("batch 3 verticals: every one is a scored, cited brief", async () => {
   const energy = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "energy-supply" })).json;
   assert.equal(energy.inputs.find((m) => m.series_id === "fred:GASREGW").direction, -1, "pump prices read as tightness");
   assert.ok(energy.watch.some((m) => m.series_id === "fred:WPULEUS3"));
-  for (const id of ["earnings-quality", "innovation"]) {
+  for (const id of ["earnings-quality"]) {
     const r = await call("pmic-company-signals", "POST", "/v1/brief", { vertical: id, entity_id: "aapl" });
     assert.equal(r.status, 200, JSON.stringify(r.json));
     checkBrief(r.json, "pmic-company-signals");

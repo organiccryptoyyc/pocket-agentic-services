@@ -34,7 +34,6 @@ const ADAPTERS = {
   cisa: require("./adapters/cisa"),
   nvd: require("./adapters/nvd"),
   cdc: require("./adapters/cdc"),
-  patentsview: require("./adapters/patentsview"),
 };
 
 const DAY = 86400000;

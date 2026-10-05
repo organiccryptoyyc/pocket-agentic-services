@@ -14,7 +14,7 @@ const { makeFetch } = require("./stub-upstream");
 
 const NOW = new Date("2026-10-04T06:00:00Z");
 const catalog = catalogLib.load();
-const ENV = { PATENTSVIEW_API_KEY: "k", PMIC_NVD_GAP_MS: "0", PMIC_PATENTSVIEW_GAP_MS: "0", PMIC_SEC_USER_AGENT: "t t@example.com" };
+const ENV = { PMIC_NVD_GAP_MS: "0", PMIC_SEC_USER_AGENT: "t t@example.com" };
 
 async function run(sources, env = ENV) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pmic-b3-"));
@@ -47,7 +47,7 @@ test("fema counts each disaster once, not once per county", () => {
 });
 
 test("batch 3 sources collect against the stub, with events", async () => {
-  const { db, summary } = await run(["treasury", "fema", "usgs", "nws", "cisa", "nvd", "cdc", "patentsview"]);
+  const { db, summary } = await run(["treasury", "fema", "usgs", "nws", "cisa", "nvd", "cdc"]);
   for (const s of summary.sources) assert.equal(s.failed.length, 0, `${s.source_id}: ${JSON.stringify(s.failed[0])}`);
   assert.ok(obs(db, "treasury:bid_to_cover_monthly").length >= 20);
   assert.ok(obs(db, "fema:declarations_monthly").length >= 20);
@@ -56,16 +56,8 @@ test("batch 3 sources collect against the stub, with events", async () => {
   assert.ok(obs(db, "cisa:kev_added_weekly").length >= 50);
   assert.ok(obs(db, "nvd:critical_cves_monthly").every((o) => o.v >= 150 && o.v < 210));
   assert.ok(obs(db, "cdc:ed_flu_weekly").length >= 50);
-  assert.ok(obs(db, "patentsview:AAPL:patent_grants_monthly").length >= 20);
   const types = new Set(db.prepare("SELECT DISTINCT event_type t FROM events").all().map((r) => r.t));
   for (const t of ["disaster_declaration", "earthquake", "exploited_vulnerability"]) assert.ok(types.has(t), t);
-});
-
-test("patentsview without a key is skipped with a missing_key alert, not a failure loop", async () => {
-  const { db, summary } = await run(["patentsview"], { PMIC_PATENTSVIEW_GAP_MS: "0" });
-  const s = summary.sources.find((x) => x.source_id === "patentsview");
-  assert.ok(s.failed.every((f) => f.kind === "missing_key"));
-  assert.equal(obs(db, "patentsview:AAPL:patent_grants_monthly").length, 0);
 });
 
 test("drug shortages: new postings and discontinuations by first posting date", async () => {
