@@ -40,15 +40,22 @@ const ADAPTERS = {
   defillama: require("./adapters/defillama"),
   nifc: require("./adapters/nifc"),
   noaa: require("./adapters/noaa"),
-  fbi: require("./adapters/fbi"),
   tsa: require("./adapters/tsa"),
   imf: require("./adapters/imf"),
   fedreg: require("./adapters/fedreg"),
   cms: require("./adapters/cms"),
   secftd: require("./adapters/secftd"),
+  releases: require("./adapters/releases"),
+  oecd: require("./adapters/oecd"),
+  fdawl: require("./adapters/fdawl"),
+  congress: require("./adapters/congress"),
+  echo: require("./adapters/echo"),
+  irs990: require("./adapters/irs990"),
+  sec13f: require("./adapters/sec13f"),
 };
 
 const DAY = 86400000;
+const BULK_TIMEOUT_MS = Number(process.env.PMIC_BULK_TIMEOUT_MS || 600000);
 // After a failed attempt, wait this long before retrying (or the series cadence, if shorter).
 const FAILURE_BACKOFF_MIN = Number(process.env.PMIC_FAILURE_BACKOFF_MIN || 60);
 
@@ -95,9 +102,12 @@ function makeCtx(db, catalog, source, { now, dataDir, env, fetchImpl }) {
     async get(jobKey, url, init = {}, { allowStatus = [] } = {}) {
       const started = new Date().toISOString();
       const cleanUrl = redact(url);
+      // init.bulk: a large bulk file (13F and Form 990 zips, 50-90 MB). It gets a longer timeout,
+      // and only its hash and size go to the raw store; the adapter reads it once and drops it.
+      const { bulk, ...fetchInit } = init;
       let r;
       try {
-        r = await (fetchImpl || fetchText)(url, init);
+        r = await (fetchImpl || fetchText)(url, fetchInit, bulk ? { timeoutMs: BULK_TIMEOUT_MS } : undefined);
       } catch (e) {
         db.prepare(`INSERT INTO fetch_logs (source_id, job_key, url, started_at, finished_at, http_status, ok, bytes, error)
           VALUES (?, ?, ?, ?, ?, NULL, 0, 0, ?)`).run(source.source_id, jobKey, cleanUrl, started, new Date().toISOString(), String(e.message).slice(0, 500));
@@ -105,7 +115,10 @@ function makeCtx(db, catalog, source, { now, dataDir, env, fetchImpl }) {
       }
       const ok = (r.status >= 200 && r.status < 300) || allowStatus.includes(r.status);
       let stored = null;
-      if (r.text) stored = raw.store(db, dataDir, { source_id: source.source_id, job_key: jobKey, url: cleanUrl, fetched_at: nowIso, status: r.status, content_type: r.contentType || null, body: r.text });
+      if (r.text) {
+        const body = bulk && ok ? `[bulk file not kept: ${Buffer.byteLength(r.text)} bytes, sha256 ${raw.sha256(r.text)}]` : r.text;
+        stored = raw.store(db, dataDir, { source_id: source.source_id, job_key: jobKey, url: cleanUrl, fetched_at: nowIso, status: r.status, content_type: r.contentType || null, body });
+      }
       const id = Number(db.prepare(`INSERT INTO fetch_logs (source_id, job_key, url, started_at, finished_at, http_status, ok, bytes, raw_sha256, raw_file, error)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(source.source_id, jobKey, cleanUrl, started, new Date().toISOString(), r.status, ok ? 1 : 0,
           Buffer.byteLength(r.text || ""), stored && stored.sha256, stored && stored.raw_file, ok ? null : `HTTP ${r.status}: ${String(r.text || "").slice(0, 300)}`).lastInsertRowid);

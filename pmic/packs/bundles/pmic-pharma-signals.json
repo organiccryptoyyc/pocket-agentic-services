@@ -4,7 +4,7 @@
   "display_name": "PMIC Pharma Safety and Approval Signals",
   "version": "0.5.0",
   "category": "health",
-  "description": "Scored drug-market and company safety briefs from openFDA and BLS: drug recalls, adverse event reports, label changes and approvals for the US drug market and for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipelines (ClinicalTrials.gov), drug shortages, medical device recalls and adverse events, and drug price inflation (CPI and PPI). Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and citations.",
+  "description": "Scored drug-market and company safety briefs from openFDA, FDA and BLS: drug recalls, adverse event reports, label changes and approvals for the US drug market and for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipelines (ClinicalTrials.gov), drug shortages, medical device recalls and adverse events, FDA warning letters, and drug price inflation (CPI and PPI). Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and citations.",
   "default_horizon": "90d",
   "cache_seconds": 300,
   "hub_scope": [
@@ -14,7 +14,8 @@
     {"source_id": "openfda", "entity_id": "jnj"},
     {"source_id": "ctgov"},
     {"source_id": "openfda", "entity_id": "us-devices"},
-    {"source_id": "bls", "entity_id": "us-drug-market"}
+    {"source_id": "bls", "entity_id": "us-drug-market"},
+    {"source_id": "fdawl"}
   ],
   "events_scope": {"industry": "pharma"},
   "entities": ["pfe", "lly", "jnj"],
@@ -113,6 +114,22 @@
         {"series_id": "bls:CUSR0000SEMF01", "weight": 2},
         {"series_id": "bls:CUSR0000SAM1"},
         {"series_id": "bls:PCU325412325412", "weight": 2}
+      ]
+    },
+    {
+      "id": "fda-enforcement",
+      "title": "FDA enforcement",
+      "question": "Is the FDA issuing more warning letters than usual?",
+      "kind": "composite",
+      "note": "Higher score means calmer than usual: FDA warning letters posted each month, in total and those from the drug and biologics centers (CDER, CBER) and the device center (CDRH), against the trailing years. The latest drug and device letters are listed under recent_events, including any to Pfizer, Lilly or J&J.",
+      "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
+      "trend_words": {"up": "easing", "down": "intensifying"},
+      "events_entities": ["us-fda-compliance", "pfe", "lly", "jnj"],
+      "event_types": ["warning_letter"],
+      "members": [
+        {"series_id": "fdawl:drug_warning_letters_monthly", "weight": 2},
+        {"series_id": "fdawl:device_warning_letters_monthly"},
+        {"series_id": "fdawl:warning_letters_monthly"}
       ]
     }
   ]

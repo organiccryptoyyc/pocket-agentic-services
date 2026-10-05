@@ -166,6 +166,14 @@ async function brief(v, { horizon, entity, countries }) {
       const all = lists.flatMap((l) => l.events).filter((e) => !v.event_types || v.event_types.includes(e.event_type));
       out.recent_events = all.sort((a, b) => String(b.event_time).localeCompare(String(a.event_time))).slice(0, 20);
     }
+    if (v.upcoming_entities) {
+      // Scheduled events (the release calendar): the next ones from now, soonest first.
+      const now = new Date().toISOString();
+      const lists = await Promise.all(v.upcoming_entities.map((id) => hub("/v1/events", { entity_id: id, since: now.slice(0, 10), limit: 500, ...(v.upcoming_severity ? { severity: v.upcoming_severity } : {}) })));
+      out.upcoming_events = lists.flatMap((l) => l.events)
+        .filter((e) => String(e.event_time) >= now)
+        .sort((a, b) => String(a.event_time).localeCompare(String(b.event_time))).slice(0, 20);
+    }
     return out;
   }
   if (v.kind === "entity_composite") {

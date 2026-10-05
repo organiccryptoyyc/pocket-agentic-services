@@ -3,7 +3,7 @@
   "info": {
     "title": "PMIC Company Fundamentals and Filing Risk",
     "version": "0.5.0",
-    "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): fundamentals, filing risk (8-K items, 13D, Form 4), insider activity, balance sheet strength, a peer ranking, earnings quality, shareholder returns (buybacks and dividends), interest coverage, the investment cycle (capex) and settlement fails (SEC fails-to-deliver). Every input carries its SEC citation."
+    "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): fundamentals, filing risk (8-K items, 13D, Form 4), insider activity, balance sheet strength, a peer ranking, earnings quality, shareholder returns (buybacks and dividends), interest coverage, the investment cycle (capex), settlement fails (SEC fails-to-deliver) and institutional ownership (13F). Every input carries its SEC citation."
   },
   "servers": [
     {
@@ -73,7 +73,8 @@
                       "shareholder-returns",
                       "interest-coverage",
                       "investment-cycle",
-                      "settlement-fails"
+                      "settlement-fails",
+                      "institutional-ownership"
                     ]
                   },
                   "entity_id": {
@@ -219,7 +220,8 @@
                     "enum": [
                       "sec",
                       "wikimedia",
-                      "secftd"
+                      "secftd",
+                      "sec13f"
                     ]
                   },
                   "horizon": {

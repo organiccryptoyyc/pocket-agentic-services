@@ -3,7 +3,7 @@
   "info": {
     "title": "PMIC Public Sector Signals",
     "version": "0.3.0",
-    "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC, NHTSA, FDA food), political money (FEC, Senate lobbying), federal spending (USAspending, Treasury), natural hazards (FEMA, USGS, NWS), cyber threat (CISA KEV, NVD), respiratory illness (CDC), wildfire activity (NIFC), climate anomaly (NOAA), crime (FBI), air travel demand (TSA), federal rulemaking (Federal Register) and Medicare enrollment (CMS). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input."
+    "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC, NHTSA, FDA food), political money (FEC, Senate lobbying), federal spending (USAspending, Treasury), natural hazards (FEMA, USGS, NWS), cyber threat (CISA KEV, NVD), respiratory illness (CDC), wildfire activity (NIFC), climate anomaly (NOAA), air travel demand (TSA), federal rulemaking (Federal Register), legislation (Congress.gov), environmental enforcement (EPA ECHO), Medicare enrollment (CMS) and nonprofit finances (IRS Form 990). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input."
   },
   "servers": [
     {
@@ -71,10 +71,12 @@
                       "disease-activity",
                       "wildfire-activity",
                       "climate-anomaly",
-                      "public-safety",
                       "travel-demand",
                       "rulemaking",
-                      "medicare-providers"
+                      "medicare-providers",
+                      "legislation",
+                      "environmental-compliance",
+                      "nonprofit-finance"
                     ]
                   },
                   "horizon": {
@@ -195,10 +197,12 @@
                       "cdc",
                       "nifc",
                       "noaa",
-                      "fbi",
                       "tsa",
                       "fedreg",
-                      "cms"
+                      "cms",
+                      "congress",
+                      "echo",
+                      "irs990"
                     ]
                   },
                   "horizon": {

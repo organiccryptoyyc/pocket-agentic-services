@@ -4,6 +4,8 @@
 "use strict";
 
 const zlib = require("zlib");
+const { Readable } = require("stream");
+const { StringDecoder } = require("string_decoder");
 
 function unzip(buf) {
   let eocd = -1;
@@ -37,6 +39,28 @@ function unzip(buf) {
       if (f.method === 0) return data.toString("utf8");
       if (f.method === 8) return zlib.inflateRawSync(data).toString("utf8");
       throw new Error(`xlsx: unsupported compression ${f.method} for ${name}`);
+    },
+    // Streams one entry line by line, for entries too large to hold as one string (a 13F
+    // INFOTABLE is about 350 MB). Resolves with the number of lines read.
+    async eachLine(name, onLine) {
+      const f = files.get(name);
+      if (!f) throw new Error(`zip: no entry ${name}`);
+      if (buf.readUInt32LE(f.local) !== 0x04034b50) throw new Error(`zip: bad local header for ${name}`);
+      const start = f.local + 30 + buf.readUInt16LE(f.local + 26) + buf.readUInt16LE(f.local + 28);
+      const data = buf.subarray(start, start + f.size);
+      if (f.method !== 0 && f.method !== 8) throw new Error(`zip: unsupported compression ${f.method} for ${name}`);
+      const stream = f.method === 8 ? Readable.from([data]).pipe(zlib.createInflateRaw()) : Readable.from([data]);
+      const decoder = new StringDecoder("utf8");
+      let rest = "";
+      let n = 0;
+      for await (const chunk of stream) {
+        const lines = (rest + decoder.write(chunk)).split("\n");
+        rest = lines.pop();
+        for (const line of lines) { n++; onLine(line.replace(/\r$/, "")); }
+      }
+      rest += decoder.end();
+      if (rest) { n++; onLine(rest.replace(/\r$/, "")); }
+      return n;
     },
   };
 }

@@ -362,18 +362,6 @@
       "notes": "Public domain, no key. Contiguous US monthly temperature and precipitation departures from the 1991-2020 normal. Weekly poll."
     },
     {
-      "source_id": "fbi",
-      "name": "FBI Crime Data Explorer API (api.usa.gov)",
-      "homepage": "https://cde.ucr.cjis.gov/",
-      "terms_url": "https://api.data.gov/docs/",
-      "tier": 1,
-      "reliability_score": 85,
-      "cadence_minutes": 10080,
-      "key_env": "FBI_API_KEY",
-      "required_key": false,
-      "notes": "Free api.data.gov key (FBI_API_KEY, falls back to FEC_API_KEY, then DEMO_KEY). National monthly offense rates; the two newest months are left out until agencies report. Weekly poll."
-    },
-    {
       "source_id": "tsa",
       "name": "TSA checkpoint travel numbers",
       "homepage": "https://www.tsa.gov/travel/passenger-volumes",
@@ -432,6 +420,90 @@
       "key_env": "PMIC_SEC_USER_AGENT",
       "required_key": true,
       "notes": "Public domain; SEC fair access needs a User-Agent with contact (PMIC_SEC_USER_AGENT). Half-monthly zips summed per company and month as dollar value. Weekly poll."
+    },
+    {
+      "source_id": "releases",
+      "name": "BLS and BEA release calendars (iCalendar)",
+      "homepage": "https://www.bls.gov/schedule/",
+      "terms_url": "https://www.bls.gov/opub/copyright-information.htm",
+      "tier": 1,
+      "reliability_score": 95,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. Scheduled release dates from the BLS and BEA calendar feeds, kept as events; the number of major releases in the next 30 days is a daily snapshot."
+    },
+    {
+      "source_id": "oecd",
+      "name": "OECD Data Explorer (SDMX API)",
+      "homepage": "https://data-explorer.oecd.org/",
+      "terms_url": "https://www.oecd.org/en/about/terms-conditions.html",
+      "tier": 2,
+      "reliability_score": 90,
+      "cadence_minutes": 10080,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, no key; OECD data is CC BY 4.0. Composite leading indicators, monthly; one request per run. Business and consumer confidence are left out because some countries' series are built from licensed surveys."
+    },
+    {
+      "source_id": "fdawl",
+      "name": "FDA warning letters (fda.gov listing)",
+      "homepage": "https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/compliance-actions-and-activities/warning-letters",
+      "terms_url": "https://www.fda.gov/about-fda/about-website/website-policies",
+      "tier": 1,
+      "reliability_score": 85,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. The warning letter table behind fda.gov's listing page, paged newest first; monthly counts by posted date and drug or device letters as events."
+    },
+    {
+      "source_id": "congress",
+      "name": "Congress.gov API (Library of Congress)",
+      "homepage": "https://api.congress.gov/",
+      "terms_url": "https://www.loc.gov/legal/",
+      "tier": 1,
+      "reliability_score": 92,
+      "cadence_minutes": 10080,
+      "key_env": "CONGRESS_API_KEY",
+      "required_key": false,
+      "notes": "Free api.data.gov key (CONGRESS_API_KEY, falls back to FEC_API_KEY). Without a key only laws are collected: DEMO_KEY allows 10 requests an hour, too few to page every bill. Bills introduced and public laws enacted, monthly. Weekly poll."
+    },
+    {
+      "source_id": "echo",
+      "name": "EPA ECHO enforcement case services",
+      "homepage": "https://echo.epa.gov/tools/web-services",
+      "terms_url": "https://www.epa.gov/web-policies-and-procedures",
+      "tier": 1,
+      "reliability_score": 85,
+      "cadence_minutes": 10080,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. Civil enforcement cases with a milestone in each month, those with a federal penalty, judicial cases, and the penalties assessed. Recent months fill in as cases are entered. Weekly poll."
+    },
+    {
+      "source_id": "irs990",
+      "name": "IRS SOI exempt organization extracts (Form 990)",
+      "homepage": "https://www.irs.gov/statistics/soi-tax-stats-annual-extract-of-tax-exempt-organization-financial-data",
+      "terms_url": "https://www.irs.gov/privacy-disclosure/irs-privacy-policy",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 10080,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. One zip per processing year (about 55 MB); each year is read once, streamed, and summed; the zip itself is not kept. Weekly check for a new year."
+    },
+    {
+      "source_id": "sec13f",
+      "name": "SEC Form 13F data sets",
+      "homepage": "https://www.sec.gov/data-research/sec-markets-data/form-13f-data-sets",
+      "terms_url": "https://www.sec.gov/about/privacy-information#security",
+      "tier": 1,
+      "reliability_score": 92,
+      "cadence_minutes": 10080,
+      "key_env": "PMIC_SEC_USER_AGENT",
+      "required_key": true,
+      "notes": "Public domain; SEC fair access needs the User-Agent in PMIC_SEC_USER_AGENT. One zip per filing window (about 85 MB); each window is read once, streamed for the 14 companies' CUSIPs, and not kept. Weekly check for a new window."
     }
   ]
 }

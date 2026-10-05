@@ -4,10 +4,10 @@
   "display_name": "PMIC Company Fundamentals and Filing Risk",
   "version": "0.5.0",
   "category": "finance",
-  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): fundamentals, filing risk (8-K items, 13D, Form 4), insider activity, balance sheet strength, a peer ranking, earnings quality, shareholder returns (buybacks and dividends), interest coverage, the investment cycle (capex) and settlement fails (SEC fails-to-deliver). Every input carries its SEC citation.",
+  "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): fundamentals, filing risk (8-K items, 13D, Form 4), insider activity, balance sheet strength, a peer ranking, earnings quality, shareholder returns (buybacks and dividends), interest coverage, the investment cycle (capex), settlement fails (SEC fails-to-deliver) and institutional ownership (13F). Every input carries its SEC citation.",
   "default_horizon": "365d",
   "cache_seconds": 300,
-  "hub_scope": [{"source_id": "sec"}, {"source_id": "wikimedia"}, {"source_id": "secftd"}],
+  "hub_scope": [{"source_id": "sec"}, {"source_id": "wikimedia"}, {"source_id": "secftd"}, {"source_id": "sec13f"}],
   "events_scope": {},
   "entities": ["aapl", "msft", "nvda", "amzn", "wmt", "jpm", "bac", "xom", "pfe", "lly", "jnj", "unh", "nflx", "dis"],
   "verticals": [
@@ -163,6 +163,17 @@
       "labels": {"high": "calm", "mid": "normal", "low": "elevated"},
       "trend_words": {"up": "easing", "down": "rising"},
       "metrics": [{"metric": "fails_to_deliver_value_monthly"}]
+    },
+    {
+      "id": "institutional-ownership",
+      "title": "Institutional ownership",
+      "question": "Are more institutions holding this stock than a year ago?",
+      "kind": "entity_composite",
+      "series_pattern": "sec13f:{TICKER}:{metric}",
+      "note": "Higher score means stronger institutional interest than usual: the number of 13F filers holding the common stock and the dollar value they report, each quarter, year over year, against the stock's own history (SEC Form 13F data sets). Value also moves with the share price. Data arrives about 45 days after each quarter ends. Not investment advice.",
+      "labels": {"high": "accumulating", "mid": "steady", "low": "distributing"},
+      "trend_words": {"up": "rising", "down": "falling"},
+      "metrics": [{"metric": "institutional_holders", "weight": 2}, {"metric": "institutional_value"}]
     }
   ]
 }

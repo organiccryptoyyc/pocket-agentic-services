@@ -4,7 +4,7 @@
   "display_name": "PMIC Macro and Markets Signals",
   "version": "0.5.0",
   "category": "finance",
-  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF), plus Pocket Network health and crypto liquidity (DefiLlama). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
+  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health and crypto liquidity (DefiLlama). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
   "default_horizon": "90d",
   "cache_seconds": 300,
   "hub_scope": [
@@ -21,7 +21,9 @@
     {"source_id": "census"},
     {"source_id": "pokt"},
     {"source_id": "defillama"},
-    {"source_id": "imf"}
+    {"source_id": "imf"},
+    {"source_id": "oecd"},
+    {"source_id": "releases"}
   ],
   "verticals": [
     {
@@ -419,6 +421,37 @@
       "source_id": "imf",
       "note": "IMF World Economic Outlook, including the current-year projection, for the US, China, Japan, Germany, UK, India, Brazil and Canada: real GDP growth, consumer price inflation, unemployment and government debt (% of GDP). Projections change with each WEO vintage (April and October). Ranked values compare countries with each other.",
       "metrics": ["imf_gdp_growth", "imf_inflation", "imf_unemployment", "imf_government_debt"]
+    },
+    {
+      "id": "economic-calendar",
+      "title": "US economic calendar",
+      "question": "Which major US data releases are coming up, and how unusual were the latest ones?",
+      "kind": "composite",
+      "note": "Higher score means the latest headline prints were closer to normal: CPI, payrolls, unemployment, real GDP, real consumer spending, PPI final demand, job openings and retail sales, each scored as how ordinary its latest reading is against its own history (100 minus the hub's unusualness). upcoming_events lists the next major BLS and BEA releases with their times in UTC; the number of major releases in the next 30 days is a watch item.",
+      "labels": {"high": "calm", "mid": "normal", "low": "eventful"},
+      "trend_words": {"up": "calming", "down": "heating up"},
+      "upcoming_entities": ["us-calendar"],
+      "upcoming_severity": "high",
+      "members": [
+        {"series_id": "fred:CPIAUCSL", "direction": 0, "score_unusualness": true, "weight": 2},
+        {"series_id": "fred:PAYEMS", "direction": 0, "score_unusualness": true, "weight": 2},
+        {"series_id": "fred:UNRATE", "direction": 0, "score_unusualness": true},
+        {"series_id": "fred:GDPC1", "direction": 0, "score_unusualness": true},
+        {"series_id": "fred:PCEC96", "direction": 0, "score_unusualness": true},
+        {"series_id": "bls:WPUFD4", "direction": 0, "score_unusualness": true},
+        {"series_id": "fred:JTSJOL", "direction": 0, "score_unusualness": true},
+        {"series_id": "fred:RSAFS", "direction": 0, "score_unusualness": true},
+        {"series_id": "releases:major_releases_next_30d"}
+      ]
+    },
+    {
+      "id": "leading-indicators",
+      "title": "OECD leading indicators",
+      "question": "Which major economies are heading into an upturn or a slowdown?",
+      "kind": "country_table",
+      "source_id": "oecd",
+      "note": "OECD composite leading indicators (amplitude adjusted, long-term trend = 100), monthly, for the US, China, Japan, Germany, UK, India, Brazil and Canada. Above 100 and rising points to growth above trend in the next six to nine months; below 100 and falling to a slowdown. Ranked values compare countries with each other; each country's score compares it with its own history. OECD data, CC BY 4.0.",
+      "metrics": ["oecd_cli"]
     }
   ],
   "extra_routes": ["inflation_adjust"]

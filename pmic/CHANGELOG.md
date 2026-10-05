@@ -12,43 +12,65 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
-## Packs batch 4 (2026-10-05): 18 verticals, 10 new sources, no new registration
+## Packs batch 4 (2026-10-05): 24 verticals, 16 new sources, no new registration
 
-- Probed live from the PC before building (2026-10-05): the Pocket Network indexer
-  (data.pocket.network GraphQL), DefiLlama, NIFC WFIGS (ArcGIS), NOAA NCEI Climate at a Glance,
-  FBI Crime Data Explorer (api.usa.gov, `FBI_API_KEY` optional, DEMO_KEY otherwise), TSA checkpoint
-  numbers, IMF WEO (api.imf.org SDMX; imf.org and data.imf.org block scripts), Federal Register,
-  CMS Medicare Monthly Enrollment (data.cms.gov) and SEC fails-to-deliver zips all answer with no
-  paid key. 17 new BLS series checked. The FRED state series and ISRATIO are checked from the Pi
-  (`ops/probe-batch4.sh`) because FRED times out from the PC.
-- `pmic-macro-signals` 0.5.0: `pokt-network-health` (weekly estimated relays, staked suppliers and
-  apps; claimed relays as a watch item), `crypto-liquidity` (stablecoin supply, DeFi TVL),
+- The owner's list (2026-10-05): the 14 suggested verticals plus crypto-liquidity, food-inflation,
+  investment-cycle, climate-anomaly, travel-demand, imf-outlook, rulemaking, medicare-providers,
+  settlement-fails (replaces short-interest) and nonprofit-finance, then economic-calendar,
+  leading-indicators, institutional-ownership, fda-enforcement, legislation and
+  environmental-compliance; public-safety dropped. 24 verticals, 60 in the four services.
+- Probed live from the PC (2026-10-05), all free with no paid key: the Pocket Network indexer
+  (data.pocket.network GraphQL), DefiLlama, NIFC WFIGS (ArcGIS), NOAA NCEI Climate at a Glance, TSA
+  checkpoint numbers, IMF WEO (api.imf.org SDMX; imf.org and data.imf.org block scripts), Federal
+  Register, CMS Medicare Monthly Enrollment, SEC fails-to-deliver zips, the BLS and BEA release
+  calendars (iCalendar), OECD composite leading indicators (sdmx.oecd.org, CC BY 4.0), the FDA warning
+  letter table, Congress.gov (laws with DEMO_KEY; bill counts need an api.data.gov key), EPA ECHO
+  enforcement cases, and 17 new BLS series. The IRS Form 990 extracts (2018-2024) and the SEC 13F data
+  sets were parsed from the real files on the PC. The FRED state series and ISRATIO are checked from
+  the Pi (`ops/probe-batch4.sh`) because FRED times out from the PC.
+- `pmic-macro-signals` 0.5.0 (+8): `pokt-network-health` (weekly estimated relays, staked suppliers
+  and apps; claimed relays as a watch item), `crypto-liquidity` (stablecoin supply, DeFi TVL),
   `supply-chain-pressure` (BLS PPI truckload, deep sea, air freight, transportation services;
   inventories-to-sales and the freight index as watch items), `food-inflation` (CPI food at home,
   away from home, meats/poultry/fish/eggs, dairy), `state-labor` (12-state table: unemployment and
-  payroll growth from FRED) and `imf-outlook` (8-country table: WEO growth, inflation,
-  unemployment, government debt including the projection for next year).
-- `pmic-company-signals` 0.5.0: `shareholder-returns` (buybacks, dividends), `interest-coverage`
-  (new ratio operating income / interest expense; banks leave interest expense out),
-  `investment-cycle` (capex, new ratio capex / revenue) and `settlement-fails` (SEC fails-to-deliver
-  dollar value per month; a month is stored only when both half-month files are out).
-- `pmic-pharma-signals` 0.5.0: `device-safety` (openFDA device recalls, Class I recalls, MAUDE
-  adverse events with the same lag rule as FAERS) and `drug-prices` (CPI prescription drugs and
-  medical care commodities, PPI pharmaceutical preparations).
-- `pmic-public-sector-signals` 0.3.0: `wildfire-activity`, `climate-anomaly` (departures from the
-  1991-2020 normal, scored as closeness to normal via the new `score_unusualness` member option),
-  `public-safety` (FBI violent and property crime rates; the two newest months wait for late
-  reporters), `travel-demand` (TSA weekly passengers, year over year), `rulemaking` (final,
-  proposed and significant rules; significant rules as events) and `medicare-providers` (Medicare
-  enrollment in total and in Medicare Advantage; Original Medicare as a watch item).
+  payroll growth from FRED), `imf-outlook` (8-country table: WEO growth, inflation, unemployment,
+  government debt including next year's projection), `economic-calendar` (how ordinary the latest
+  CPI, payrolls, unemployment, GDP, consumer spending, PPI, job openings and retail sales prints
+  were, plus `upcoming_events`: the next major BLS and BEA releases in UTC) and `leading-indicators`
+  (8-country table of OECD composite leading indicators).
+- `pmic-company-signals` 0.5.0 (+5): `shareholder-returns` (buybacks, dividends),
+  `interest-coverage` (new ratio operating income / interest expense; banks leave interest expense
+  out), `investment-cycle` (capex, new ratio capex / revenue), `settlement-fails` (SEC
+  fails-to-deliver dollar value per month; a month is stored only when both half-month files are
+  out) and `institutional-ownership` (13F filers holding the stock and the value they report, per
+  quarter).
+- `pmic-pharma-signals` 0.5.0 (+3): `device-safety` (openFDA device recalls, Class I recalls, MAUDE
+  adverse events with the same lag rule as FAERS), `drug-prices` (CPI prescription drugs and medical
+  care commodities, PPI pharmaceutical preparations) and `fda-enforcement` (FDA warning letters, all,
+  drug and biologic, device; letters as events, tied to Pfizer, Lilly or J&J when named).
+- `pmic-public-sector-signals` 0.3.0 (+8): `wildfire-activity`, `climate-anomaly` (departures from
+  the 1991-2020 normal, scored as closeness to normal via the new `score_unusualness` member option),
+  `travel-demand` (TSA weekly passengers, year over year, with 800 days of history),
+  `rulemaking` (final, proposed and significant rules; significant rules as events),
+  `medicare-providers` (Medicare enrollment in total and in Medicare Advantage; Original Medicare as
+  a watch item), `legislation` (public laws enacted and bills introduced; new laws as events),
+  `environmental-compliance` (EPA cases with a milestone each month, penalty and judicial cases;
+  penalties settled as a watch item) and `nonprofit-finance` (Form 990 revenue, contributions,
+  assets and returns by IRS processing year).
 - Swapped sources, owner informed (2026-10-05): short-interest became `settlement-fails` because
   FINRA's free data is "not intended for commercial purposes"; the NY Fed GSCPI became BLS freight
-  PPIs (federal data with an API); NADAC drug prices became BLS CPI/PPI; CMS
-  provider enrollment became Medicare monthly enrollment (a time series, not a provider list).
-- Not built yet: `nonprofit-finance` (IRS SOI 990 extracts, about 55 MB a year). Last in line; the
-  owner can drop it.
+  PPIs (federal data with an API); NADAC drug prices became BLS CPI/PPI; CMS provider enrollment
+  became Medicare monthly enrollment (a time series, not a provider list). OECD business and consumer
+  confidence are left out because some countries' series are built from licensed surveys.
+- Dropped: `public-safety` (FBI Crime Data Explorer), owner's call (2026-10-05).
+- Bulk files: the 13F windows (about 85 MB each, 11 on the first run, about 950 MB) and the Form
+  990 extracts (about 50 MB each, 7 on the first run, about 360 MB) are streamed line by line, read
+  once, and not kept: the raw store gets their size and hash only (`bulk: true` in `ctx.get`, 10
+  minute timeout). After the first run, one new 13F window a quarter and one 990 year a year.
+- New keys, both optional: `CONGRESS_API_KEY` (falls back to `FEC_API_KEY`; without either, only
+  laws are counted). ECHO needs a browser-like User-Agent (Node's default gets a 503).
 - Card descriptions list verticals by id only when the list with questions would go over the
-  2,048-character on-chain limit (macro now does).
+  2,048-character on-chain limit (macro now does). Public sector is 2,028 characters.
 
 ## Packs batch 3 (2026-10-04): 9 verticals, 9 new sources, no new registration
 

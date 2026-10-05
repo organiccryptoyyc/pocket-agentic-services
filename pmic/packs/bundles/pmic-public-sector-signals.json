@@ -4,7 +4,7 @@
   "display_name": "PMIC Public Sector Signals",
   "version": "0.3.0",
   "category": "government",
-  "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC, NHTSA, FDA food), political money (FEC, Senate lobbying), federal spending (USAspending, Treasury), natural hazards (FEMA, USGS, NWS), cyber threat (CISA KEV, NVD), respiratory illness (CDC), wildfire activity (NIFC), climate anomaly (NOAA), crime (FBI), air travel demand (TSA), federal rulemaking (Federal Register) and Medicare enrollment (CMS). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input.",
+  "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC, NHTSA, FDA food), political money (FEC, Senate lobbying), federal spending (USAspending, Treasury), natural hazards (FEMA, USGS, NWS), cyber threat (CISA KEV, NVD), respiratory illness (CDC), wildfire activity (NIFC), climate anomaly (NOAA), air travel demand (TSA), federal rulemaking (Federal Register), legislation (Congress.gov), environmental enforcement (EPA ECHO), Medicare enrollment (CMS) and nonprofit finances (IRS Form 990). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input.",
   "default_horizon": "90d",
   "cache_seconds": 300,
   "hub_scope": [
@@ -23,10 +23,12 @@
     {"source_id": "cdc"},
     {"source_id": "nifc"},
     {"source_id": "noaa"},
-    {"source_id": "fbi"},
     {"source_id": "tsa"},
     {"source_id": "fedreg"},
-    {"source_id": "cms"}
+    {"source_id": "cms"},
+    {"source_id": "congress"},
+    {"source_id": "echo"},
+    {"source_id": "irs990"}
   ],
   "verticals": [
     {
@@ -151,16 +153,6 @@
       ]
     },
     {
-      "id": "public-safety",
-      "title": "US crime",
-      "question": "Is US crime rising or falling?",
-      "kind": "composite",
-      "note": "Higher score means safer than usual: national violent and property crime rates per 100,000 people each month (FBI Crime Data Explorer), against their history. Agencies report late, so the two newest months are left out until they fill in.",
-      "labels": {"high": "safer", "mid": "normal", "low": "elevated"},
-      "trend_words": {"up": "improving", "down": "worsening"},
-      "members": [{"series_id": "fbi:violent_crime_rate", "weight": 2}, {"series_id": "fbi:property_crime_rate"}]
-    },
-    {
       "id": "travel-demand",
       "title": "US air travel demand",
       "question": "Are more people flying than a year ago?",
@@ -198,6 +190,52 @@
         {"series_id": "cms:medicare_beneficiaries", "weight": 2},
         {"series_id": "cms:medicare_advantage"},
         {"series_id": "cms:original_medicare"}
+      ]
+    },
+    {
+      "id": "legislation",
+      "title": "US legislation",
+      "question": "Is Congress introducing and passing more bills than usual?",
+      "kind": "composite",
+      "note": "Higher score means more legislative activity than usual: public laws enacted and House and Senate bills introduced each month (Congress.gov), against the trailing years. Activity follows the session calendar and the two-year Congress, so read the trend with the calendar. New public laws are listed under recent_events.",
+      "labels": {"high": "busy", "mid": "normal", "low": "quiet"},
+      "trend_words": {"up": "accelerating", "down": "slowing"},
+      "events_entities": ["us-congress"],
+      "event_types": ["public_law"],
+      "members": [
+        {"series_id": "congress:laws_enacted_monthly", "direction": 1, "weight": 2},
+        {"series_id": "congress:bills_introduced_monthly", "direction": 1}
+      ]
+    },
+    {
+      "id": "environmental-compliance",
+      "title": "US environmental enforcement",
+      "question": "Is EPA enforcement activity rising or falling?",
+      "kind": "composite",
+      "note": "Higher score means more EPA enforcement than usual: civil enforcement cases with a milestone each month, those with a federal penalty, and judicial cases (EPA ECHO), against the trailing years. Federal penalties in cases settled that month are a watch item because single large settlements dominate. Cases are entered with a lag, so recent months fill in.",
+      "labels": {"high": "active", "mid": "normal", "low": "quiet"},
+      "trend_words": {"up": "stepping up", "down": "easing off"},
+      "members": [
+        {"series_id": "echo:cases_monthly", "direction": 1, "weight": 2},
+        {"series_id": "echo:penalty_cases_monthly", "direction": 1, "weight": 2},
+        {"series_id": "echo:judicial_cases_monthly", "direction": 1},
+        {"series_id": "echo:penalties_usd_monthly", "direction": 0}
+      ]
+    },
+    {
+      "id": "nonprofit-finance",
+      "title": "US nonprofit finances",
+      "question": "Are US nonprofits' revenue, donations and assets growing?",
+      "kind": "composite",
+      "note": "Higher score means faster nonprofit growth than usual: total revenue, contributions and grants received, and year-end assets of Form 990 filers, and the number of returns, year over year (IRS SOI annual extracts, by IRS processing year, so about a year behind). Total expenses are a watch item.",
+      "labels": {"high": "growing", "mid": "steady", "low": "shrinking"},
+      "trend_words": {"up": "accelerating", "down": "slowing"},
+      "members": [
+        {"series_id": "irs990:total_revenue", "weight": 2},
+        {"series_id": "irs990:contributions", "weight": 2},
+        {"series_id": "irs990:total_assets"},
+        {"series_id": "irs990:filers"},
+        {"series_id": "irs990:total_expenses"}
       ]
     }
   ]

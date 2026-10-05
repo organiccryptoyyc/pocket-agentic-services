@@ -25,7 +25,7 @@ async function run(sources, env = ENV) {
 const obs = (db, id) => db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time").all(id);
 
 test("batch 4 sources collect against the stub", async () => {
-  const { db, summary } = await run(["pokt", "defillama", "nifc", "noaa", "fbi", "tsa", "imf", "fedreg", "cms", "secftd"]);
+  const { db, summary } = await run(["pokt", "defillama", "nifc", "noaa", "tsa", "imf", "fedreg", "cms", "secftd"]);
   for (const s of summary.sources) assert.equal(s.failed.length, 0, `${s.source_id}: ${JSON.stringify(s.failed[0])}`);
   for (const id of ["pokt:estimated_relays_weekly", "pokt:claimed_relays_weekly", "pokt:staked_suppliers", "pokt:staked_apps"]) assert.ok(obs(db, id).length >= 20, id);
   assert.ok(obs(db, "pokt:estimated_relays_weekly").every((o) => o.v > 5e9), "relays read as numbers, not strings");
@@ -36,9 +36,6 @@ test("batch 4 sources collect against the stub", async () => {
   assert.ok(obs(db, "nifc:acres_monthly").every((o) => Number.isInteger(o.v)), "acres are whole numbers");
   assert.ok(obs(db, "nifc:incidents_monthly").length >= 20);
   assert.ok(obs(db, "noaa:temperature_departure").some((o) => o.v < 0), "departures keep their sign");
-  const crime = obs(db, "fbi:violent_crime_rate");
-  assert.ok(crime.length >= 20);
-  assert.ok(crime[crime.length - 1].t <= "2026-07-01", "the two newest months wait for late reporters");
   const tsa = obs(db, "tsa:passengers_weekly");
   assert.ok(tsa.length >= 50 && tsa.every((o) => o.v > 1e7), "weekly sums of daily counts");
   const imf = obs(db, "imf:de:NGDP_RPCH");
@@ -95,11 +92,6 @@ test("fails to deliver needs the SEC User-Agent", async () => {
   assert.ok(s.failed.length > 0 || s.skipped || s.missing_key, JSON.stringify(s));
 });
 
-test("fbi falls back to DEMO_KEY and leaves the newest months out", () => {
-  const { LAG_MONTHS } = require("../lib/adapters/fbi");
-  assert.equal(LAG_MONTHS, 2);
-});
-
 test("SEC capital return and interest metrics, with the nonoperating interest concept", async () => {
   const { db, summary } = await run(["sec"]);
   for (const s of summary.sources) assert.equal(s.failed.length, 0, `${s.source_id}: ${JSON.stringify(s.failed[0])}`);
@@ -111,4 +103,74 @@ test("device feeds and new BLS and FRED series collect", async () => {
   const { db, summary } = await run(["openfda", "bls", "fred"], {});
   for (const s of summary.sources) assert.equal(s.failed.length, 0, `${s.source_id}: ${JSON.stringify(s.failed[0])}`);
   for (const id of ["openfda:device:recalls_weekly", "openfda:device:recalls_class1_weekly", "openfda:device:events_weekly", "bls:CUSR0000SAF11", "bls:PCU325412325412", "bls:WPU3011", "fred:CAUR", "fred:VANA", "fred:ISRATIO"]) assert.ok(obs(db, id).length >= 10, id);
+});
+
+test("batch 4 second half: calendar, OECD, warning letters, Congress, ECHO, Form 990 and 13F", async () => {
+  const { db, summary } = await run(["releases", "oecd", "fdawl", "congress", "echo", "irs990", "sec13f"], { ...ENV, CONGRESS_API_KEY: "k" });
+  for (const s of summary.sources) assert.equal(s.failed.length, 0, `${s.source_id}: ${JSON.stringify(s.failed[0])}`);
+  assert.equal(obs(db, "releases:major_releases_next_30d").length, 1, "a daily snapshot");
+  const upcoming = db.prepare("SELECT event_time t, severity s, title FROM events WHERE event_type = 'scheduled_release' AND event_time > '2026-10-04T06' ORDER BY event_time").all();
+  assert.ok(upcoming.length > 10 && upcoming.some((e) => e.s === "high") && upcoming.some((e) => e.s === "low"));
+  assert.ok(upcoming.every((e) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(e.t)), "UTC times");
+  assert.ok(upcoming.some((e) => e.t.endsWith("T12:30:00Z")), "08:30 Eastern in October is 12:30 UTC");
+  assert.ok(obs(db, "oecd:de:CLI").length >= 20);
+  assert.ok(obs(db, "oecd:de:CLI").every((o) => o.v > 95 && o.v < 105), "amplitude-adjusted rows only");
+  const all = obs(db, "fdawl:warning_letters_monthly");
+  const drug = obs(db, "fdawl:drug_warning_letters_monthly");
+  assert.ok(all.length >= 20 && drug.every((o, i) => o.v <= all[i].v));
+  const letters = db.prepare("SELECT entity_id e FROM events WHERE event_type = 'warning_letter'").all();
+  assert.ok(letters.length > 0 && letters.some((x) => x.e === "pfe"), "a Pfizer letter is tied to Pfizer");
+  assert.ok(obs(db, "congress:bills_introduced_monthly").length >= 20);
+  assert.ok(obs(db, "congress:laws_enacted_monthly").some((o) => o.v > 0));
+  assert.ok(db.prepare("SELECT COUNT(*) n FROM events WHERE event_type = 'public_law'").get().n > 0);
+  const pen = obs(db, "echo:penalties_usd_monthly");
+  assert.ok(pen.length >= 20 && pen.every((o) => o.v > 0));
+  assert.ok(obs(db, "echo:judicial_cases_monthly").every((o) => o.v >= 20));
+  const rev = obs(db, "irs990:total_revenue");
+  assert.deepEqual(rev.map((o) => o.t), ["2018-01-01", "2019-01-01", "2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01", "2024-01-01"], "from 2018; 2025 is not out yet");
+  assert.ok(obs(db, "irs990:filers").every((o) => o.v > 2000));
+  const holders = obs(db, "sec13f:AAPL:institutional_holders");
+  assert.equal(holders.length, 11, "Q4 2023 to Q2 2026");
+  assert.equal(holders[holders.length - 1].t, "2026-04-01", "the Jun-Aug 2026 window is the June quarter");
+  assert.ok(holders.every((o) => o.v > 150 && o.v < 400), "late filers and options are left out");
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM fetch_logs WHERE source_id = 'sec13f' AND url LIKE '%.zip'").get().n, 11);
+});
+
+test("bulk zips are read once and not kept in the raw store", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pmic-b4bulk-"));
+  const db = dbLib.open({ dataDir: dir });
+  const fetchImpl = makeFetch(catalog, { now: NOW });
+  await collectOnce(db, catalog, { now: NOW, dataDir: dir, env: ENV, fetchImpl, sources: ["irs990", "sec13f"] });
+  const raw = require("../lib/raw");
+  const log = db.prepare("SELECT raw_file, raw_sha256, bytes FROM fetch_logs WHERE url LIKE '%eoextract990.zip' AND http_status = 200 LIMIT 1").get();
+  assert.ok(log.bytes > 10000);
+  assert.match(raw.read(dir, log.raw_file, log.raw_sha256).body, /^\[bulk file not kept: \d+ bytes, sha256 [0-9a-f]{64}\]$/);
+  const later = new Date(NOW.getTime() + 8 * 86400000);
+  await collectOnce(db, catalog, { now: later, dataDir: dir, env: ENV, fetchImpl, sources: ["irs990", "sec13f"], force: true });
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM fetch_logs WHERE url LIKE '%.zip' AND http_status = 200").get().n, 18, "no zip is downloaded twice");
+});
+
+test("congress without a key: laws only", async () => {
+  const { db, summary } = await run(["congress"], {});
+  const s = summary.sources.find((x) => x.source_id === "congress");
+  assert.ok(obs(db, "congress:laws_enacted_monthly").length >= 20);
+  assert.equal(obs(db, "congress:bills_introduced_monthly").length, 0);
+  assert.ok(JSON.stringify(s).includes("CONGRESS_API_KEY"));
+});
+
+test("release calendar: unfolded lines, Eastern times to UTC, major releases", () => {
+  const { icsEvents, startUtc, isMajor } = require("../lib/adapters/releases");
+  const ev = icsEvents("BEGIN:VEVENT\r\nSUMMARY:Gross Domestic Product\, 3rd Quarter\r\n  (Advance)\r\nDTSTART;TZID=US-Eastern:20260115T083000\r\nUID:x\r\nEND:VEVENT\r\n");
+  assert.equal(ev[0].SUMMARY, "Gross Domestic Product, 3rd Quarter (Advance)");
+  assert.equal(startUtc(ev[0]), "2026-01-15T13:30:00Z", "EST is UTC-5");
+  assert.equal(startUtc({ DTSTART: "20260715T083000", DTSTART_TZID: "US-Eastern" }), "2026-07-15T12:30:00Z", "EDT is UTC-4");
+  assert.equal(startUtc({ DTSTART: "20261029T123000Z" }), "2026-10-29T12:30:00Z");
+  assert.ok(isMajor("Employment Situation") && !isMajor("Real Earnings"));
+});
+
+test("13F dates and data set links", () => {
+  const { secDate, windowsOf } = require("../lib/adapters/sec13f");
+  assert.equal(secDate("30-JUN-2026"), "2026-06-30");
+  const w = windowsOf('<a href="/files/x/data/form-13f-data-sets/01dec2025-28feb2026_form13f.zip">x</a><a href="/files/x/2023q4_form13f.zip">old</a>');
+  assert.deepEqual(w.map((x) => x.end), ["2026-02-28"]);
 });
