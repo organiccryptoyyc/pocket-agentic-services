@@ -10,6 +10,7 @@
 //   node bin/collect.js --maintain      run retention/rollups/backup now
 //   node bin/collect.js --push          push to the hub now (needs PMIC_PUSH_URL, PMIC_PUSH_TOKEN)
 //   node bin/collect.js --push --resend-events   also send every stored event again
+//   node bin/collect.js --push --resend-source echo,irs990   also send every observation of these sources again
 //
 // Pushing also happens after every pass when PMIC_PUSH_URL is set.
 "use strict";
@@ -49,7 +50,7 @@ async function main() {
   db.syncCatalog(d, catalog);
   if (has("--rescore")) return log({ rescored: rescoreAll(d, catalog) });
   if (has("--maintain")) return log({ maintenance: maintain(d, catalog, db.DATA_DIR, { force: true }) });
-  if (has("--push")) return log({ push: await push(d, { url: process.env.PMIC_PUSH_URL, token: process.env.PMIC_PUSH_TOKEN, resendEvents: has("--resend-events") }) });
+  if (has("--push")) return log({ push: await push(d, { url: process.env.PMIC_PUSH_URL, token: process.env.PMIC_PUSH_TOKEN, resendEvents: has("--resend-events"), resendSources: val("--resend-source") || [] }) });
   if (!has("--loop")) return pass(d, catalog);
   const minutes = Number(process.env.PMIC_LOOP_MINUTES || 15);
   log({ loop: "started", every_minutes: minutes, data_dir: db.DATA_DIR, series: catalog.series.length });

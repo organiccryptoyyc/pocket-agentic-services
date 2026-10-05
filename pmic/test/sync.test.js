@@ -74,3 +74,19 @@ test("events for entities unknown to the hub are resent once the hub knows them;
   assert.equal(sent.events, pi.prepare("SELECT COUNT(*) n FROM events").get().n);
   assert.equal(hub.prepare("SELECT COUNT(*) n FROM events").get().n, sent.events);
 });
+
+test("--resend-source queues every series of a source for a full resend", async () => {
+  const catalog = catalogLib.load();
+  const now = new Date("2026-10-04T06:00:00Z");
+  const piDir = fs.mkdtempSync(path.join(os.tmpdir(), "pmic-pi-"));
+  const pi = dbLib.open({ dataDir: piDir });
+  await collectOnce(pi, catalog, { now, dataDir: piDir, env: {}, sources: ["nifc"], fetchImpl: makeFetch(catalog, { now }) });
+  const hub = dbLib.open({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "pmic-hub-")) });
+  dbLib.syncCatalog(hub, catalog, now.toISOString());
+  const fetchImpl = async (url, init) => ({ ok: true, status: 200, text: async () => JSON.stringify(apply(hub, catalog, JSON.parse(init.body), now)) });
+  await push(pi, { url: "http://hub", token: "t", fetchImpl });
+  hub.exec("DELETE FROM observations WHERE source_id = 'nifc' AND observation_time < '2026-01-01'");
+  await push(pi, { url: "http://hub", token: "t", fetchImpl, resendSources: ["nifc"] });
+  const n = (db) => db.prepare("SELECT COUNT(*) n FROM observations WHERE source_id = 'nifc'").get().n;
+  assert.equal(n(hub), n(pi));
+});

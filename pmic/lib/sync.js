@@ -24,7 +24,7 @@ function page(db, table, cols, cursor) {
     .all(cursor.t, cursor.t, cursor.id, BATCH);
 }
 
-async function push(db, { url, token, fetchImpl = fetch, statusExtra = {}, resendEvents = false } = {}) {
+async function push(db, { url, token, fetchImpl = fetch, statusExtra = {}, resendEvents = false, resendSources = [] } = {}) {
   if (!url || !token) throw new Error("PMIC_PUSH_URL and PMIC_PUSH_TOKEN are required to push");
   const cur = kvGet(db, "push_cursor") || { obs: { t: "", id: 0 }, evt: { t: "", id: 0 } };
   // --resend-events: send every stored event again (events skipped by a hub that lagged the Pi).
@@ -52,6 +52,11 @@ async function push(db, { url, token, fetchImpl = fetch, statusExtra = {}, resen
       await post({ pushed_at: new Date().toISOString(), observations: [], revisions: [], events: chunk.map(({ id, ...r }) => r), collector_status: null });
       sent.events += chunk.length;
     }
+  }
+  // --resend-source: queue every series of these sources for a full resend (one-off repair).
+  if (resendSources.length) {
+    const ids = db.prepare(`SELECT DISTINCT series_id FROM observations WHERE source_id IN (${resendSources.map(() => "?").join(",")})`).all(...resendSources).map((r) => r.series_id);
+    kvSet(db, "push_unknown_series", [...new Set([...(kvGet(db, "push_unknown_series") || []), ...ids])]);
   }
   const unknown = new Set(kvGet(db, "push_unknown_series") || []);
   if (unknown.size) {

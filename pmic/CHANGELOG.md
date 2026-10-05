@@ -81,7 +81,8 @@
 - MainNet deploy (2026-10-05): the hub skipped events for entities its old catalog did not have
   (release calendar, FDA warning letters, public laws), and the push cursor had moved past them. The
   hub now answers `unknown_entities` and the Pi resends those events once the hub knows them;
-  `node bin/collect.js --push --resend-events` sends every stored event again (one-off repair).
+  `node bin/collect.js --push --resend-events` sends every stored event again, and
+  `--resend-source echo` every observation of a source (one-off repairs).
 - The company selftest tried Pfizer only, which has no interest coverage (no operating income tag).
   The selftest now tries up to three companies per company vertical (`selftest_entities`).
 - Card descriptions list verticals by id only when the list with questions would go over the
