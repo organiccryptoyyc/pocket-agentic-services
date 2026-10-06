@@ -12,7 +12,7 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
-## Crypto service built (2026-10-06): pmic-crypto-signals 0.1.0, not registered yet
+## Crypto service (2026-10-06): pmic-crypto-signals 0.1.0
 
 - Owner's call: a full crypto service with no aggregator or exchange data. Sources:
   - `chainrpc`: public chain state through Pocket Network's own public RPC endpoints
@@ -31,7 +31,12 @@
   (EIP-55 with a built-in keccak-256, bech32/bech32m for Pocket, Cosmos and Bitcoin, base58check for
   Bitcoin and Tron, Solana) and `POST /v1/tools/units` (exact, BigInt).
 - Held for a terms check: Snapshot governance and Pyth oracle feeds.
-- Registration (fee about 1,000 POKT) and adding it to the supplier wait for the owner's OK.
+- PC probe (2026-10-06): Avalanche and Optimism public endpoints are not reliably archive nodes
+  ("no block", "state is pruned"), and Arbitrum fee history is not kept, so those read the latest
+  block weekly (supply) or daily (fees) from now on; the EVM total with history is Ethereum, Base,
+  Arbitrum and Polygon. RPC error answers are retried (another node usually answers).
+- Registered on MainNet 2026-10-06 (owner approved in PSM): add-service 689195FD...745D (1,000
+  POKT), supplier stake update BD48077C...0F76 (same 60,000 POKT, 7 services).
 
 ## DefiLlama removed (2026-10-06)
 

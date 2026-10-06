@@ -11,7 +11,7 @@ service; batch 3 added 9 and batch 4 added 24 to the existing four, so no new re
 | `pmic-company-signals` | fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking, public-attention, earnings-quality, shareholder-returns, interest-coverage, investment-cycle, settlement-fails, institutional-ownership | yes: aapl, msft, nvda, amzn, wmt, jpm, bac, xom, pfe, lly, jnj, unh, nflx, dis |
 | `pmic-pharma-signals` | drug-market, company-safety, clinical-pipeline, drug-shortages, device-safety, drug-prices, fda-enforcement | company-safety and clinical-pipeline: pfe, lly, jnj |
 | `pmic-public-sector-signals` | product-recalls, political-money, federal-spending, natural-hazards, cyber-threat, disease-activity, wildfire-activity, climate-anomaly, travel-demand, rulemaking, medicare-providers, legislation, environmental-compliance, nonprofit-finance | no |
-| `pmic-crypto-signals` (built, not registered yet) | stablecoin-supply, crypto-liquidity, futures-positioning, crypto-prices, network-fees, pokt-network-health, pokt-staking (+ address check and unit conversion tools) | no |
+| `pmic-crypto-signals` | stablecoin-supply, crypto-liquidity, futures-positioning, crypto-prices, network-fees, pokt-network-health, pokt-staking (+ address check and unit conversion tools) | no |
 
 All data is free and public (FRED, BLS, BEA, SEC EDGAR, openFDA, World Bank, ECB, FDIC, CFPB, Wikimedia,
 ClinicalTrials.gov, CPSC, NHTSA, FEC, Senate LDA, USAspending, Treasury, FEMA, USGS, NWS, CISA, NVD, CDC,

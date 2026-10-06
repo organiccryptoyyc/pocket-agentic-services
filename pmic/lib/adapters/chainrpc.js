@@ -20,7 +20,9 @@ const CITE = { eth: "https://etherscan.io", base: "https://basescan.org", "arb-o
 const cite = (chain, addr) => (addr ? `${CITE[chain] || rpcUrl(chain)}/${chain === "solana" ? "address" : chain === "tron" ? "#/token20" : "address"}/${addr}` : CITE[chain] || rpcUrl(chain));
 
 let nextId = 1;
-async function rpc(ctx, chain, method, params, { attempts = 1 } = {}) {
+// Public endpoints route each call to one of many nodes, and some nodes are not archive nodes or
+// lack a method: an error answer is retried (a different node usually answers).
+async function rpc(ctx, chain, method, params, { attempts = 3 } = {}) {
   let last;
   for (let i = 0; i < attempts; i++) {
     const r = await ctx.get(`chainrpc:${chain}:${method}`, rpcUrl(chain), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: nextId++, method, params }) });

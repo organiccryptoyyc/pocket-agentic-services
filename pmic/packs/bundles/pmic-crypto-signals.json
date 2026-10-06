@@ -15,7 +15,7 @@
       "title": "Stablecoin supply",
       "question": "Is the supply of USDT and USDC growing or shrinking, and on which chains?",
       "kind": "composite",
-      "note": "Higher score means more stablecoins outstanding than usual: USDT and USDC supply read from the token contracts at the start of each week (native issuance only, so bridged copies are not counted twice), against the trailing year. The 8-chain total includes Tron and Solana, read weekly from the first pass of each week; the 6-chain EVM total has a full year of history. Per-chain supply is under /v1/signals.",
+      "note": "Higher score means more stablecoins outstanding than usual: USDT and USDC supply read from the token contracts at the start of each week (native issuance only, so bridged copies are not counted twice), against the trailing year. The Ethereum, Base, Arbitrum and Polygon total has a full year of history; the total across all 8 chains adds Tron, Solana, Avalanche and Optimism, which the public endpoints answer for the latest block only, so it builds weekly from 2026-10-06. Per-chain supply is under /v1/signals.",
       "labels": {"high": "expanding", "mid": "steady", "low": "contracting"},
       "trend_words": {"up": "growing", "down": "shrinking"},
       "members": [
