@@ -48,6 +48,7 @@ async function main() {
   const catalog = catalogLib.load();
   const d = db.open();
   db.syncCatalog(d, catalog);
+  require("../lib/raw").purgeSources(db.DATA_DIR, catalog.purged_sources);
   if (has("--rescore")) return log({ rescored: rescoreAll(d, catalog) });
   if (has("--maintain")) return log({ maintenance: maintain(d, catalog, db.DATA_DIR, { force: true }) });
   if (has("--push")) return log({ push: await push(d, { url: process.env.PMIC_PUSH_URL, token: process.env.PMIC_PUSH_TOKEN, resendEvents: has("--resend-events"), resendSources: val("--resend-source") || [] }) });

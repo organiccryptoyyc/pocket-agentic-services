@@ -62,4 +62,12 @@ function prune(dataDir, keepDays, now = new Date()) {
   return removed;
 }
 
-module.exports = { store, read, prune, sha256 };
+// Raw payloads of purged sources are deleted outright (one folder per source).
+function purgeSources(dataDir, sourceIds = []) {
+  for (const id of sourceIds) {
+    if (!/^[a-z0-9_-]+$/i.test(id)) continue;
+    fs.rmSync(path.join(dataDir, "raw", id), { recursive: true, force: true });
+  }
+}
+
+module.exports = { store, read, prune, sha256, purgeSources };

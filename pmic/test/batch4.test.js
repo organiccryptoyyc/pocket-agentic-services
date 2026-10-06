@@ -25,14 +25,10 @@ async function run(sources, env = ENV) {
 const obs = (db, id) => db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time").all(id);
 
 test("batch 4 sources collect against the stub", async () => {
-  const { db, summary } = await run(["pokt", "defillama", "nifc", "noaa", "tsa", "imf", "fedreg", "cms", "secftd"]);
+  const { db, summary } = await run(["pokt", "nifc", "noaa", "tsa", "imf", "fedreg", "cms", "secftd"]);
   for (const s of summary.sources) assert.equal(s.failed.length, 0, `${s.source_id}: ${JSON.stringify(s.failed[0])}`);
   for (const id of ["pokt:estimated_relays_weekly", "pokt:claimed_relays_weekly", "pokt:staked_suppliers", "pokt:staked_apps"]) assert.ok(obs(db, id).length >= 20, id);
   assert.ok(obs(db, "pokt:estimated_relays_weekly").every((o) => o.v > 5e9), "relays read as numbers, not strings");
-  const tvl = obs(db, "defillama:defi_tvl");
-  assert.ok(tvl.length >= 300);
-  assert.ok(tvl[tvl.length - 1].t < "2026-10-04", "today's moving point is left out");
-  assert.ok(obs(db, "defillama:stablecoin_supply").length >= 300);
   assert.ok(obs(db, "nifc:acres_monthly").every((o) => Number.isInteger(o.v)), "acres are whole numbers");
   assert.ok(obs(db, "nifc:incidents_monthly").length >= 20);
   assert.ok(obs(db, "noaa:temperature_departure").some((o) => o.v < 0), "departures keep their sign");

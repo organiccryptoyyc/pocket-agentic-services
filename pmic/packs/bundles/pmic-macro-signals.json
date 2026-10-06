@@ -2,9 +2,9 @@
   "_comment": "One file per on-chain service. Related verticals are bundled into one service so they share one registration fee and one container. Member scores: when a member's own polarity matches (or no 'direction' is set) the hub's composite_score is used; when 'direction' differs from the hub's polarity (for example a neutral price series read as cost pressure), the pack scores it from the percentile in that direction. Neutral members without a direction are reported under 'watch', not averaged.",
   "service_id": "pmic-macro-signals",
   "display_name": "PMIC Macro and Markets Signals",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "category": "finance",
-  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health and crypto liquidity (DefiLlama). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
+  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
   "default_horizon": "90d",
   "cache_seconds": 300,
   "hub_scope": [
@@ -20,7 +20,6 @@
     {"source_id": "eia"},
     {"source_id": "census"},
     {"source_id": "pokt"},
-    {"source_id": "defillama"},
     {"source_id": "imf"},
     {"source_id": "oecd"},
     {"source_id": "releases"}
@@ -360,16 +359,6 @@
         {"series_id": "pokt:staked_apps"},
         {"series_id": "pokt:claimed_relays_weekly"}
       ]
-    },
-    {
-      "id": "crypto-liquidity",
-      "title": "Crypto liquidity",
-      "question": "Is liquidity flowing into or out of crypto markets?",
-      "kind": "composite",
-      "note": "Higher score means more crypto liquidity than usual: total USD stablecoin supply and total value locked in DeFi across all chains (DefiLlama), daily, against the trailing year. Stablecoin supply counts double because it is dry powder that moves first. Not investment advice.",
-      "labels": {"high": "abundant", "mid": "normal", "low": "draining"},
-      "trend_words": {"up": "rising", "down": "falling"},
-      "members": [{"series_id": "defillama:stablecoin_supply", "weight": 2}, {"series_id": "defillama:defi_tvl"}]
     },
     {
       "id": "supply-chain-pressure",

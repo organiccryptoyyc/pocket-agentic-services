@@ -37,7 +37,6 @@ const ADAPTERS = {
   eia: require("./adapters/eia"),
   census: require("./adapters/census"),
   pokt: require("./adapters/pokt"),
-  defillama: require("./adapters/defillama"),
   nifc: require("./adapters/nifc"),
   noaa: require("./adapters/noaa"),
   tsa: require("./adapters/tsa"),

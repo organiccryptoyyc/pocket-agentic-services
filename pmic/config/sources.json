@@ -1,5 +1,8 @@
 {
   "_comment": "One row per upstream. tier: 1 = official statistical agency / regulator primary data, 2 = official aggregator republishing tier-1 data, 3 = reputable secondary. reliability_score is the base 0-100 used in scoring before fetch-failure penalties. cadence_minutes is the default poll interval for this source's series; a series row may override it. key_env names the env var holding an API key: required_key=true means the adapter skips (and logs) when it is missing.",
+  "purged_sources": [
+    {"source_id": "defillama", "date": "2026-10-06", "reason": "DefiLlama terms forbid commercial use and republishing of its data without permission. All stored DefiLlama data is deleted on the Pi and the hub."}
+  ],
   "sources": [
     {
       "source_id": "fred",
@@ -324,18 +327,6 @@
       "key_env": null,
       "required_key": false,
       "notes": "Free, no key. Weekly sums of estimated (throughput) and claimed relays, staked supplier and app counts on each week's last block."
-    },
-    {
-      "source_id": "defillama",
-      "name": "DefiLlama open API (stablecoins and TVL)",
-      "homepage": "https://defillama.com/docs/api",
-      "terms_url": "https://defillama.com/docs/api",
-      "tier": 3,
-      "reliability_score": 80,
-      "cadence_minutes": 1440,
-      "key_env": null,
-      "required_key": false,
-      "notes": "Free, no key. Total pegged-USD stablecoin supply and total DeFi value locked, daily."
     },
     {
       "source_id": "nifc",

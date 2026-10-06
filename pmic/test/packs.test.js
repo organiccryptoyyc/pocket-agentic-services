@@ -77,7 +77,7 @@ test("probes: version, health and the PSM healthz path", async () => {
 
 test("macro bundle: every vertical is a scored, cited brief", async () => {
   const list = (await call("pmic-macro-signals", "POST", "/v1/verticals", {})).json;
-  assert.equal(list.count, 27);
+  assert.equal(list.count, 26);
   for (const id of ["housing", "consumer", "country-risk", "health-systems", "education", "yield-curve", "bank-health", "global-rates-fx"]) assert.ok(list.verticals.some((v) => v.id === id), `batch 2 vertical ${id}`);
   for (const v of list.verticals) {
     const r = await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: v.id });
@@ -111,7 +111,7 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
 
 test("macro overview and inflation calculator", async () => {
   const o = (await call("pmic-macro-signals", "POST", "/v1/overview", {})).json;
-  assert.equal(o.count, 27);
+  assert.equal(o.count, 26);
   assert.ok(o.briefs.every((b) => b.status === "ok"));
   const range = (await call("pmic-macro-signals", "POST", "/v1/inflation/adjust", { amount: 100, from: "1990-01" }));
   assert.equal(range.status, 400);
@@ -293,7 +293,7 @@ test("raw routes stay inside each bundle's scope; bad input is a 400", async () 
 
 test("batch 4 verticals: every one is a scored, cited brief", async () => {
   const plain = {
-    "pmic-macro-signals": ["pokt-network-health", "crypto-liquidity", "supply-chain-pressure", "food-inflation", "economic-calendar"],
+    "pmic-macro-signals": ["pokt-network-health", "supply-chain-pressure", "food-inflation", "economic-calendar"],
     "pmic-pharma-signals": ["device-safety", "drug-prices", "fda-enforcement"],
     "pmic-public-sector-signals": ["wildfire-activity", "climate-anomaly", "travel-demand", "rulemaking", "medicare-providers", "legislation", "environmental-compliance", "nonprofit-finance"],
   };

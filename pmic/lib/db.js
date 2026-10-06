@@ -111,6 +111,20 @@ function syncCatalog(db, catalog, now = new Date().toISOString()) {
         db.prepare("UPDATE alerts SET resolved_at = ? WHERE series_id = ? AND resolved_at IS NULL").run(now, r.series_id);
       }
     }
+    // Purged sources (terms do not allow our use): every stored row is deleted, not left to age out.
+    for (const id of catalog.purged_sources || []) {
+      const bySeries = "SELECT series_id FROM series WHERE source_id = ?";
+      db.prepare("DELETE FROM observation_revisions WHERE observation_id IN (SELECT id FROM observations WHERE source_id = ?)").run(id);
+      db.prepare("DELETE FROM observations WHERE source_id = ?").run(id);
+      db.prepare("DELETE FROM events WHERE source_id = ?").run(id);
+      db.prepare(`DELETE FROM derived_metrics WHERE series_id IN (${bySeries})`).run(id);
+      db.prepare(`DELETE FROM rollups_weekly WHERE series_id IN (${bySeries})`).run(id);
+      db.prepare("DELETE FROM scores WHERE source_id = ?").run(id);
+      db.prepare("DELETE FROM alerts WHERE source_id = ?").run(id);
+      db.prepare("DELETE FROM fetch_logs WHERE source_id = ?").run(id);
+      db.prepare("DELETE FROM series WHERE source_id = ?").run(id);
+      db.prepare("DELETE FROM sources WHERE source_id = ?").run(id);
+    }
   });
 }
 

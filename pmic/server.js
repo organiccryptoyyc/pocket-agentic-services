@@ -101,6 +101,7 @@ if (require.main === module) {
   // Make sure the schema and catalog exist before opening read-only.
   const w = db.open();
   db.syncCatalog(w, catalog);
+  require("./lib/raw").purgeSources(db.DATA_DIR, catalog.purged_sources);
   w.close();
   build().listen(PORT, () => console.log(JSON.stringify({ service: SERVICE, version: VERSION, port: PORT, data_dir: db.DATA_DIR, listening: true })));
   startIngest({ openDb: () => db.open(), catalog });

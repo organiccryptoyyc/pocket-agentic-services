@@ -76,5 +76,5 @@
     "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
   },
   "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/pmic/packs/README.md",
-  "updated": "2026-10-05"
+  "updated": "2026-10-06"
 }

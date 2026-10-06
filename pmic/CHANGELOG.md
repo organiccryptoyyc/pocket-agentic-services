@@ -12,6 +12,17 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## DefiLlama removed (2026-10-06)
+
+- DefiLlama's terms forbid commercial use and republishing of its data without permission, so it
+  should not have been used (caught by the owner). The `crypto-liquidity` vertical is removed from
+  `pmic-macro-signals` (0.5.1, 26 verticals) and the source from the collector.
+- New `purged_sources` list in `config/sources.json`: on the next start, the Pi and the hub delete
+  every stored row of a purged source (observations, revisions, scores, derived values, fetch logs,
+  series, source) and its raw payload folder, instead of letting it age out.
+- Crypto liquidity returns in the planned crypto service, built on on-chain reads (token contract
+  supply) through Pocket's public RPC endpoints.
+
 ## Packs batch 4 (2026-10-05): 24 verticals, 16 new sources, no new registration
 
 - The owner's list (2026-10-05): the 14 suggested verticals plus crypto-liquidity, food-inflation,

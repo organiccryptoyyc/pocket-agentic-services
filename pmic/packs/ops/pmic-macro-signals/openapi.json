@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Macro and Markets Signals",
-    "version": "0.5.0",
-    "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health and crypto liquidity (DefiLlama). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator."
+    "version": "0.5.1",
+    "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator."
   },
   "servers": [
     {
@@ -83,7 +83,6 @@
                       "trade-flows",
                       "business-formation",
                       "pokt-network-health",
-                      "crypto-liquidity",
                       "supply-chain-pressure",
                       "food-inflation",
                       "state-labor",
@@ -213,7 +212,6 @@
                       "eia",
                       "census",
                       "pokt",
-                      "defillama",
                       "imf",
                       "oecd",
                       "releases"

@@ -1,5 +1,5 @@
 // Test-only upstream stub for the batch 4 sources, in each API's response shape as seen live on
-// 2026-10-04: the Pocket indexer's GraphQL aliases, DefiLlama chart arrays, ArcGIS statistics,
+// 2026-10-04: the Pocket indexer's GraphQL aliases, ArcGIS statistics,
 // NOAA Climate at a Glance {data}, the TSA passenger table, IMF
 // SDMX XML, Federal Register {count}, data.cms.gov rows and SEC fails-to-deliver zips.
 "use strict";
@@ -49,15 +49,6 @@ function batch4(u, init, now, json) {
       else data[`l${k}`] = { nodes: [{ stakedSuppliers: 4400 + (wk % 50), stakedApps: 30 + (wk % 5) }] };
     }
     return json({ data });
-  }
-  if (u.host === "stablecoins.llama.fi" || u.host === "api.llama.fi") {
-    const rows = [];
-    for (let k = 800; k >= 0; k--) {
-      const date = Math.floor((t - k * DAY) / DAY) * 86400;
-      const v = (u.host === "api.llama.fi" ? 9e10 : 3e11) * (1 + 0.05 * Math.sin(k / 30));
-      rows.push(u.host === "api.llama.fi" ? { date, tvl: v } : { date: String(date), totalCirculating: { peggedUSD: v }, totalCirculatingUSD: { peggedUSD: v } });
-    }
-    return json(rows);
   }
   if (u.host === "services3.arcgis.com") {
     const where = u.searchParams.get("where") || "";

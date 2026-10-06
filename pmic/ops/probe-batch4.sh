@@ -8,5 +8,5 @@
 cd "$(dirname "$0")/.." || exit 1
 ENV_FILE=.env
 [ -f "$ENV_FILE" ] || ENV_FILE="$HOME/pmic-src/pmic/.env"
-docker run --rm --env-file "$ENV_FILE" -v "$PWD":/app:ro -w /app pmic:latest node bin/probe.js --source pokt,defillama,nifc,noaa,tsa,imf,fedreg,cms,secftd,releases,oecd,fdawl,congress,echo,bls,fred,openfda "$@" 2>&1 | tee /tmp/pmic-probe4.txt
+docker run --rm --env-file "$ENV_FILE" -v "$PWD":/app:ro -w /app pmic:latest node bin/probe.js --source pokt,nifc,noaa,tsa,imf,fedreg,cms,secftd,releases,oecd,fdawl,congress,echo,bls,fred,openfda "$@" 2>&1 | tee /tmp/pmic-probe4.txt
 echo "Saved to /tmp/pmic-probe4.txt"

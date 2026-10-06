@@ -13,7 +13,7 @@ function readConfig(name) {
 }
 
 function load() {
-  const { sources } = readConfig("sources.json");
+  const { sources, purged_sources: purged = [] } = readConfig("sources.json");
   const cfg = readConfig("series.json");
   const retention = readConfig("retention.json");
   const bySource = new Map(sources.map((s) => [s.source_id, s]));
@@ -118,7 +118,7 @@ function load() {
     s.params = s.params || {};
   }
 
-  return { sources, entities, series, retention, sec: cfg.sec, openfda: cfg.openfda };
+  return { sources, entities, series, retention, sec: cfg.sec, openfda: cfg.openfda, purged_sources: purged.map((x) => x.source_id) };
 }
 
 module.exports = { load, CONFIG_DIR, ID_RE };

@@ -2,19 +2,19 @@
 
 Paid Pocket services that sell scored briefs built on the PMIC hub. Related verticals are bundled
 into one service, so each bundle costs one registration fee and runs one container. Batches 1 to
-4 have 60 verticals in 4 services (batch 2 added 13 to the existing services and 3 in one new
+4 have 59 verticals in 4 services (batch 2 added 13 to the existing services and 3 in one new
 service; batch 3 added 9 and batch 4 added 24 to the existing four, so no new registration fee):
 
 | Service ID | Verticals | Needs `entity_id` |
 |---|---|---|
-| `pmic-macro-signals` | macro-regime, inflation, labor, rates, credit-stress, commodities, global-compare, housing, consumer, country-risk, health-systems, education, yield-curve, bank-health, global-rates-fx, treasury-demand, energy-supply, trade-flows, business-formation, pokt-network-health, crypto-liquidity, supply-chain-pressure, food-inflation, state-labor, imf-outlook, economic-calendar, leading-indicators (+ CPI inflation calculator) | no |
+| `pmic-macro-signals` | macro-regime, inflation, labor, rates, credit-stress, commodities, global-compare, housing, consumer, country-risk, health-systems, education, yield-curve, bank-health, global-rates-fx, treasury-demand, energy-supply, trade-flows, business-formation, pokt-network-health, supply-chain-pressure, food-inflation, state-labor, imf-outlook, economic-calendar, leading-indicators (+ CPI inflation calculator) | no |
 | `pmic-company-signals` | fundamentals, filing-risk, insider-activity, balance-sheet, peer-ranking, public-attention, earnings-quality, shareholder-returns, interest-coverage, investment-cycle, settlement-fails, institutional-ownership | yes: aapl, msft, nvda, amzn, wmt, jpm, bac, xom, pfe, lly, jnj, unh, nflx, dis |
 | `pmic-pharma-signals` | drug-market, company-safety, clinical-pipeline, drug-shortages, device-safety, drug-prices, fda-enforcement | company-safety and clinical-pipeline: pfe, lly, jnj |
 | `pmic-public-sector-signals` | product-recalls, political-money, federal-spending, natural-hazards, cyber-threat, disease-activity, wildfire-activity, climate-anomaly, travel-demand, rulemaking, medicare-providers, legislation, environmental-compliance, nonprofit-finance | no |
 
 All data is free and public (FRED, BLS, BEA, SEC EDGAR, openFDA, World Bank, ECB, FDIC, CFPB, Wikimedia,
 ClinicalTrials.gov, CPSC, NHTSA, FEC, Senate LDA, USAspending, Treasury, FEMA, USGS, NWS, CISA, NVD, CDC,
-EIA, Census, IMF, OECD, the Pocket Network indexer, DefiLlama, NIFC, NOAA NCEI, TSA, Federal Register,
+EIA, Census, IMF, OECD, the Pocket Network indexer, NIFC, NOAA NCEI, TSA, Federal Register,
 Congress.gov, EPA ECHO, CMS, IRS Form 990 extracts, SEC fails-to-deliver and 13F data sets, FDA warning
 letters, BLS and BEA release calendars). Paid or
 subscription sources are skipped for now; see `pmic/CHANGELOG.md`.

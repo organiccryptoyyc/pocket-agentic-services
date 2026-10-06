@@ -90,3 +90,19 @@ test("--resend-source queues every series of a source for a full resend", async 
   const n = (db) => db.prepare("SELECT COUNT(*) n FROM observations WHERE source_id = 'nifc'").get().n;
   assert.equal(n(hub), n(pi));
 });
+
+test("a purged source's rows and raw files are deleted on catalog sync", async () => {
+  const catalog = catalogLib.load();
+  const now = new Date("2026-10-04T06:00:00Z");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pmic-purge-"));
+  const db = dbLib.open({ dataDir: dir });
+  await collectOnce(db, catalog, { now, dataDir: dir, env: {}, sources: ["nifc"], fetchImpl: makeFetch(catalog, { now }) });
+  assert.ok(db.prepare("SELECT COUNT(*) n FROM observations WHERE source_id = 'nifc'").get().n > 0);
+  assert.ok(fs.existsSync(path.join(dir, "raw", "nifc")));
+  const purged = { ...catalog, sources: catalog.sources.filter((s) => s.source_id !== "nifc"), series: catalog.series.filter((s) => s.source_id !== "nifc"), purged_sources: ["nifc"] };
+  dbLib.syncCatalog(db, purged, now.toISOString());
+  require("../lib/raw").purgeSources(dir, purged.purged_sources);
+  for (const t of ["observations", "scores", "fetch_logs", "series", "sources"]) assert.equal(db.prepare(`SELECT COUNT(*) n FROM ${t} WHERE source_id = 'nifc'`).get().n, 0, t);
+  assert.equal(fs.existsSync(path.join(dir, "raw", "nifc")), false);
+  assert.deepEqual(catalog.purged_sources, ["defillama"]);
+});
