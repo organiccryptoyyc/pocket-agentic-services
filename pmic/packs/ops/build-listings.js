@@ -218,8 +218,10 @@ function openapi(b) {
           type: "object",
           properties: {
             service: { type: "string" }, vertical: { type: "string" }, title: { type: "string" }, status: { type: "string", enum: ["ok", "insufficient_data"] },
-            score: { type: "integer", minimum: 0, maximum: 100, nullable: true }, label: { type: "string", nullable: true }, trend: { type: "string" },
-            trend_basis: { type: "string", nullable: true, enum: ["score_history", "input_trends", null] }, summary: { type: "string" },
+            // Fields that can be null carry no type: OpenAPI 3.0's "nullable" is ignored by plain JSON
+            // Schema validators (a gateway refused an insufficient_data brief with score null for it).
+            score: { description: "Integer 0-100, or null when status is insufficient_data." }, label: { description: "The vertical's label for the score, or null with no score." }, trend: { type: "string" },
+            trend_basis: { description: "score_history, input_trends, or null when there is no trend." }, summary: { type: "string" },
             drivers: { type: "array", items: { type: "object" } }, risk_flags: { type: "array", items: { type: "string" } },
             confidence: { type: "object", properties: { score: { type: "integer" }, label: { type: "string" } } },
             inputs: { type: "array", items: { type: "object" } }, watch: { type: "array", items: { type: "object" } },

@@ -12,6 +12,17 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Declared response schema fix (2026-10-06)
+
+- PNF forwarded a gateway alert: a `pmic-company-signals` response "failed its declared schema and
+  was refused" (supplier-schema-violation). The declared schema is the OpenAPI spec the card links to
+  on the `main` branch. Its Brief schema used OpenAPI 3.0 `"nullable": true` on `score`, `label` and
+  `trend_basis`; a plain JSON Schema validator ignores that keyword, so any `insufficient_data` brief
+  (score null; for example interest-coverage for Pfizer or investment-cycle for the banks) failed.
+- Those three fields now carry no type constraint, only a description, in all five specs. A new test
+  checks every brief for every company in every bundle against the Brief schema strictly.
+- The specs are served from `main`, so the fix reaches the gateway when `main` is updated.
+
 ## Crypto service (2026-10-06): pmic-crypto-signals 0.1.0
 
 - Owner's call: a full crypto service with no aggregator or exchange data. Sources:

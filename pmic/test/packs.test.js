@@ -371,6 +371,36 @@ test("crypto bundle: every vertical scores; tools answer; no third-party price d
   assert.equal((await call("pmic-macro-signals", "POST", "/v1/tools/address", { address: "x" })).status, 404, "tools only on the crypto bundle");
 });
 
+// Strict JSON Schema subset (type, enum, minimum, maximum, properties, items). OpenAPI 3.0's
+// "nullable" is ignored on purpose, as plain JSON Schema validators in gateways ignore it.
+function schemaErrors(schema, v, at = "$") {
+  const errs = [];
+  const typeOk = (t) => (t === "integer" ? Number.isInteger(v) : t === "number" ? typeof v === "number" : t === "array" ? Array.isArray(v) : t === "object" ? v !== null && typeof v === "object" && !Array.isArray(v) : typeof v === t);
+  if (schema.type && !typeOk(schema.type)) return [`${at}: ${JSON.stringify(v)} is not ${schema.type}`];
+  if (schema.enum && !schema.enum.includes(v)) errs.push(`${at}: ${JSON.stringify(v)} not in enum`);
+  if (schema.minimum !== undefined && v < schema.minimum) errs.push(`${at}: below minimum`);
+  if (schema.maximum !== undefined && v > schema.maximum) errs.push(`${at}: above maximum`);
+  if (schema.properties && v && typeof v === "object") for (const [k, s] of Object.entries(schema.properties)) if (k in v) errs.push(...schemaErrors(s, v[k], `${at}.${k}`));
+  if (schema.items && Array.isArray(v)) v.forEach((x, i) => errs.push(...schemaErrors(schema.items, x, `${at}[${i}]`)));
+  return errs;
+}
+
+test("every brief, for every company, matches the declared Brief schema strictly", async () => {
+  for (const b of BUNDLES) {
+    const spec = require(`../packs/ops/${b}/openapi.json`);
+    const brief = spec.components.schemas.Brief;
+    const bundle = require(`../packs/bundles/${b}.json`);
+    for (const v of bundle.verticals) {
+      const entities = ["entity_composite", "entity_events", "peer_table"].includes(v.kind) ? bundle.entities : [null];
+      for (const e of entities) {
+        const r = await call(b, "POST", "/v1/brief", { vertical: v.id, ...(e ? { entity_id: e } : {}) });
+        assert.equal(r.status, 200);
+        assert.deepEqual(schemaErrors(brief, r.json), [], `${b} ${v.id} ${e || ""}`);
+      }
+    }
+  }
+});
+
 test("inputs the hub has never collected are pending, not missing", () => {
   const V = require("../packs/lib/verticals");
   const cur = (id, status, score) => ({ series_id: id, status, metric: { label: id, polarity: 1 }, composite_score: score, percentile: 50, trend: "flat", confidence: { score: 90 }, risk_flags: [] });
