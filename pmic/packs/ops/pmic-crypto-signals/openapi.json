@@ -1,0 +1,646 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PMIC Crypto Signals",
+    "version": "0.1.0",
+    "description": "Scored crypto briefs from public chain state read through Pocket Network's own RPC endpoints, the Pocket chain and CFTC data: USDT and USDC supply by chain, crypto liquidity, CME bitcoin and ether futures positioning, on-chain ETH and BTC prices, Ethereum and L2 fees, Pocket Network health and staking. Plus address checks and unit conversion. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and a citation for every input. Not investment advice."
+  },
+  "servers": [
+    {
+      "url": "https://agentic.organiccryptoyyc.com"
+    }
+  ],
+  "paths": {
+    "/v1/verticals": {
+      "post": {
+        "summary": "List the verticals this service sells.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input: JSON object with error {code, message}.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/brief": {
+      "post": {
+        "summary": "One scored brief.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "vertical": {
+                    "type": "string",
+                    "enum": [
+                      "stablecoin-supply",
+                      "crypto-liquidity",
+                      "futures-positioning",
+                      "crypto-prices",
+                      "network-fees",
+                      "pokt-network-health",
+                      "pokt-staking"
+                    ]
+                  },
+                  "horizon": {
+                    "type": "string",
+                    "enum": [
+                      "7d",
+                      "30d",
+                      "90d",
+                      "365d"
+                    ]
+                  }
+                },
+                "required": [
+                  "vertical"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Brief"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input: JSON object with error {code, message}.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/overview": {
+      "post": {
+        "summary": "Every brief at once, compact.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "horizon": {
+                    "type": "string",
+                    "enum": [
+                      "7d",
+                      "30d",
+                      "90d",
+                      "365d"
+                    ]
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input: JSON object with error {code, message}.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/signals": {
+      "post": {
+        "summary": "Ranked scored series inside this service's scope.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "source_id": {
+                    "type": "string",
+                    "enum": [
+                      "chainrpc",
+                      "cftc",
+                      "pokt"
+                    ]
+                  },
+                  "horizon": {
+                    "type": "string",
+                    "enum": [
+                      "7d",
+                      "30d",
+                      "90d",
+                      "365d"
+                    ]
+                  },
+                  "sort": {
+                    "type": "string",
+                    "enum": [
+                      "composite",
+                      "change",
+                      "abs_change",
+                      "confidence",
+                      "deviation"
+                    ]
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  },
+                  "min_confidence": {
+                    "type": "integer"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input: JSON object with error {code, message}.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/signal": {
+      "post": {
+        "summary": "One scored series.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "series_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "series_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input: JSON object with error {code, message}.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/explain": {
+      "post": {
+        "summary": "Why a series moved over the horizon.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "series_id": {
+                    "type": "string"
+                  },
+                  "horizon": {
+                    "type": "string",
+                    "enum": [
+                      "7d",
+                      "30d",
+                      "90d",
+                      "365d"
+                    ]
+                  }
+                },
+                "required": [
+                  "series_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input: JSON object with error {code, message}.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/catalog": {
+      "post": {
+        "summary": "Series this service covers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "entity_id": {
+                    "type": "string"
+                  },
+                  "q": {
+                    "type": "string"
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input: JSON object with error {code, message}.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/version": {
+      "get": {
+        "summary": "Service identity.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "summary": "Readiness.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tools/address": {
+      "post": {
+        "summary": "Check an address: EVM (EIP-55 checksum), Pocket/Cosmos/Bitcoin bech32, Bitcoin and Tron base58check, Solana. No network calls.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "address"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input: JSON object with error {code, message}.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tools/units": {
+      "post": {
+        "summary": "Convert units of one asset exactly (wei/gwei/eth, sat/btc, lamport/sol, upokt/pokt, sun/trx), or any token with 'decimals' between 'raw' and 'token'.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "string"
+                  },
+                  "decimals": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "from",
+                  "to"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input: JSON object with error {code, message}.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Object": {
+        "type": "object"
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Brief": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "vertical": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "insufficient_data"
+            ]
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "nullable": true
+          },
+          "label": {
+            "type": "string",
+            "nullable": true
+          },
+          "trend": {
+            "type": "string"
+          },
+          "trend_basis": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "score_history",
+              "input_trends",
+              null
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "drivers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "risk_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "confidence": {
+            "type": "object",
+            "properties": {
+              "score": {
+                "type": "integer"
+              },
+              "label": {
+                "type": "string"
+              }
+            }
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "watch": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

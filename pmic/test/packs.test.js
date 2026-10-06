@@ -15,7 +15,7 @@ const { collectOnce } = require("../lib/collect");
 const { makeFetch } = require("./stub-upstream");
 
 const HUB_PORT = 20100 + Math.floor(Math.random() * 300);
-const BUNDLES = ["pmic-macro-signals", "pmic-company-signals", "pmic-pharma-signals", "pmic-public-sector-signals"];
+const BUNDLES = ["pmic-macro-signals", "pmic-company-signals", "pmic-pharma-signals", "pmic-public-sector-signals", "pmic-crypto-signals"];
 const PORTS = Object.fromEntries(BUNDLES.map((b, i) => [b, HUB_PORT + 400 + i]));
 const procs = [];
 
@@ -349,6 +349,26 @@ test("selftest: every bundle passes end to end", async () => {
   }
   const c = (await call("pmic-company-signals", "GET", "/v1/selftest")).json;
   assert.ok(c.results.filter((x) => x.entity_id).every((x) => ["msft", "aapl", "pfe"].includes(x.entity_id)));
+});
+
+test("crypto bundle: every vertical scores; tools answer; no third-party price data in scope", async () => {
+  const b = "pmic-crypto-signals";
+  const list = (await call(b, "POST", "/v1/verticals", {})).json;
+  assert.deepEqual(list.verticals.map((v) => v.id), ["stablecoin-supply", "crypto-liquidity", "futures-positioning", "crypto-prices", "network-fees", "pokt-network-health", "pokt-staking"]);
+  for (const v of list.verticals) checkBrief((await call(b, "POST", "/v1/brief", { vertical: v.id })).json, b);
+  const st = (await call(b, "POST", "/v1/brief", { vertical: "stablecoin-supply" })).json;
+  assert.ok(st.inputs.some((m) => m.series_id === "chainrpc:usdt_supply:tron"));
+  const fees = (await call(b, "POST", "/v1/brief", { vertical: "network-fees" })).json;
+  assert.ok(fees.watch.some((m) => m.series_id === "chainrpc:block_fullness:eth"));
+  const sig = (await call(b, "POST", "/v1/signals", { limit: 200 })).json;
+  assert.ok(sig.signals.length > 0 && sig.signals.every((x) => /^(chainrpc|cftc|pokt):/.test(x.series_id)));
+  const a = await call(b, "POST", "/v1/tools/address", { address: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" });
+  assert.equal(a.status, 200);
+  assert.equal(a.json.valid, true);
+  const u = await call(b, "POST", "/v1/tools/units", { amount: "2.5", from: "pokt", to: "upokt" });
+  assert.equal(u.json.result, "2500000");
+  assert.equal((await call(b, "POST", "/v1/tools/units", { amount: "x", from: "eth", to: "wei" })).status, 400);
+  assert.equal((await call("pmic-macro-signals", "POST", "/v1/tools/address", { address: "x" })).status, 404, "tools only on the crypto bundle");
 });
 
 test("inputs the hub has never collected are pending, not missing", () => {

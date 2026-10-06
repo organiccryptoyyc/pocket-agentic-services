@@ -12,6 +12,27 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Crypto service built (2026-10-06): pmic-crypto-signals 0.1.0, not registered yet
+
+- Owner's call: a full crypto service with no aggregator or exchange data. Sources:
+  - `chainrpc`: public chain state through Pocket Network's own public RPC endpoints
+    (`https://<chain>.api.pocket.network`, free, keyless, production use allowed). USDT and USDC
+    `totalSupply()` on Ethereum, Base, Arbitrum, Polygon, Avalanche and Optimism at the start of each
+    week (archive calls, so a year of history), Tron and Solana read weekly from now on (the public
+    endpoints answer "latest" only), Uniswap v3 `slot0()` prices for ETH and BTC at 00:00 UTC daily,
+    and `eth_feeHistory` base fees and block fullness for Ethereum, Base and Arbitrum. Native issuance
+    only, so bridged copies are not counted twice. Values already read are kept (kv), so after the
+    first pass (about 1,500 calls) each pass reads only new days and weeks.
+  - `cftc`: Commitments of Traders, Traders in Financial Futures, CME Bitcoin and Ether (public domain).
+  - `pokt`: the indexer query now also returns supplier stake, validators, validator stake and
+    gateways at the end of each week.
+- Verticals: stablecoin-supply, crypto-liquidity (rebuilt without DefiLlama), futures-positioning,
+  crypto-prices, network-fees, pokt-network-health, pokt-staking. Tools: `POST /v1/tools/address`
+  (EIP-55 with a built-in keccak-256, bech32/bech32m for Pocket, Cosmos and Bitcoin, base58check for
+  Bitcoin and Tron, Solana) and `POST /v1/tools/units` (exact, BigInt).
+- Held for a terms check: Snapshot governance and Pyth oracle feeds.
+- Registration (fee about 1,000 POKT) and adding it to the supplier wait for the owner's OK.
+
 ## DefiLlama removed (2026-10-06)
 
 - DefiLlama's terms forbid commercial use and republishing of its data without permission, so it

@@ -1,6 +1,7 @@
 // Pocket Network (Shannon) indexer, data.pocket.network GraphQL, no key. One request per run:
 // per complete week, the sum of estimated relays (the throughput figure PoktScan quotes) and of
-// claimed relays, plus the staked supplier and application counts on the last block of the week.
+// claimed relays, plus the staked supplier, application, validator and gateway counts and the
+// supplier and validator stake (POKT) on the last block of the week.
 "use strict";
 
 const { SchemaError, parseJson, completeWeeks, ymd } = require("./common");
@@ -8,13 +9,14 @@ const { SchemaError, parseJson, completeWeeks, ymd } = require("./common");
 const URL_GQL = "https://data.pocket.network/graphql";
 const CITE = "https://poktscan.com";
 const addDays = (d, n) => ymd(new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400000));
-const FIELD = { estimated_relays: "est", claimed_relays: "claimed", staked_suppliers: "suppliers", staked_apps: "apps" };
+const FIELD = { estimated_relays: "est", claimed_relays: "claimed", staked_suppliers: "suppliers", staked_apps: "apps", supplier_stake: "supplierStake", validators: "validators", validator_stake: "validatorStake", gateways: "gateways" };
+const pokt = (u) => (u === null || u === undefined ? null : Math.round(Number(u) / 1e6)); // upokt -> POKT
 
 function weeklyQuery(weeks) {
   const parts = weeks.map((w, i) => {
     const end = addDays(w, 7);
     return `w${i}: blocks(filter:{timestamp:{greaterThanOrEqualTo:"${w}T00:00:00",lessThan:"${end}T00:00:00"}}){ aggregates { sum { totalEstimatedRelays totalRelays } } } ` +
-      `l${i}: blocks(filter:{timestamp:{lessThan:"${end}T00:00:00"}}, orderBy: ID_DESC, first: 1){ nodes { stakedSuppliers stakedApps } }`;
+      `l${i}: blocks(filter:{timestamp:{lessThan:"${end}T00:00:00"}}, orderBy: ID_DESC, first: 1){ nodes { stakedSuppliers stakedApps stakedSuppliersTokens stakedValidators stakedValidatorsTokens stakedGateways } }`;
   });
   return `{ ${parts.join(" ")} }`;
 }
@@ -36,7 +38,7 @@ async function collect(series, ctx) {
         const sum = body.data[`w${k}`] && body.data[`w${k}`].aggregates && body.data[`w${k}`].aggregates.sum;
         const last = body.data[`l${k}`] && body.data[`l${k}`].nodes && body.data[`l${k}`].nodes[0];
         if (!sum || sum.totalEstimatedRelays === null) return;
-        rows.set(w, { est: Number(sum.totalEstimatedRelays), claimed: Number(sum.totalRelays), suppliers: last ? last.stakedSuppliers : null, apps: last ? last.stakedApps : null });
+        rows.set(w, { est: Number(sum.totalEstimatedRelays), claimed: Number(sum.totalRelays), suppliers: last ? last.stakedSuppliers : null, apps: last ? last.stakedApps : null, supplierStake: last ? pokt(last.stakedSuppliersTokens) : null, validators: last ? last.stakedValidators : null, validatorStake: last ? pokt(last.stakedValidatorsTokens) : null, gateways: last ? last.stakedGateways : null });
       });
     }
     for (const s of series) {

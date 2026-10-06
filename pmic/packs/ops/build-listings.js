@@ -49,6 +49,7 @@ function routesOf(b) {
   const r = ["POST /v1/verticals", "POST /v1/brief", "POST /v1/overview", "POST /v1/signals", "POST /v1/signal", "POST /v1/explain", "POST /v1/catalog"];
   if (b.events_scope) r.push("POST /v1/events");
   if ((b.extra_routes || []).includes("inflation_adjust")) r.push("POST /v1/inflation/adjust");
+  if ((b.extra_routes || []).includes("crypto_tools")) r.push("POST /v1/tools/address", "POST /v1/tools/units");
   return r;
 }
 
@@ -198,6 +199,10 @@ function openapi(b) {
     "/v1/health": { get: { summary: "Readiness.", responses: { 200: ok("Object") } } },
   };
   if (b.events_scope) paths["/v1/events"] = { post: { summary: "Dated events with source links.", requestBody: body({ ...E, event_type: { type: "string" }, severity: { type: "string", enum: ["low", "medium", "high"] }, since: { type: "string", format: "date" }, limit: { type: "integer" } }), responses: { 200: ok("Object"), 400: err } } };
+  if ((b.extra_routes || []).includes("crypto_tools")) {
+    paths["/v1/tools/address"] = { post: { summary: "Check an address: EVM (EIP-55 checksum), Pocket/Cosmos/Bitcoin bech32, Bitcoin and Tron base58check, Solana. No network calls.", requestBody: body({ address: { type: "string" } }, ["address"]), responses: { 200: ok("Object"), 400: err } } };
+    paths["/v1/tools/units"] = { post: { summary: "Convert units of one asset exactly (wei/gwei/eth, sat/btc, lamport/sol, upokt/pokt, sun/trx), or any token with 'decimals' between 'raw' and 'token'.", requestBody: body({ amount: { type: "string" }, from: { type: "string" }, to: { type: "string" }, decimals: { type: "integer" } }, ["amount", "from", "to"]), responses: { 200: ok("Object"), 400: err } } };
+  }
   if ((b.extra_routes || []).includes("inflation_adjust")) paths["/v1/inflation/adjust"] = { post: { summary: "What an amount is worth in another month, by US CPI (months the hub holds).", requestBody: body({ amount: { type: "number" }, from: { type: "string", pattern: "^\\d{4}-\\d{2}$" }, to: { type: "string", pattern: "^\\d{4}-\\d{2}$" } }, ["amount", "from"]), responses: { 200: ok("Object"), 400: err } } };
   return {
     openapi: "3.0.3",

@@ -46,7 +46,7 @@ function batch4(u, init, now, json) {
       const end = Date.parse(m[4] + "Z");
       const wk = Math.round((t - end) / (7 * DAY));
       if (m[1] === "w") data[`w${k}`] = { aggregates: { sum: { totalEstimatedRelays: String(Math.round(1e10 * (1 + 0.1 * Math.sin(wk / 4)))), totalRelays: String(Math.round(9e6 * (1 + 0.1 * Math.cos(wk / 4)))) } } };
-      else data[`l${k}`] = { nodes: [{ stakedSuppliers: 4400 + (wk % 50), stakedApps: 30 + (wk % 5) }] };
+      else data[`l${k}`] = { nodes: [{ stakedSuppliers: 4400 + (wk % 50), stakedApps: 30 + (wk % 5), stakedSuppliersTokens: String((267e6 + wk * 1e5) * 1e6), stakedValidators: 22 + (wk % 3), stakedValidatorsTokens: String((104e6 - wk * 2e4) * 1e6), stakedGateways: 8 + (wk % 2) }] };
     }
     return json({ data });
   }

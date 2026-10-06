@@ -51,6 +51,8 @@ const ADAPTERS = {
   echo: require("./adapters/echo"),
   irs990: require("./adapters/irs990"),
   sec13f: require("./adapters/sec13f"),
+  chainrpc: require("./adapters/chainrpc"),
+  cftc: require("./adapters/cftc"),
 };
 
 const DAY = 86400000;

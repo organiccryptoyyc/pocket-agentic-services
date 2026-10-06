@@ -1,0 +1,83 @@
+{
+  "serviceId": "pmic-crypto-signals",
+  "displayName": "PMIC Crypto Signals",
+  "description": "Scored crypto briefs from public chain state read through Pocket Network's own RPC endpoints, the Pocket chain and CFTC data: USDT and USDC supply by chain, crypto liquidity, CME bitcoin and ether futures positioning, on-chain ETH and BTC prices, Ethereum and L2 fees, Pocket Network health and staking. Plus address checks and unit conversion. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and a citation for every input. Not investment advice. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
+  "category": "crypto",
+  "protocols": [
+    "rest"
+  ],
+  "inputSchema": {
+    "type": "object",
+    "description": "Body for POST /v1/brief (other routes take similar small bodies).",
+    "properties": {
+      "vertical": {
+        "type": "string",
+        "enum": [
+          "stablecoin-supply",
+          "crypto-liquidity",
+          "futures-positioning",
+          "crypto-prices",
+          "network-fees",
+          "pokt-network-health",
+          "pokt-staking"
+        ],
+        "description": "Which brief. POST /v1/verticals describes each."
+      },
+      "horizon": {
+        "type": "string",
+        "enum": [
+          "7d",
+          "30d",
+          "90d",
+          "365d"
+        ],
+        "description": "Comparison window; default 30d."
+      }
+    },
+    "required": [
+      "vertical"
+    ]
+  },
+  "outputSchema": {
+    "type": "object",
+    "description": "{service, vertical, title, status, score (0-100), label, trend, trend_basis, summary, drivers[], risk_flags[], confidence{score,label}, coverage, inputs[], watch[], citations[{url}], method}. Errors return a JSON object with an error field (HTTP 400)."
+  },
+  "methods": {
+    "GET /v1/health": "read",
+    "GET /v1/version": "read",
+    "POST /v1/verticals": "read",
+    "POST /v1/brief": "read",
+    "POST /v1/overview": "read",
+    "POST /v1/signals": "read",
+    "POST /v1/signal": "read",
+    "POST /v1/explain": "read",
+    "POST /v1/catalog": "read",
+    "POST /v1/tools/address": "read",
+    "POST /v1/tools/units": "read"
+  },
+  "example": {
+    "method": "POST",
+    "path": "/v1/brief",
+    "request": {
+      "vertical": "stablecoin-supply"
+    },
+    "responseSummary": {
+      "service": "pmic-crypto-signals",
+      "note": "Fill from a live MainNet capture."
+    }
+  },
+  "pocket": {
+    "network": "mainnet",
+    "serviceId": "pmic-crypto-signals",
+    "computeUnitsPerRelay": 100000,
+    "supplierOperator": "pokt1a0e9xlhmrpsw44upzmxqj7ct6eh7enqr7tzysx",
+    "supplierEndpoint": "https://agentic.organiccryptoyyc.com",
+    "owner": "pokt16cqt2tjzec6gsxdncl0v6k2aa7awya0wghevlw",
+    "registrationTx": "{{REGISTRATION_TX}}",
+    "healthChecks": [
+      "GET /v1/version contains \"service\":\"pmic-crypto-signals\"",
+      "GET /v1/health contains \"status\":\"ok\"",
+      "POST /v1/verticals {} contains \"service\":\"pmic-crypto-signals\""
+    ]
+  }
+}

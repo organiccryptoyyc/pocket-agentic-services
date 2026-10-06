@@ -1,0 +1,80 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "Scored crypto briefs from public chain state read through Pocket Network's own RPC endpoints, the Pocket chain and CFTC data: USDT and USDC supply by chain, crypto liquidity, CME bitcoin and ether futures positioning, on-chain ETH and BTC prices, Ethereum and L2 fees, Pocket Network health and staking. Plus address checks and unit conversion. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and a citation for every input. Not investment advice. POST /v1/brief {vertical} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: stablecoin-supply (Is the supply of USDT and USDC growing or shrinking, and on which chains?); crypto-liquidity (Is fresh money flowing into crypto or draining out?); futures-positioning (Are institutions positioned long or short in bitcoin and ether futures?); crypto-prices (Where are ETH and BTC trading against their recent range?); network-fees (Is it cheap or expensive to transact on Ethereum and its L2s right now?); pokt-network-health (Is Pocket Network usage and participation growing?); pokt-staking (Is more POKT being staked to run the network?). Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog. Every response is a single JSON object. Research signal, not investment advice.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "pmic-crypto-signals-backend on :8080; mount at /",
+      "notes": "POST /v1/verticals, POST /v1/brief, POST /v1/overview, POST /v1/signals, POST /v1/signal, POST /v1/explain, POST /v1/catalog, POST /v1/tools/address, POST /v1/tools/units; GET /v1/version, /v1/health. JSON body only. Bad input returns 400 + JSON."
+    }
+  ],
+  "apis": [
+    "pmic-crypto-signals-briefs"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "pmic-crypto-signals-briefs",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs/ops/pmic-crypto-signals/openapi.json"
+    },
+    {
+      "kind": "docs",
+      "api": "pmic-crypto-signals-briefs",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs/README.md",
+      "notes": "How briefs are scored."
+    }
+  ],
+  "access": "public",
+  "results": "variable",
+  "serving": {
+    "backend": "Node.js HTTP server (zero npm dependencies) behind a RelayMiner at http://<container>:8080. No caller auth. Answers come from a private hub refreshed by a scheduled collector of official public data; 5-minute cache.",
+    "implementations": [
+      "pmic-crypto-signals >= 0.1"
+    ],
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/version",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.service",
+          "matches": "^pmic-crypto-signals$"
+        },
+        "notes": "Identity probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/health",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.status",
+          "matches": "^ok$"
+        },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/verticals",
+          "method": "POST",
+          "body": {}
+        },
+        "expect": {
+          "json_path": "$.service",
+          "matches": "^pmic-crypto-signals$"
+        },
+        "notes": "Functional probe."
+      }
+    ],
+    "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/pmic/packs/README.md",
+  "updated": "2026-10-06"
+}

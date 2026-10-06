@@ -8,6 +8,7 @@
 const { batch2 } = require("./stub-batch2");
 const { batch3 } = require("./stub-batch3");
 const { batch4 } = require("./stub-batch4");
+const { crypto } = require("./stub-crypto");
 
 const DAY = 86400000;
 
@@ -291,6 +292,8 @@ function makeFetch(catalog, opts = {}) {
     if (b3) return b3;
     const b4 = batch4(u, init, now, json);
     if (b4) return b4;
+    const c = crypto(u, init, now, json);
+    if (c) return c;
     return { status: 404, ok: false, text: `stub has no route for ${url}` };
   }
   fetchImpl.calls = calls;

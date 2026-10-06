@@ -12,6 +12,7 @@
 //   POST /v1/catalog   {entity_id?, q?, ...}
 //   POST /v1/events    {entity_id?, event_type?, severity?, since?, limit?}   (company and pharma bundles)
 //   POST /v1/inflation/adjust {amount, from: "YYYY-MM", to?: "YYYY-MM"}     (macro bundle)
+//   POST /v1/tools/address {address}; POST /v1/tools/units {amount, from, to}  (crypto bundle)
 //   GET  /v1/version, /v1/health, /healthz
 //   GET  /v1/selftest                                       every vertical end to end; 200 only if all pass
 "use strict";
@@ -325,6 +326,7 @@ function verticalList() {
       inputs: v.members ? v.members.map((m) => m.series_id) : v.metrics ? v.metrics.map((m) => (typeof m === "string" ? m : m.metric)) : null,
     })),
     ...(PACK.extra_routes || []).includes("inflation_adjust") ? { extra_routes: ["POST /v1/inflation/adjust {amount, from: \"YYYY-MM\", to?}"] } : {},
+    ...(PACK.extra_routes || []).includes("crypto_tools") ? { extra_routes: ["POST /v1/tools/address {address}", "POST /v1/tools/units {amount, from, to, decimals?}"] } : {},
   };
 }
 
@@ -364,6 +366,17 @@ if (PACK.events_scope) {
   });
 }
 if ((PACK.extra_routes || []).includes("inflation_adjust")) routes.set("POST /v1/inflation/adjust", async (raw) => wrap(await inflationAdjust(obj(raw))));
+if ((PACK.extra_routes || []).includes("crypto_tools")) {
+  // Deterministic utilities: no hub, no network. Bad input is a 400 with the reason.
+  const T = require("./lib/cryptotools");
+  const tool = (fn) => async (raw) => {
+    const r = fn(obj(raw));
+    if (r.error) throw new ClientError(400, "invalid_input", r.error);
+    return wrap(r);
+  };
+  routes.set("POST /v1/tools/address", tool(T.addressCheck));
+  routes.set("POST /v1/tools/units", tool(T.unitConvert));
+}
 
 // Every vertical end to end through the hub. 200 only if each one answers status ok with a score,
 // so a deploy probed at /v1/selftest proves the service on the server without a shell there.

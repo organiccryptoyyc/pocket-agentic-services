@@ -495,6 +495,30 @@
       "key_env": "PMIC_SEC_USER_AGENT",
       "required_key": true,
       "notes": "Public domain; SEC fair access needs the User-Agent in PMIC_SEC_USER_AGENT. One zip per filing window (about 85 MB); each window is read once, streamed for the 14 companies' CUSIPs, and not kept. Weekly check for a new window."
+    },
+    {
+      "source_id": "chainrpc",
+      "name": "Pocket Network public RPC (on-chain reads)",
+      "homepage": "https://api.pocket.network/",
+      "terms_url": "https://api.pocket.network/",
+      "tier": 1,
+      "reliability_score": 90,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Free, keyless public RPC endpoints run by the Pocket Network Foundation (fair use, production allowed). Public chain state only: stablecoin token supply (totalSupply / getTokenSupply), Uniswap v3 pool prices (slot0) and fee history. Values already read are kept between passes, so each pass reads only new days and weeks."
+    },
+    {
+      "source_id": "cftc",
+      "name": "CFTC Commitments of Traders (public reporting API)",
+      "homepage": "https://publicreporting.cftc.gov/",
+      "terms_url": "https://www.cftc.gov/Disclaimers/index.htm",
+      "tier": 1,
+      "reliability_score": 95,
+      "cadence_minutes": 1440,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public domain, no key. Traders in Financial Futures (futures only), weekly, for CME Bitcoin (133741) and Ether (146021) futures."
     }
   ]
 }

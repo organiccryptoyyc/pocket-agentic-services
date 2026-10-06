@@ -1,0 +1,120 @@
+{
+  "_comment": "Crypto verticals from public chain state read through Pocket Network's own public RPC endpoints (token supply, Uniswap pool prices, fee history), the Pocket chain indexer, and CFTC Commitments of Traders (public domain). No exchange, aggregator or price-vendor data: their terms do not allow resale (DefiLlama was removed on 2026-10-06 for that reason).",
+  "service_id": "pmic-crypto-signals",
+  "display_name": "PMIC Crypto Signals",
+  "version": "0.1.0",
+  "category": "crypto",
+  "description": "Scored crypto briefs from public chain state read through Pocket Network's own RPC endpoints, the Pocket chain and CFTC data: USDT and USDC supply by chain, crypto liquidity, CME bitcoin and ether futures positioning, on-chain ETH and BTC prices, Ethereum and L2 fees, Pocket Network health and staking. Plus address checks and unit conversion. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and a citation for every input. Not investment advice.",
+  "default_horizon": "30d",
+  "cache_seconds": 300,
+  "hub_scope": [{"source_id": "chainrpc"}, {"source_id": "cftc"}, {"source_id": "pokt"}],
+  "extra_routes": ["crypto_tools"],
+  "verticals": [
+    {
+      "id": "stablecoin-supply",
+      "title": "Stablecoin supply",
+      "question": "Is the supply of USDT and USDC growing or shrinking, and on which chains?",
+      "kind": "composite",
+      "note": "Higher score means more stablecoins outstanding than usual: USDT and USDC supply read from the token contracts at the start of each week (native issuance only, so bridged copies are not counted twice), against the trailing year. The 8-chain total includes Tron and Solana, read weekly from the first pass of each week; the 6-chain EVM total has a full year of history. Per-chain supply is under /v1/signals.",
+      "labels": {"high": "expanding", "mid": "steady", "low": "contracting"},
+      "trend_words": {"up": "growing", "down": "shrinking"},
+      "members": [
+        {"series_id": "chainrpc:stablecoins_evm_total", "weight": 2},
+        {"series_id": "chainrpc:stablecoins_total", "weight": 2},
+        {"series_id": "chainrpc:usdt_supply:eth"},
+        {"series_id": "chainrpc:usdc_supply:eth"},
+        {"series_id": "chainrpc:usdc_supply:base"},
+        {"series_id": "chainrpc:usdc_supply:arb-one"},
+        {"series_id": "chainrpc:usdt_supply:tron"},
+        {"series_id": "chainrpc:usdc_supply:solana"}
+      ]
+    },
+    {
+      "id": "crypto-liquidity",
+      "title": "Crypto liquidity",
+      "question": "Is fresh money flowing into crypto or draining out?",
+      "kind": "composite",
+      "note": "Higher score means more liquidity than usual: stablecoin supply (dry powder on chain) and open interest in CME bitcoin and ether futures (institutional money), against the trailing year. Not investment advice.",
+      "labels": {"high": "abundant", "mid": "normal", "low": "draining"},
+      "trend_words": {"up": "rising", "down": "falling"},
+      "members": [
+        {"series_id": "chainrpc:stablecoins_evm_total", "weight": 2},
+        {"series_id": "chainrpc:stablecoins_total"},
+        {"series_id": "cftc:btc:open_interest"},
+        {"series_id": "cftc:eth:open_interest"}
+      ]
+    },
+    {
+      "id": "futures-positioning",
+      "title": "CME crypto futures positioning",
+      "question": "Are institutions positioned long or short in bitcoin and ether futures?",
+      "kind": "composite",
+      "note": "Higher score means asset managers are more net long than usual in CME bitcoin and ether futures, and open interest is higher, against their history (CFTC Commitments of Traders, weekly as of Tuesday). Leveraged funds' net position is a watch item: they often hold the short side of basis trades, so it is reported for how unusual it is. Not investment advice.",
+      "labels": {"high": "risk-on", "mid": "neutral", "low": "risk-off"},
+      "trend_words": {"up": "adding", "down": "cutting"},
+      "members": [
+        {"series_id": "cftc:btc:asset_mgr_net", "weight": 2},
+        {"series_id": "cftc:eth:asset_mgr_net"},
+        {"series_id": "cftc:btc:open_interest"},
+        {"series_id": "cftc:eth:open_interest"},
+        {"series_id": "cftc:btc:lev_money_net"},
+        {"series_id": "cftc:eth:lev_money_net"}
+      ]
+    },
+    {
+      "id": "crypto-prices",
+      "title": "ETH and BTC on-chain prices",
+      "question": "Where are ETH and BTC trading against their recent range?",
+      "kind": "composite",
+      "note": "Higher score means prices are high in their recent range: ETH and BTC in USDC from the deepest Uniswap v3 pools on Ethereum, read on chain at 00:00 UTC each day, against the trailing history (about four months at launch, growing daily). A spot read, not an exchange average. Not investment advice.",
+      "labels": {"high": "strong", "mid": "neutral", "low": "weak"},
+      "trend_words": {"up": "rising", "down": "falling"},
+      "members": [{"series_id": "chainrpc:btc_usd", "weight": 2}, {"series_id": "chainrpc:eth_usd", "weight": 2}]
+    },
+    {
+      "id": "network-fees",
+      "title": "Ethereum and L2 fees",
+      "question": "Is it cheap or expensive to transact on Ethereum and its L2s right now?",
+      "kind": "composite",
+      "note": "Higher score means cheaper than usual: the median base fee (gwei) over the 256 blocks before 00:00 UTC each day on Ethereum, Base and Arbitrum, against the trailing 90 days. How full Ethereum blocks are is a watch item. Base fee only; priority tips come on top.",
+      "labels": {"high": "cheap", "mid": "normal", "low": "expensive"},
+      "trend_words": {"up": "cheaper", "down": "pricier"},
+      "members": [
+        {"series_id": "chainrpc:base_fee:eth", "weight": 2},
+        {"series_id": "chainrpc:base_fee:base"},
+        {"series_id": "chainrpc:base_fee:arb-one"},
+        {"series_id": "chainrpc:block_fullness:eth"}
+      ]
+    },
+    {
+      "id": "pokt-network-health",
+      "title": "Pocket Network health",
+      "question": "Is Pocket Network usage and participation growing?",
+      "kind": "composite",
+      "note": "Higher score means a healthier network than usual: weekly estimated relays served and the number of staked suppliers and applications at the end of each week, against the trailing year (Pocket Network indexer, data.pocket.network). Claimed relays (the relays settled on chain) is a watch item.",
+      "labels": {"high": "growing", "mid": "steady", "low": "contracting"},
+      "trend_words": {"up": "strengthening", "down": "weakening"},
+      "members": [
+        {"series_id": "pokt:estimated_relays_weekly", "weight": 2},
+        {"series_id": "pokt:staked_suppliers"},
+        {"series_id": "pokt:staked_apps"},
+        {"series_id": "pokt:claimed_relays_weekly"}
+      ]
+    },
+    {
+      "id": "pokt-staking",
+      "title": "Pocket Network staking",
+      "question": "Is more POKT being staked to run the network?",
+      "kind": "composite",
+      "note": "Higher score means more stake than usual: POKT staked by suppliers and bonded to validators, and the number of active validators and staked gateways at the end of each week, against the trailing year (Pocket Network indexer).",
+      "labels": {"high": "growing", "mid": "steady", "low": "shrinking"},
+      "trend_words": {"up": "rising", "down": "falling"},
+      "members": [
+        {"series_id": "pokt:supplier_stake", "weight": 2},
+        {"series_id": "pokt:validator_stake", "weight": 2},
+        {"series_id": "pokt:validators"},
+        {"series_id": "pokt:gateways"}
+      ]
+    }
+  ]
+}
