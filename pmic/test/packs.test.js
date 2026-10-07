@@ -385,7 +385,7 @@ function schemaErrors(schema, v, at = "$") {
   return errs;
 }
 
-test("every brief, for every company, matches the declared Brief schema strictly", async () => {
+test("every brief, for every company and horizon, matches the declared Brief schema strictly", async () => {
   for (const b of BUNDLES) {
     const spec = require(`../packs/ops/${b}/openapi.json`);
     const brief = spec.components.schemas.Brief;
@@ -393,9 +393,11 @@ test("every brief, for every company, matches the declared Brief schema strictly
     for (const v of bundle.verticals) {
       const entities = ["entity_composite", "entity_events", "peer_table"].includes(v.kind) ? bundle.entities : [null];
       for (const e of entities) {
-        const r = await call(b, "POST", "/v1/brief", { vertical: v.id, ...(e ? { entity_id: e } : {}) });
-        assert.equal(r.status, 200);
-        assert.deepEqual(schemaErrors(brief, r.json), [], `${b} ${v.id} ${e || ""}`);
+        for (const horizon of ["7d", "30d", "90d", "365d"]) {
+          const r = await call(b, "POST", "/v1/brief", { vertical: v.id, horizon, ...(e ? { entity_id: e } : {}) });
+          assert.equal(r.status, 200);
+          assert.deepEqual(schemaErrors(brief, r.json), [], `${b} ${v.id} ${e || ""} ${horizon}`);
+        }
       }
     }
   }
