@@ -12,6 +12,21 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Typed score, label and trend_basis (2026-10-07)
+
+PNF rebuilt the gateway outputSchema for company, pharma and macro from `portal-descriptor.json` (minus its
+top-level `required`, since the same schema also checks health and version answers); all three passed 10 of 10
+paid calls. Their follow-up: `score`, `label` and `trend_basis` were untyped, so a non-null value of the wrong
+type would also pass. Now:
+
+- `score`: `["integer", "null"]`, minimum 0, maximum 100. `label` and `trend_basis`: `["string", "null"]`.
+- `portal-descriptor.json` keeps JSON Schema type lists (what PNF validates). `openapi.json` is OpenAPI 3.0.3,
+  which has no type lists, so it gets `{type, nullable: true}` (`oas30()` in `build-listings.js`).
+- Every code path already emits whole-number scores (`Math.round`, or 100 minus whole-number filing penalties),
+  so live answers are unchanged; the strict test checks every brief, company and horizon against both schemas.
+- New test: wrong types (`"59"`, `59.5`, `101`, `-1`, a numeric label, a boolean trend_basis) are rejected.
+- Cards are unchanged (no on-chain update). PNF re-reads `portal-descriptor.json` for the five packs.
+
 ## Portal response schema (2026-10-07)
 
 - PNF's portal returned 502 UPSTREAM_ERROR on 10/10 company and pharma test calls after it added

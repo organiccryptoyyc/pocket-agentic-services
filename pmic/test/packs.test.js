@@ -375,8 +375,10 @@ test("crypto bundle: every vertical scores; tools answer; no third-party price d
 // "nullable" is ignored on purpose, as plain JSON Schema validators in gateways ignore it.
 function schemaErrors(schema, v, at = "$") {
   const errs = [];
-  const typeOk = (t) => (t === "integer" ? Number.isInteger(v) : t === "number" ? typeof v === "number" : t === "array" ? Array.isArray(v) : t === "object" ? v !== null && typeof v === "object" && !Array.isArray(v) : typeof v === t);
-  if (schema.type && !typeOk(schema.type)) return [`${at}: ${JSON.stringify(v)} is not ${schema.type}`];
+  if (schema.nullable && v === null) return errs; // OpenAPI 3.0 nullable
+  const typeOk = (t) => (t === "null" ? v === null : t === "integer" ? Number.isInteger(v) : t === "number" ? typeof v === "number" : t === "array" ? Array.isArray(v) : t === "object" ? v !== null && typeof v === "object" && !Array.isArray(v) : typeof v === t);
+  // A type list (["integer", "null"]) passes if any member matches, as in JSON Schema.
+  if (schema.type && !(Array.isArray(schema.type) ? schema.type.some(typeOk) : typeOk(schema.type))) return [`${at}: ${JSON.stringify(v)} is not ${[].concat(schema.type).join(" or ")}`];
   if (schema.enum && !schema.enum.includes(v)) errs.push(`${at}: ${JSON.stringify(v)} not in enum`);
   if (schema.minimum !== undefined && v < schema.minimum) errs.push(`${at}: below minimum`);
   if (schema.maximum !== undefined && v > schema.maximum) errs.push(`${at}: above maximum`);
@@ -385,6 +387,21 @@ function schemaErrors(schema, v, at = "$") {
   if (schema.items && Array.isArray(v)) v.forEach((x, i) => errs.push(...schemaErrors(schema.items, x, `${at}[${i}]`)));
   return errs;
 }
+
+test("the published Brief schemas reject a non-null score, label or trend_basis of the wrong type (PNF, 2026-10-07)", () => {
+  for (const b of BUNDLES) {
+    const portal = require(`../packs/ops/${b}/portal-descriptor.json`).outputSchema;
+    const brief = require(`../packs/ops/${b}/openapi.json`).components.schemas.Brief;
+    const good = require(`../packs/ops/${b}/portal-descriptor.json`).example.responseSummary;
+    for (const schema of [portal, brief]) {
+      assert.deepEqual(schemaErrors(schema, good), [], `${b}: the example must pass`);
+      assert.deepEqual(schemaErrors(schema, { ...good, score: null, label: null, trend_basis: null }), [], `${b}: nulls must pass`);
+      for (const bad of [{ score: "59" }, { score: 59.5 }, { score: 101 }, { score: -1 }, { label: 5 }, { trend_basis: true }]) {
+        assert.notDeepEqual(schemaErrors(schema, { ...good, ...bad }), [], `${b}: ${JSON.stringify(bad)} must fail`);
+      }
+    }
+  }
+});
 
 test("every brief, for every company and horizon, matches the declared Brief schema strictly", async () => {
   for (const b of BUNDLES) {

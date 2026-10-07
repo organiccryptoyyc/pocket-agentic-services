@@ -44,8 +44,9 @@ const BRIEF = {
     service: { type: "string" }, pack_version: { type: "string" }, vertical: { type: "string" }, title: { type: "string" }, question: { type: "string" },
     entity: { description: "The company ({entity_id, name, ...}) on company briefs; absent otherwise." },
     horizon: { type: "string" }, status: { type: "string", enum: ["ok", "insufficient_data"] },
-    score: { description: "Integer 0-100, or null when status is insufficient_data." }, label: { description: "The vertical's label for the score, or null with no score." }, trend: { type: "string" },
-    trend_basis: { description: "score_history, input_trends, or null when there is no trend." }, summary: { type: "string" },
+    score: { type: ["integer", "null"], minimum: 0, maximum: 100, description: "Integer 0-100, or null when status is insufficient_data." },
+    label: { type: ["string", "null"], description: "The vertical's label for the score, or null with no score." }, trend: { type: "string" },
+    trend_basis: { type: ["string", "null"], description: "score_history, input_trends, or null when there is no trend." }, summary: { type: "string" },
     drivers: { type: "array", items: { type: "object" } }, risk_flags: { type: "array", items: { type: "string" } },
     confidence: { type: "object", properties: { score: { type: "integer" }, label: { type: "string" } } },
     inputs: { type: "array", items: { type: "object" } }, watch: { type: "array", items: { type: "object" } },
@@ -210,6 +211,21 @@ gateway_config:
 `;
 }
 
+// OpenAPI 3.0.3 has no type lists: ["integer", "null"] becomes {type: "integer", nullable: true}.
+// The portal descriptor keeps plain JSON Schema type lists (what PNF validates against).
+function oas30(schema) {
+  if (Array.isArray(schema)) return schema.map(oas30);
+  if (!schema || typeof schema !== "object") return schema;
+  const out = {};
+  for (const [k, v] of Object.entries(schema)) out[k] = k === "type" ? v : oas30(v);
+  if (Array.isArray(schema.type)) {
+    const types = schema.type.filter((t) => t !== "null");
+    out.type = types.length === 1 ? types[0] : types;
+    if (schema.type.includes("null")) out.nullable = true;
+  }
+  return out;
+}
+
 function openapi(b) {
   const err = { description: "Bad input: JSON object with error {code, message}.", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } };
   const ok = (ref) => ({ description: "OK", content: { "application/json": { schema: { $ref: `#/components/schemas/${ref}` } } } });
@@ -242,7 +258,7 @@ function openapi(b) {
       schemas: {
         Object: { type: "object" },
         Error: { type: "object", properties: { error: { type: "object", properties: { code: { type: "string" }, message: { type: "string" } } } } },
-        Brief: BRIEF,
+        Brief: oas30(BRIEF),
       },
     },
   };
