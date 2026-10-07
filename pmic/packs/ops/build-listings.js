@@ -17,20 +17,42 @@ const REGISTRATION_TX = {
   "pmic-crypto-signals": "689195FDE0976ECDCDAAC0A81D86BD586F07621339851790F5EF12B81AF4745D"
 };
 
-// Live MainNet relay captures (2026-10-04, pack 0.2.0) used as each listing's example.
+// Example requests from live MainNet relays, and the shape of the answer as it really comes back
+// (trimmed to a few fields, but every field keeps its real type). Gateways may derive a response
+// schema from this example, so a summary that turns an object into a string breaks real answers.
 const SAMPLES = {
   "pmic-macro-signals": {
     request: { vertical: "inflation" },
-    response: { service: "pmic-macro-signals", vertical: "inflation", status: "ok", score: 59, label: "steady", trend: "steady", previous_score: 56, inputs: 6, confidence: 93, risk_flags: ["mixed_signals", "extreme_level"], strongest_input: "Core CPI +2.45% y/y, low for its history (scored 94)", weakest_input: "Import prices +6.95% y/y, top of range (scored 0)", citations: "FRED and BLS link per input" },
+    response: { service: "pmic-macro-signals", vertical: "inflation", title: "Inflation pressure", status: "ok", score: 59, label: "steady", trend: "steady", trend_basis: "score_history", summary: "Inflation pressure: 59/100, steady.", drivers: [{ series_id: "fred:CPILFESL", label: "Core CPI", score: 94 }], risk_flags: ["mixed_signals", "extreme_level"], confidence: { score: 93, label: "high" }, inputs: [], watch: [], citations: [{ label: "Core CPI", url: "https://fred.stlouisfed.org/series/CPILFESL" }] },
   },
   "pmic-company-signals": {
     request: { vertical: "filing-risk", entity_id: "nvda" },
-    response: { service: "pmic-company-signals", vertical: "filing-risk", entity: "NVIDIA", status: "ok", score: 45, label: "active", horizon: "365d", high_severity_8k: 0, medium_severity_8k: 6, other_8k: 7, watch: "insider Form 4 unusualness 64", citations: "SEC EDGAR link per filing" },
+    response: { service: "pmic-company-signals", vertical: "filing-risk", title: "Filing risk", entity: { entity_id: "nvda", name: "NVIDIA" }, horizon: "365d", status: "ok", score: 45, label: "active", summary: "Filing risk for NVIDIA: 45/100, active.", counts: { high: 0, medium: 6, other_8k: 7 }, drivers: [], risk_flags: [], confidence: { score: 90, label: "high" }, watch: [], citations: [{ label: "8-K", url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001045810&type=8-K" }] },
   },
   "pmic-pharma-signals": {
     request: { vertical: "company-safety", entity_id: "lly", horizon: "365d" },
-    response: { service: "pmic-pharma-signals", vertical: "company-safety", entity: "Eli Lilly and Co.", status: "ok", score: 52, label: "normal", inputs: ["drug recalls naming Eli Lilly", "FAERS adverse event reports (scored 30)", "original FDA approvals (scored 98, ONSWIK BLA761408 approved 2026-09-23)"], watch: ["label updates"], recent_events: "FDA approvals and SEC filings with source links", citations: "openFDA link per input" },
+    response: { service: "pmic-pharma-signals", vertical: "company-safety", title: "Company drug safety", entity: { entity_id: "lly", name: "Eli Lilly and Co." }, horizon: "365d", status: "ok", score: 52, label: "normal", trend: "steady", trend_basis: "input_trends", summary: "Company drug safety for Eli Lilly and Co.: 52/100, normal.", drivers: [], risk_flags: [], confidence: { score: 88, label: "high" }, inputs: [], watch: [], recent_events: [], citations: [{ label: "FAERS adverse event reports", url: "https://api.fda.gov/drug/event.json" }] },
   },
+};
+
+// The answer to POST /v1/brief, as JSON Schema both the openapi spec and the portal descriptor carry.
+// Fields that can be null carry no type: OpenAPI 3.0's "nullable" is ignored by plain JSON Schema
+// validators (a gateway refused an insufficient_data brief with score null for it).
+const BRIEF = {
+  type: "object",
+  properties: {
+    service: { type: "string" }, pack_version: { type: "string" }, vertical: { type: "string" }, title: { type: "string" }, question: { type: "string" },
+    entity: { description: "The company ({entity_id, name, ...}) on company briefs; absent otherwise." },
+    horizon: { type: "string" }, status: { type: "string", enum: ["ok", "insufficient_data"] },
+    score: { description: "Integer 0-100, or null when status is insufficient_data." }, label: { description: "The vertical's label for the score, or null with no score." }, trend: { type: "string" },
+    trend_basis: { description: "score_history, input_trends, or null when there is no trend." }, summary: { type: "string" },
+    drivers: { type: "array", items: { type: "object" } }, risk_flags: { type: "array", items: { type: "string" } },
+    confidence: { type: "object", properties: { score: { type: "integer" }, label: { type: "string" } } },
+    inputs: { type: "array", items: { type: "object" } }, watch: { type: "array", items: { type: "object" } },
+    recent_events: { type: "array", items: { type: "object" } },
+    citations: { type: "array", items: { type: "object", properties: { url: { type: "string" }, label: { type: "string" } } } },
+  },
+  required: ["service", "vertical", "status", "summary"],
 };
 
 const fs = require("fs");
@@ -52,6 +74,12 @@ function routesOf(b) {
   if ((b.extra_routes || []).includes("inflation_adjust")) r.push("POST /v1/inflation/adjust");
   if ((b.extra_routes || []).includes("crypto_tools")) r.push("POST /v1/tools/address", "POST /v1/tools/units");
   return r;
+}
+
+// Without a live capture, an example that shows the answer's shape (types only, no invented numbers).
+function shapeOnly(b) {
+  const v = b.verticals[0];
+  return { service: b.service_id, vertical: v.id, title: v.title, status: "ok", summary: `${v.title}: score/100 and label, with the inputs that drive it.`, drivers: [], risk_flags: [], confidence: { score: 0, label: "low" }, inputs: [], watch: [], citations: [] };
 }
 
 function example(b) {
@@ -121,11 +149,11 @@ function portal(b) {
       required: ["vertical"],
     },
     outputSchema: {
-      type: "object",
-      description: "{service, vertical, title, status, score (0-100), label, trend, trend_basis, summary, drivers[], risk_flags[], confidence{score,label}, coverage, inputs[], watch[], citations[{url}], method}. Errors return a JSON object with an error field (HTTP 400).",
+      ...BRIEF,
+      description: "The answer to POST /v1/brief. score, label and trend_basis are null on insufficient_data briefs; entity is an object on company briefs. Errors return {error: {code, message}} with HTTP 400; other routes return their own JSON objects (see the openapi spec).",
     },
     methods,
-    example: { method: "POST", path: "/v1/brief", request: SAMPLES[b.service_id] ? SAMPLES[b.service_id].request : example(b), responseSummary: SAMPLES[b.service_id] ? SAMPLES[b.service_id].response : { service: b.service_id, note: "Fill from a live MainNet capture." } },
+    example: { method: "POST", path: "/v1/brief", request: SAMPLES[b.service_id] ? SAMPLES[b.service_id].request : example(b), responseSummary: SAMPLES[b.service_id] ? SAMPLES[b.service_id].response : shapeOnly(b) },
     pocket: {
       network: "mainnet",
       serviceId: b.service_id,
@@ -214,20 +242,7 @@ function openapi(b) {
       schemas: {
         Object: { type: "object" },
         Error: { type: "object", properties: { error: { type: "object", properties: { code: { type: "string" }, message: { type: "string" } } } } },
-        Brief: {
-          type: "object",
-          properties: {
-            service: { type: "string" }, vertical: { type: "string" }, title: { type: "string" }, status: { type: "string", enum: ["ok", "insufficient_data"] },
-            // Fields that can be null carry no type: OpenAPI 3.0's "nullable" is ignored by plain JSON
-            // Schema validators (a gateway refused an insufficient_data brief with score null for it).
-            score: { description: "Integer 0-100, or null when status is insufficient_data." }, label: { description: "The vertical's label for the score, or null with no score." }, trend: { type: "string" },
-            trend_basis: { description: "score_history, input_trends, or null when there is no trend." }, summary: { type: "string" },
-            drivers: { type: "array", items: { type: "object" } }, risk_flags: { type: "array", items: { type: "string" } },
-            confidence: { type: "object", properties: { score: { type: "integer" }, label: { type: "string" } } },
-            inputs: { type: "array", items: { type: "object" } }, watch: { type: "array", items: { type: "object" } },
-            citations: { type: "array", items: { type: "object", properties: { url: { type: "string" }, label: { type: "string" } } } },
-          },
-        },
+        Brief: BRIEF,
       },
     },
   };

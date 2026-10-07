@@ -380,6 +380,7 @@ function schemaErrors(schema, v, at = "$") {
   if (schema.enum && !schema.enum.includes(v)) errs.push(`${at}: ${JSON.stringify(v)} not in enum`);
   if (schema.minimum !== undefined && v < schema.minimum) errs.push(`${at}: below minimum`);
   if (schema.maximum !== undefined && v > schema.maximum) errs.push(`${at}: above maximum`);
+  if (schema.required && v && typeof v === "object") for (const k of schema.required) if (!(k in v)) errs.push(`${at}.${k}: missing`);
   if (schema.properties && v && typeof v === "object") for (const [k, s] of Object.entries(schema.properties)) if (k in v) errs.push(...schemaErrors(s, v[k], `${at}.${k}`));
   if (schema.items && Array.isArray(v)) v.forEach((x, i) => errs.push(...schemaErrors(schema.items, x, `${at}[${i}]`)));
   return errs;
@@ -389,6 +390,10 @@ test("every brief, for every company and horizon, matches the declared Brief sch
   for (const b of BUNDLES) {
     const spec = require(`../packs/ops/${b}/openapi.json`);
     const brief = spec.components.schemas.Brief;
+    const portal = require(`../packs/ops/${b}/portal-descriptor.json`);
+    // A gateway may derive its response schema from the listing's example, so the example must be
+    // a valid answer too (a string where the real answer has an object made every call fail).
+    assert.deepEqual(schemaErrors(portal.outputSchema, portal.example.responseSummary), [], `${b} example`);
     const bundle = require(`../packs/bundles/${b}.json`);
     for (const v of bundle.verticals) {
       const entities = ["entity_composite", "entity_events", "peer_table"].includes(v.kind) ? bundle.entities : [null];
@@ -397,6 +402,7 @@ test("every brief, for every company and horizon, matches the declared Brief sch
           const r = await call(b, "POST", "/v1/brief", { vertical: v.id, horizon, ...(e ? { entity_id: e } : {}) });
           assert.equal(r.status, 200);
           assert.deepEqual(schemaErrors(brief, r.json), [], `${b} ${v.id} ${e || ""} ${horizon}`);
+          assert.deepEqual(schemaErrors(portal.outputSchema, r.json), [], `portal ${b} ${v.id} ${e || ""} ${horizon}`);
         }
       }
     }

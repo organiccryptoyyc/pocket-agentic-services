@@ -12,6 +12,17 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Portal response schema (2026-10-07)
+
+- PNF's portal returned 502 UPSTREAM_ERROR on 10/10 company and pharma test calls after it added
+  response schemas for those two services (2026-10-06 11:25 UTC). Macro, with no portal schema yet, passed.
+- Likely cause: the portal descriptors' example `responseSummary` was a hand-condensed summary with the
+  wrong types (entity, watch, citations and recent_events as strings; inputs and confidence as numbers).
+  A schema built from it rejects every real answer.
+- Fix: the portal descriptor's `outputSchema` is now the full Brief JSON Schema (same as openapi.json,
+  no `nullable`), and every example keeps the real types. A test checks each example and every brief
+  against it. No card change and no redeploy; PNF needs to rebuild their schema from the new descriptor.
+
 ## Declared response schema fix (2026-10-06)
 
 - PNF forwarded a gateway alert: a `pmic-company-signals` response "failed its declared schema and

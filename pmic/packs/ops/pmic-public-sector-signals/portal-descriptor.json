@@ -47,7 +47,113 @@
   },
   "outputSchema": {
     "type": "object",
-    "description": "{service, vertical, title, status, score (0-100), label, trend, trend_basis, summary, drivers[], risk_flags[], confidence{score,label}, coverage, inputs[], watch[], citations[{url}], method}. Errors return a JSON object with an error field (HTTP 400)."
+    "properties": {
+      "service": {
+        "type": "string"
+      },
+      "pack_version": {
+        "type": "string"
+      },
+      "vertical": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "question": {
+        "type": "string"
+      },
+      "entity": {
+        "description": "The company ({entity_id, name, ...}) on company briefs; absent otherwise."
+      },
+      "horizon": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "insufficient_data"
+        ]
+      },
+      "score": {
+        "description": "Integer 0-100, or null when status is insufficient_data."
+      },
+      "label": {
+        "description": "The vertical's label for the score, or null with no score."
+      },
+      "trend": {
+        "type": "string"
+      },
+      "trend_basis": {
+        "description": "score_history, input_trends, or null when there is no trend."
+      },
+      "summary": {
+        "type": "string"
+      },
+      "drivers": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "risk_flags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "confidence": {
+        "type": "object",
+        "properties": {
+          "score": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "inputs": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "watch": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "recent_events": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "citations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "service",
+      "vertical",
+      "status",
+      "summary"
+    ],
+    "description": "The answer to POST /v1/brief. score, label and trend_basis are null on insufficient_data briefs; entity is an object on company briefs. Errors return {error: {code, message}} with HTTP 400; other routes return their own JSON objects (see the openapi spec)."
   },
   "methods": {
     "GET /v1/health": "read",
@@ -68,7 +174,19 @@
     },
     "responseSummary": {
       "service": "pmic-public-sector-signals",
-      "note": "Fill from a live MainNet capture."
+      "vertical": "product-recalls",
+      "title": "US product safety recalls",
+      "status": "ok",
+      "summary": "US product safety recalls: score/100 and label, with the inputs that drive it.",
+      "drivers": [],
+      "risk_flags": [],
+      "confidence": {
+        "score": 0,
+        "label": "low"
+      },
+      "inputs": [],
+      "watch": [],
+      "citations": []
     }
   },
   "pocket": {

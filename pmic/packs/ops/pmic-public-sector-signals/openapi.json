@@ -476,10 +476,22 @@
           "service": {
             "type": "string"
           },
+          "pack_version": {
+            "type": "string"
+          },
           "vertical": {
             "type": "string"
           },
           "title": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "entity": {
+            "description": "The company ({entity_id, name, ...}) on company briefs; absent otherwise."
+          },
+          "horizon": {
             "type": "string"
           },
           "status": {
@@ -539,6 +551,12 @@
               "type": "object"
             }
           },
+          "recent_events": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
           "citations": {
             "type": "array",
             "items": {
@@ -553,7 +571,13 @@
               }
             }
           }
-        }
+        },
+        "required": [
+          "service",
+          "vertical",
+          "status",
+          "summary"
+        ]
       }
     }
   }

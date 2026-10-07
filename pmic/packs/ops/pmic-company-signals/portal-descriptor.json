@@ -65,7 +65,113 @@
   },
   "outputSchema": {
     "type": "object",
-    "description": "{service, vertical, title, status, score (0-100), label, trend, trend_basis, summary, drivers[], risk_flags[], confidence{score,label}, coverage, inputs[], watch[], citations[{url}], method}. Errors return a JSON object with an error field (HTTP 400)."
+    "properties": {
+      "service": {
+        "type": "string"
+      },
+      "pack_version": {
+        "type": "string"
+      },
+      "vertical": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "question": {
+        "type": "string"
+      },
+      "entity": {
+        "description": "The company ({entity_id, name, ...}) on company briefs; absent otherwise."
+      },
+      "horizon": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "insufficient_data"
+        ]
+      },
+      "score": {
+        "description": "Integer 0-100, or null when status is insufficient_data."
+      },
+      "label": {
+        "description": "The vertical's label for the score, or null with no score."
+      },
+      "trend": {
+        "type": "string"
+      },
+      "trend_basis": {
+        "description": "score_history, input_trends, or null when there is no trend."
+      },
+      "summary": {
+        "type": "string"
+      },
+      "drivers": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "risk_flags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "confidence": {
+        "type": "object",
+        "properties": {
+          "score": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "inputs": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "watch": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "recent_events": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "citations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "service",
+      "vertical",
+      "status",
+      "summary"
+    ],
+    "description": "The answer to POST /v1/brief. score, label and trend_basis are null on insufficient_data briefs; entity is an object on company briefs. Errors return {error: {code, message}} with HTTP 400; other routes return their own JSON objects (see the openapi spec)."
   },
   "methods": {
     "GET /v1/health": "read",
@@ -89,16 +195,34 @@
     "responseSummary": {
       "service": "pmic-company-signals",
       "vertical": "filing-risk",
-      "entity": "NVIDIA",
+      "title": "Filing risk",
+      "entity": {
+        "entity_id": "nvda",
+        "name": "NVIDIA"
+      },
+      "horizon": "365d",
       "status": "ok",
       "score": 45,
       "label": "active",
-      "horizon": "365d",
-      "high_severity_8k": 0,
-      "medium_severity_8k": 6,
-      "other_8k": 7,
-      "watch": "insider Form 4 unusualness 64",
-      "citations": "SEC EDGAR link per filing"
+      "summary": "Filing risk for NVIDIA: 45/100, active.",
+      "counts": {
+        "high": 0,
+        "medium": 6,
+        "other_8k": 7
+      },
+      "drivers": [],
+      "risk_flags": [],
+      "confidence": {
+        "score": 90,
+        "label": "high"
+      },
+      "watch": [],
+      "citations": [
+        {
+          "label": "8-K",
+          "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001045810&type=8-K"
+        }
+      ]
     }
   },
   "pocket": {
