@@ -211,8 +211,10 @@ gateway_config:
 `;
 }
 
-// OpenAPI 3.0.3 has no type lists: ["integer", "null"] becomes {type: "integer", nullable: true}.
-// The portal descriptor keeps plain JSON Schema type lists (what PNF validates against).
+// OpenAPI 3.0.3 has no type lists. A field that can be null (["integer", "null"]) carries no type
+// there, never "nullable": plain JSON Schema validators ignore "nullable" and then refuse the null
+// (PNF's gateway refused insufficient_data briefs for it on 2026-10-06). The portal descriptor keeps
+// the plain JSON Schema type lists (what PNF validates against).
 function oas30(schema) {
   if (Array.isArray(schema)) return schema.map(oas30);
   if (!schema || typeof schema !== "object") return schema;
@@ -220,8 +222,8 @@ function oas30(schema) {
   for (const [k, v] of Object.entries(schema)) out[k] = k === "type" ? v : oas30(v);
   if (Array.isArray(schema.type)) {
     const types = schema.type.filter((t) => t !== "null");
-    out.type = types.length === 1 ? types[0] : types;
-    if (schema.type.includes("null")) out.nullable = true;
+    if (schema.type.includes("null") || types.length !== 1) delete out.type;
+    else out.type = types[0];
   }
   return out;
 }

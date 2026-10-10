@@ -375,7 +375,6 @@ test("crypto bundle: every vertical scores; tools answer; no third-party price d
 // "nullable" is ignored on purpose, as plain JSON Schema validators in gateways ignore it.
 function schemaErrors(schema, v, at = "$") {
   const errs = [];
-  if (schema.nullable && v === null) return errs; // OpenAPI 3.0 nullable
   const typeOk = (t) => (t === "null" ? v === null : t === "integer" ? Number.isInteger(v) : t === "number" ? typeof v === "number" : t === "array" ? Array.isArray(v) : t === "object" ? v !== null && typeof v === "object" && !Array.isArray(v) : typeof v === t);
   // A type list (["integer", "null"]) passes if any member matches, as in JSON Schema.
   if (schema.type && !(Array.isArray(schema.type) ? schema.type.some(typeOk) : typeOk(schema.type))) return [`${at}: ${JSON.stringify(v)} is not ${[].concat(schema.type).join(" or ")}`];
@@ -396,10 +395,12 @@ test("the published Brief schemas reject a non-null score, label or trend_basis 
     for (const schema of [portal, brief]) {
       assert.deepEqual(schemaErrors(schema, good), [], `${b}: the example must pass`);
       assert.deepEqual(schemaErrors(schema, { ...good, score: null, label: null, trend_basis: null }), [], `${b}: nulls must pass`);
-      for (const bad of [{ score: "59" }, { score: 59.5 }, { score: 101 }, { score: -1 }, { label: 5 }, { trend_basis: true }]) {
-        assert.notDeepEqual(schemaErrors(schema, { ...good, ...bad }), [], `${b}: ${JSON.stringify(bad)} must fail`);
-      }
     }
+    // Only the portal descriptor can type a nullable field; the openapi spec leaves the type off.
+    for (const bad of [{ score: "59" }, { score: 59.5 }, { score: 101 }, { score: -1 }, { label: 5 }, { trend_basis: true }]) {
+      assert.notDeepEqual(schemaErrors(portal, { ...good, ...bad }), [], `${b}: ${JSON.stringify(bad)} must fail`);
+    }
+    assert.ok(!JSON.stringify(require(`../packs/ops/${b}/openapi.json`)).includes('"nullable"'), `${b}: openapi.json must not use nullable`);
   }
 });
 
