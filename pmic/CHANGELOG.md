@@ -12,6 +12,15 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## openapi.json drops `nullable` again (2026-10-10)
+
+85638f0 typed `score`, `label` and `trend_basis` in `openapi.json` as `{type, nullable: true}`. Plain JSON
+Schema validators ignore `nullable`, so an `insufficient_data` brief (score null) fails a spec read that way,
+which is what PNF's gateway did on 2026-10-06. Those three fields now carry no type in `openapi.json` again;
+`portal-descriptor.json` keeps the typed `["integer","null"]` / `["string","null"]` lists PNF validates
+against. The test no longer honours `nullable` and fails if any `openapi.json` contains it. Cards unchanged
+(no on-chain update).
+
 ## Typed score, label and trend_basis (2026-10-07)
 
 PNF rebuilt the gateway outputSchema for company, pharma and macro from `portal-descriptor.json` (minus its

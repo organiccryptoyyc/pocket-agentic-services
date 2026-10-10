@@ -502,24 +502,18 @@
             ]
           },
           "score": {
-            "type": "integer",
             "minimum": 0,
             "maximum": 100,
-            "description": "Integer 0-100, or null when status is insufficient_data.",
-            "nullable": true
+            "description": "Integer 0-100, or null when status is insufficient_data."
           },
           "label": {
-            "type": "string",
-            "description": "The vertical's label for the score, or null with no score.",
-            "nullable": true
+            "description": "The vertical's label for the score, or null with no score."
           },
           "trend": {
             "type": "string"
           },
           "trend_basis": {
-            "type": "string",
-            "description": "score_history, input_trends, or null when there is no trend.",
-            "nullable": true
+            "description": "score_history, input_trends, or null when there is no trend."
           },
           "summary": {
             "type": "string"
