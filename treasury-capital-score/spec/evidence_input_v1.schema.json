@@ -151,6 +151,27 @@
         }
       }
     },
+    "collector_warnings": {
+      "description": "Flags the collector raised for this bundle (e.g. value_swing). Each carries the checks it ran; the bundle is still delivered as collected.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "automatic_override": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
     "perimeter_gaps": {
       "type": "array",
       "items": {

@@ -13,6 +13,9 @@ const S = require("./scoring");
 const { sanitize } = require("./http");
 
 const SCHEMA_VERSION = "tcs-6-paid-response/1.0";
+const COLLECTOR_WARNING_IMPACT = {
+  value_swing: "Gross verified value moved more than the collector's swing threshold since the last accepted evidence. Values are shown as collected: nothing was rejected or substituted automatically.",
+};
 const RELEASE_CONDITION = "verified_payment_webhook_and_ready_validated_report";
 const DISCLAIMER =
   "This report is derived from public evidence and stated assumptions as of the reported timestamp. It is not legal, tax, accounting, or personalized investment advice, and it does not authorize or execute any transaction.";
@@ -142,6 +145,17 @@ function buildReport(entity, bundle, base, peerNrts) {
     .map(({ id, category, severity, description, monitoring_action }) => ({ id, category, severity, description, monitoring_action }));
   const curatedGaps = (bundle.gaps || []).filter((g) => g && g.field && g.reason)
     .map(({ field, reason, impact, remediation }) => ({ field, reason, impact: impact || "", remediation: remediation || "" }));
+  // Collector warnings (e.g. value_swing): the bundle was pushed unchanged; the warning tells the
+  // reader and the curator that its revalidation checks are recorded in the evidence bundle.
+  const warningGaps = (Array.isArray(bundle.collector_warnings) ? bundle.collector_warnings : [])
+    .map((w) => (typeof w === "string" ? { code: w } : w))
+    .filter((w) => w && typeof w.code === "string" && /^[a-z0-9_]{1,40}$/.test(w.code))
+    .map((w) => ({
+      field: `collector_warnings.${w.code}`,
+      reason: String(w.summary || `The collector flagged this bundle: ${w.code}.`).slice(0, 400),
+      impact: COLLECTOR_WARNING_IMPACT[w.code] || "Values were delivered as collected; the flag asks for curator review.",
+      remediation: "Curator reviews the checks the collector recorded with this evidence.",
+    }));
   const penaltyRisks = (bundle.penalties || []).map((p) => ({ id: `penalty_${p.id}`, category: "other", severity: "medium", description: `Documented penalty of ${p.points} points: ${p.reason}`, monitoring_action: "Re-evaluate at next refresh." }));
 
   const statusMap = { eligible: "ready", provisional: "provisional", insufficient_data: "insufficient_data", ineligible: "insufficient_data" };
@@ -169,7 +183,7 @@ function buildReport(entity, bundle, base, peerNrts) {
     data_coverage: cov,
     source_manifest: rights.delivered.map(({ source_ref, title, publisher, url, retrieved_at, observation_time, source_tier, rights_status }) => ({ source_ref, title, publisher, url, retrieved_at, observation_time: observation_time ?? null, source_tier, rights_status })),
     risks: [...curatedRisks, ...derivedRisks(dims, cov), ...penaltyRisks],
-    data_gaps: [...derivedGaps(dims, overallScore), ...curatedGaps],
+    data_gaps: [...derivedGaps(dims, overallScore), ...warningGaps, ...curatedGaps],
     disclaimer: DISCLAIMER,
   });
 }

@@ -60,6 +60,23 @@ test("example bundle produces a schema-valid report; D1 null below 20 peers", ()
   assert.ok(r.data_gaps.some((g) => g.field === "overall_score.coverage_pct"), "80-90% coverage gap must be prominent");
 });
 
+test("collector warnings become data gaps; the score is unchanged and nothing is dropped", () => {
+  const plain = report(clone(EXAMPLE));
+  const b = clone(EXAMPLE);
+  b.collector_warnings = [
+    { code: "value_swing", summary: "Gross verified value moved +52% since the last accepted evidence (2026-10-09).", automatic_override: false, drivers: [] },
+    "bad code!", { summary: "no code" },
+  ];
+  const r = report(b);
+  assert.ok(validateReport(r).ok, validateReport(r).errors.join("\n"));
+  const w = r.data_gaps.filter((g) => g.field.startsWith("collector_warnings."));
+  assert.deepStrictEqual(w.map((g) => g.field), ["collector_warnings.value_swing"]);
+  assert.match(w[0].reason, /\+52%/);
+  assert.match(w[0].impact, /nothing was rejected or substituted/);
+  assert.strictEqual(r.overall_score.score, plain.overall_score.score);
+  assert.deepStrictEqual(r.headline, plain.headline);
+});
+
 test("NRT arithmetic: verified only, haircut, minus probability-weighted obligations", () => {
   const b = S.computeBase(clone(EXAMPLE));
   // USDC 40M consistent @ ~0.9999, haircut mid 6% ; WETH 15M haircut 5+15*0.75=16.25% ;
