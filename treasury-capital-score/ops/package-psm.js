@@ -21,14 +21,22 @@ if (NETWORK !== "beta" && NETWORK !== "main") {
 const SRC = path.join(__dirname, "..");
 const DEPLOY_ID = NETWORK === "main" ? "treasury-capital-score" : "treasury-capital-score-beta";
 const ROUTE = NETWORK === "main" ? "/tcs6-ingest" : "/tcs6-ingest-beta";
-const PARENT = path.resolve(process.argv[3] || (NETWORK === "main" ? path.join(os.homedir(), "Downloads") : path.join(SRC, "build")));
+const PARENT = path.resolve(process.argv.slice(3).find((a) => !a.startsWith("--")) || (NETWORK === "main" ? path.join(os.homedir(), "Downloads") : path.join(SRC, "build")));
 const OUT = path.join(PARENT, DEPLOY_ID);
 
-// Per-network ingest token, generated once into .secrets/ (gitignored) and
-// written into the generated deploy/docker-compose.yaml (PSM does not ship .env files).
+// Per-network ingest token, kept in .secrets/ (gitignored) and written into the generated
+// deploy/docker-compose.yaml (PSM does not ship .env files). A missing file stops the build:
+// a fresh checkout once made a new Beta token and locked the Pi out (2026-10-10). Copy the
+// file from the checkout that built the live deploy, or pass --new-token for a first deploy.
 const crypto = require("crypto");
 const SECRET = path.join(SRC, ".secrets", `${NETWORK}-ingest.env`);
 if (!fs.existsSync(SECRET)) {
+  if (!process.argv.includes("--new-token")) {
+    console.error(`missing ${SECRET}\n` +
+      "Copy it from the checkout that built the live deploy (the Pi uses that token).\n" +
+      `First deploy of ${NETWORK} only: node ops/package-psm.js ${NETWORK} --new-token`);
+    process.exit(1);
+  }
   fs.mkdirSync(path.dirname(SECRET), { recursive: true });
   fs.writeFileSync(SECRET, `TCS6_INGEST_TOKEN=${crypto.randomBytes(32).toString("hex")}
 `, { mode: 0o600 });

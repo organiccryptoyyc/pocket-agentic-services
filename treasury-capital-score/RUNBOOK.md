@@ -40,6 +40,9 @@ service ID is `treasury-capital-score` on both networks.
 | Relayer backend_url | `http://treasury-capital-score-beta-backend:8080` | `http://treasury-capital-score-backend:8080` |
 | Ingest route | `/tcs6-ingest-beta` | `/tcs6-ingest` |
 | Token file on server | `/opt/pocket/services/treasury-capital-score-beta/tcs6-ingest.env` | `/opt/pocket/services/treasury-capital-score/tcs6-ingest.env` |
+| Token file on the PC | `treasury-capital-score/.secrets/beta-ingest.env` | `treasury-capital-score/.secrets/main-ingest.env` |
+
+The build stops if the PC token file is missing. Copy it from the checkout that built the live deploy, because the Pi sends that token. Use `--new-token` only for a network's first deploy; a new token locks the Pi out until its `config.json` is updated.
 
 ## 1. Beta TestNet (PSM → Beta TestNet tab, server `hetzner-mainnet`)
 
