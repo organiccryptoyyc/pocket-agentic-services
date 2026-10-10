@@ -39,7 +39,12 @@ service ID is `treasury-capital-score` on both networks.
 | Deploy ID (PSM ship/deploy) | `treasury-capital-score-beta` | `treasury-capital-score` |
 | Relayer backend_url | `http://treasury-capital-score-beta-backend:8080` | `http://treasury-capital-score-backend:8080` |
 | Ingest route | `/tcs6-ingest-beta` | `/tcs6-ingest` |
+| Token file on this PC | `treasury-capital-score/.secrets/beta-ingest.env` | `treasury-capital-score/.secrets/main-ingest.env` |
 | Token file on server | `/opt/pocket/services/treasury-capital-score-beta/tcs6-ingest.env` | `/opt/pocket/services/treasury-capital-score/tcs6-ingest.env` |
+
+`package-psm.js` stops if the network's `.secrets` token file is missing. In a fresh
+checkout, copy the file from the checkout that last deployed. A new token
+(`--new-token`) locks out the Pi collector until it gets the new value.
 
 ## 1. Beta TestNet (PSM → Beta TestNet tab, server `hetzner-mainnet`)
 

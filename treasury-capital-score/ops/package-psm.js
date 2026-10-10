@@ -15,20 +15,30 @@ const path = require("path");
 
 const NETWORK = process.argv[2];
 if (NETWORK !== "beta" && NETWORK !== "main") {
-  console.error("usage: node ops/package-psm.js <beta|main> [out_parent_dir]");
+  console.error("usage: node ops/package-psm.js <beta|main> [out_parent_dir] [--new-token]");
   process.exit(2);
 }
 const SRC = path.join(__dirname, "..");
 const DEPLOY_ID = NETWORK === "main" ? "treasury-capital-score" : "treasury-capital-score-beta";
 const ROUTE = NETWORK === "main" ? "/tcs6-ingest" : "/tcs6-ingest-beta";
-const PARENT = path.resolve(process.argv[3] || (NETWORK === "main" ? path.join(os.homedir(), "Downloads") : path.join(SRC, "build")));
+const OUT_ARG = process.argv.slice(3).find((a) => !a.startsWith("--"));
+const PARENT = path.resolve(OUT_ARG ||(NETWORK === "main" ? path.join(os.homedir(), "Downloads") : path.join(SRC, "build")));
 const OUT = path.join(PARENT, DEPLOY_ID);
 
-// Per-network ingest token, generated once into .secrets/ (gitignored) and
-// written into the generated deploy/docker-compose.yaml (PSM does not ship .env files).
+// Per-network ingest token, kept in .secrets/ (gitignored) and written into the
+// generated deploy/docker-compose.yaml (PSM does not ship .env files). A missing
+// file is an error: deploying a fresh token would lock out the collector that
+// already holds the old one. Pass --new-token only for a first deploy or a
+// deliberate rotation (then give the collector the new token).
 const crypto = require("crypto");
 const SECRET = path.join(SRC, ".secrets", `${NETWORK}-ingest.env`);
 if (!fs.existsSync(SECRET)) {
+  if (!process.argv.includes("--new-token")) {
+    console.error(`missing ${SECRET}\n` +
+      `Copy the ${NETWORK} ingest token file from the checkout that deployed it, or pass --new-token ` +
+      `to create one (the collector must then be given the new token).`);
+    process.exit(1);
+  }
   fs.mkdirSync(path.dirname(SECRET), { recursive: true });
   fs.writeFileSync(SECRET, `TCS6_INGEST_TOKEN=${crypto.randomBytes(32).toString("hex")}
 `, { mode: 0o600 });
