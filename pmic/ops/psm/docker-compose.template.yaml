@@ -24,6 +24,8 @@ services:
       PMIC_INGEST_PORT: "8091"
       PMIC_INGEST_TOKEN: "{{INGEST_TOKEN}}"
       PMIC_API_TOKEN: "{{API_TOKEN}}"
+      # The Pi's price bank PUBLIC key (hex); empty = price bank replica refused (TCS-6 Build B).
+      PRICEBANK_PUBLIC_KEY: "{{PRICEBANK_PUBLIC_KEY}}"
     volumes:
       - pmic-hub-data:/var/lib/pmic
     expose:

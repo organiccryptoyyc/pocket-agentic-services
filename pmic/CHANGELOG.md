@@ -12,6 +12,16 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Price bank replica on pmic-hub (TCS-6 Build B, 2026-10-10)
+
+The Pi's shared price bank (`tcs6-pi-collector/pricebank`) is the canonical source of USD prices;
+the hub keeps a read-only replica. The Pi pushes Ed25519-signed, checksummed, versioned batches to
+`POST /ingest/pricebank` (through the existing `/pmic-ingest` route; the signature is the credential,
+checked against `PRICEBANK_PUBLIC_KEY`). The hub refuses unsigned, tampered, older or stale batches
+and keeps the last good version. Readers use `POST /v1/prices` (bearer as for every `/v1` route);
+prices older than `max_age_s` (default 6h) come back as gaps, never served stale. Migration 005 adds
+the `pricebank_rows` table. No card or registration change: `pmic-hub` stays deploy-only.
+
 ## openapi.json drops `nullable` again (2026-10-10)
 
 85638f0 typed `score`, `label` and `trend_basis` in `openapi.json` as `{type, nullable: true}`. Plain JSON

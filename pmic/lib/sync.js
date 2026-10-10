@@ -10,6 +10,7 @@ const crypto = require("crypto");
 const { sendJson, readJsonBody, ClientError } = require("./http");
 const { tx, kvGet, kvSet, syncCatalog } = require("./db");
 const { rescoreAll } = require("./collect");
+const { applyBatch: applyPricebank } = require("./pricebank");
 
 const BATCH = Number(process.env.PMIC_PUSH_BATCH || 2000);
 const MAX_SYNC_BYTES = 8 * 1024 * 1024;
@@ -155,12 +156,18 @@ function startIngest({ openDb, catalog }) {
   syncCatalog(db, catalog);
   const server = http.createServer(async (req, res) => {
     try {
-      if (req.method !== "POST" || new URL(req.url, "http://x").pathname !== "/ingest/sync") return sendJson(res, 404, { error: { code: "not_found", message: "POST /ingest/sync only" } });
+      const pathname = new URL(req.url, "http://x").pathname;
+      if (req.method === "POST" && pathname === "/ingest/pricebank") {
+        // Signed price-bank batches from the Pi: the Ed25519 signature is the credential.
+        const body = await readJsonBody(req, MAX_SYNC_BYTES);
+        return sendJson(res, 200, applyPricebank(db, body));
+      }
+      if (req.method !== "POST" || pathname !== "/ingest/sync") return sendJson(res, 404, { error: { code: "not_found", message: "POST /ingest/sync or /ingest/pricebank only" } });
       if (!tokenOk(req.headers.authorization, token)) return sendJson(res, 401, { error: { code: "unauthorized", message: "bearer token required" } });
       const body = await readJsonBody(req, MAX_SYNC_BYTES);
       return sendJson(res, 200, apply(db, catalog, body));
     } catch (e) {
-      return sendJson(res, e instanceof ClientError ? e.status : 400, { error: { code: e.code || "ingest_error", message: String(e.message).slice(0, 300) } });
+      return sendJson(res, e instanceof ClientError ? e.status : 400, { error: { code: e.code || "ingest_error", message: String(e.message).slice(0, 300) }, ...(e.extra || {}) });
     }
   });
   server.listen(port, host, () => console.log(JSON.stringify({ ingest: "listening", host, port })));

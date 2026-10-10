@@ -37,7 +37,10 @@ for (const f of ["server.js", "package.json", "Dockerfile"]) copy(f, `backend/${
 for (const d of ["lib", "bin", "config", "migrations"]) copy(d, `backend/${d}`);
 const compose = fs.readFileSync(path.join(SRC, "ops/psm/docker-compose.template.yaml"), "utf8")
   .replaceAll("{{INGEST_TOKEN}}", token("PMIC_INGEST_TOKEN"))
-  .replaceAll("{{API_TOKEN}}", token("PMIC_API_TOKEN"));
+  .replaceAll("{{API_TOKEN}}", token("PMIC_API_TOKEN"))
+  // Optional: the Pi's price bank public key (printed by `sh ops/pricebank-setup.sh` on the Pi),
+  // added to .secrets/hub.env as PRICEBANK_PUBLIC_KEY=<64 hex>. Public, but kept beside the tokens.
+  .replaceAll("{{PRICEBANK_PUBLIC_KEY}}", (secrets.match(/^PRICEBANK_PUBLIC_KEY=([0-9a-f]{64})$/m) || [])[1] || "");
 fs.mkdirSync(path.join(OUT, "deploy"), { recursive: true });
 fs.writeFileSync(path.join(OUT, "deploy/docker-compose.yaml"), compose);
 fs.writeFileSync(path.join(OUT, "deploy/routes.json"), JSON.stringify({ routes: [{ path: ROUTE, port: 8091 }] }, null, 2) + "\n");
@@ -55,6 +58,8 @@ console.log(JSON.stringify({
   folder: OUT,
   ingest_route: ROUTE,
   pi_push_url: `https://agentic.organiccryptoyyc.com${ROUTE}/ingest/sync`,
+  pricebank_push_url: `https://agentic.organiccryptoyyc.com${ROUTE}/ingest/pricebank`,
+  pricebank_public_key: /^PRICEBANK_PUBLIC_KEY=[0-9a-f]{64}$/m.test(secrets) ? "set" : "NOT SET (add PRICEBANK_PUBLIC_KEY=<hex> to tokens_file, then rebuild)",
   pi_push_token: "PMIC_INGEST_TOKEN in tokens_file (not printed, so screenshots stay safe)",
   packs_hub_url: `http://${DEPLOY_ID}-backend:8080`,
   tokens_file: SECRET,

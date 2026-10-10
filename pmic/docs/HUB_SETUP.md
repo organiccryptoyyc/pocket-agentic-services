@@ -76,3 +76,12 @@ docker exec pmic-hub-backend wget -qO- http://localhost:8080/v1/health
 
 `series` and `scored_series` should now be about 312, and `last_sync` should show the time of the
 push. After this the Pi pushes on its own after every pass.
+
+## 5. Price bank replica (TCS-6 Build B, optional)
+
+1. On the Pi: `cd ~/tcs6-pi-collector && sh ops/pricebank-setup.sh`. It prints the bank's **public** key.
+2. On the PC: add the line `PRICEBANK_PUBLIC_KEY=<that key>` to `pmic\.secrets\hub.env`, run
+   `node pmic/ops/package-psm.js` (its output says `pricebank_public_key: "set"`), and redeploy `pmic-hub`
+   in PSM (Deploy service only; never register or stake).
+3. The next pushing collector run on the Pi logs `pricebank replica: {"pushed": true, ...}`.
+

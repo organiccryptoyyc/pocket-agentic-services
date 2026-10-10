@@ -1,0 +1,9 @@
+{
+ "public_key": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+ "note": "Signed by tcs6-pi-collector pricebank/replicate.py with the RFC 8032 test-1 key (public test vector, not a real key).",
+ "body": {
+  "meta_json": "{\"bank\":\"tcs6-pi-pricebank\",\"built_at\":\"2026-10-10T22:06:00Z\",\"count\":2,\"max_row_age_s\":86400,\"rows_sha256\":\"79c70a7bea9a96c5f7396b7d1dd6be2e7cb80f60027dce4629fe177573f08a1f\",\"version\":3}",
+  "rows_json": "[{\"asset\":\"ethereum:0x1111111111111111111111111111111111111111\",\"based_on\":[\"CG\"],\"block\":21000000,\"flags\":[\"single_price_source_onchain\"],\"method\":\"erc4626\",\"observed_at\":\"2026-10-10T22:00:00Z\",\"priced_at\":\"2026-10-10T22:05:00Z\",\"sources\":[{\"observed_at\":\"2026-10-10T22:00:00Z\",\"source_ref\":\"ONCHAIN\",\"usd\":1.0523456789012344}],\"status\":\"estimated\",\"tvl_usd\":null,\"underlying\":[\"ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0\"],\"usd\":1.0523456789012344},{\"asset\":\"ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0\",\"block\":null,\"flags\":[],\"method\":\"plain\",\"observed_at\":\"2026-10-10T22:00:00Z\",\"priced_at\":\"2026-10-10T22:05:00Z\",\"sources\":[{\"observed_at\":\"2026-10-10T22:00:00Z\",\"source_ref\":\"CG\",\"usd\":1.0},{\"observed_at\":\"2026-10-10T22:01:00Z\",\"source_ref\":\"CMC\",\"usd\":1.0004}],\"status\":\"verified\",\"usd\":1.0}]",
+  "signature": "66f973f50727ca488658ef02b9d6f11864ab7ff7ef4e26e8e7d8235daf70d1b28ff34d1703090349f4d7811d6474a15615c99d77e24bcd5ef891cb9893008004"
+ }
+}
