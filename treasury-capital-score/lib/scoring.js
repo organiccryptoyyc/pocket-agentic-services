@@ -415,6 +415,47 @@ function d6(base, bundle) {
 
 // --- gates, coverage, confidence -------------------------------------------
 
+// Obligations visibility (owner decision O2, 2026-10-09; penalty set 2026-10-10). A curated
+// obligation_visibility block is graded against a checklist: 90 days is a minimum, not proof of
+// completeness. unknown is never zero and withholds the overall score; partial scores provisionally
+// minus PARTIAL_OBLIGATIONS_PENALTY. Bundles without the block keep their curated visibility.
+const OBLIGATIONS_MAX_AGE_DAYS = 90;
+const PARTIAL_OBLIGATIONS_PENALTY = 10;
+const VIS_RANK = { unknown: 0, partial: 1, adequate: 2 };
+const OBLIGATION_CHECKS = [
+  ["liabilities_listed", "liabilities not listed"],
+  ["debt_covered", "debt not covered"],
+  ["payables_covered", "payables not covered"],
+  ["streams_and_grants_covered", "streams and grants not covered"],
+  ["legal_or_contingent_claims_covered", "legal or contingent claims not covered"],
+  ["scope_reconciled", "scope not reconciled to the treasury perimeter"],
+];
+
+function obligationVisibility(bundle, asOfMs) {
+  const obl = bundle.obligations || {};
+  const curated = VIS_RANK[obl.visibility] !== undefined ? obl.visibility : "unknown";
+  const block = obl.obligation_visibility;
+  if (!block || typeof block !== "object") return { status: curated, bounded: !!obl.bounded, graded: false, age_days: null, missing: [] };
+  const dateMs = Date.parse(block.report_date || "");
+  const age = Number.isFinite(dateMs) && Number.isFinite(asOfMs) ? Math.floor((asOfMs - dateMs) / 86400000) : null;
+  const missing = OBLIGATION_CHECKS.filter(([k]) => block[k] !== true).map(([, label]) => label);
+  const conflicts = Array.isArray(block.material_conflicts) ? block.material_conflicts.filter((c) => typeof c === "string" && c) : [];
+  if (conflicts.length) missing.push(`unresolved material conflict: ${conflicts.join("; ")}`);
+  let graded;
+  if (age === null) { graded = "unknown"; missing.unshift("no dated obligations report"); }
+  else if (age > OBLIGATIONS_MAX_AGE_DAYS) { graded = "unknown"; missing.unshift(`obligations report is ${age} days old (limit ${OBLIGATIONS_MAX_AGE_DAYS})`); }
+  else graded = missing.length ? "partial" : "adequate";
+  const claimed = VIS_RANK[block.status] !== undefined ? block.status : curated;
+  const status = [graded, claimed].sort((a, b) => VIS_RANK[a] - VIS_RANK[b])[0];
+  return { status, bounded: !!obl.bounded, graded: true, age_days: age, missing };
+}
+
+function obligationPenalties(vis) {
+  if (vis.status !== "partial") return [];
+  const why = vis.missing.length ? ` (${vis.missing.join(", ")})` : "";
+  return [{ id: "obligation_visibility_partial", points: PARTIAL_OBLIGATIONS_PENALTY, reason: `Obligations are only partly visible${why}.` }];
+}
+
 function gates(entity, base, bundle, blockedSources) {
   const out = [];
   const idOk = entity.scoreable && (entity.registry_status === "verified" || entity.registry_status === "partially_verified");
@@ -436,13 +477,17 @@ function gates(entity, base, bundle, blockedSources) {
     effect: stale.length ? `${stale.length} verified position(s) have prices older than 60 minutes or holdings older than 90 days at as_of; affected metrics marked stale and confidence reduced.` : base.verifiedRows.length ? "All verified positions priced within 60 minutes and holdings within 90 days of as_of." : "No verified positions to value.",
   });
 
-  const vis = (bundle.obligations && bundle.obligations.visibility) || "unknown";
-  const bounded = !!(bundle.obligations && bundle.obligations.bounded);
+  const ov = obligationVisibility(bundle, base.asOfMs);
+  const vis = ov.status;
+  const bounded = ov.bounded;
+  const detail = ov.graded && ov.missing.length ? ` Checklist: ${ov.missing.join("; ")}.` : "";
   out.push({
     id: "obligation_visibility",
     status: vis === "adequate" ? "pass" : vis === "partial" ? "fail" : "unknown_gate",
     evidence_refs: (bundle.obligations && bundle.obligations.source_refs) || [],
-    effect: vis === "adequate" ? "Known debt, pledges, payables, and commitments captured." : vis === "partial" && bounded ? "Obligations partially visible with an explicit bound; provisional score only." : "Unobserved obligation risk is not bounded; overall score withheld.",
+    effect: (vis === "adequate" ? `Known debt, pledges, payables, and commitments captured${ov.graded ? ` in a report ${ov.age_days} days old` : ""}.`
+      : vis === "partial" && bounded ? `Obligations partially visible with an explicit bound; provisional score only, ${PARTIAL_OBLIGATIONS_PENALTY} points deducted.`
+      : "Unobserved obligation risk is not bounded; overall score withheld.") + detail,
   });
 
   out.push({
@@ -499,7 +544,7 @@ function dataCoverage(base, bundle) {
   const v = base.grossVerified;
   const offchain = sum(base.rows.filter((x) => x.h.bucket === "offchain"), (x) => x.fair);
   const fresh = sum(base.verifiedRows.filter((x) => x.price_fresh), (x) => x.fair);
-  const vis = (bundle.obligations && bundle.obligations.visibility) || "unknown";
+  const vis = obligationVisibility(bundle, base.asOfMs).status;
   return {
     verified_control_value_pct: r > 0 ? round((v / r) * 100, 1) : null,
     offchain_disclosed_value_pct: r > 0 ? round((offchain / r) * 100, 1) : null,
@@ -511,5 +556,6 @@ function dataCoverage(base, bundle) {
 module.exports = {
   METHOD_VERSION, DIMENSIONS, HAIRCUT_RANGES, ASSET_CLASSES, STRESS_SET, MIN_PEERS, CORRELATED_CAP, LOW_CONTROL_CONFIDENCE_CAP,
   anchorScore, bandFor, haircutPct, valueAsset, computeBase,
+  OBLIGATIONS_MAX_AGE_DAYS, PARTIAL_OBLIGATIONS_PENALTY, obligationVisibility, obligationPenalties,
   d1, d2, d3, d4, d5, d6, gates, overall, confidence, dataCoverage, round,
 };

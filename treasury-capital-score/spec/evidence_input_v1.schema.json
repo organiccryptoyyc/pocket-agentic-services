@@ -377,6 +377,62 @@
           "items": {
             "type": "string"
           }
+        },
+        "obligation_visibility": {
+          "type": "object",
+          "description": "Graded obligations checklist (O2). adequate needs a report at most 90 days old at as_of, every *_covered/listed/reconciled flag true and no material_conflicts; an older or undated report grades unknown. The lower of this grade and status is used.",
+          "required": [
+            "status",
+            "report_date"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "adequate",
+                "partial",
+                "unknown"
+              ]
+            },
+            "report_date": {
+              "type": "string",
+              "description": "YYYY-MM-DD: date the obligations evidence describes."
+            },
+            "publication_date": {
+              "type": "string",
+              "description": "YYYY-MM-DD"
+            },
+            "liabilities_listed": {
+              "type": "boolean"
+            },
+            "debt_covered": {
+              "type": "boolean"
+            },
+            "payables_covered": {
+              "type": "boolean"
+            },
+            "streams_and_grants_covered": {
+              "type": "boolean"
+            },
+            "legal_or_contingent_claims_covered": {
+              "type": "boolean"
+            },
+            "scope_reconciled": {
+              "type": "boolean"
+            },
+            "material_conflicts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "source_refs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },

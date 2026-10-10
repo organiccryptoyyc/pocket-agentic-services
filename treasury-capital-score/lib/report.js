@@ -131,7 +131,9 @@ function buildReport(entity, bundle, base, peerNrts) {
   const dims = [S.d1(base, peerNrts), S.d2(base, bundle), S.d3(base, bundle), S.d4(base), S.d5(bundle), S.d6(base, bundle)];
   const rights = rightsFilter(bundle.sources);
   const gateList = S.gates(entity, base, bundle, rights.blocked);
-  const overallScore = S.overall(dims, gateList, bundle.penalties, !!(bundle.obligations && bundle.obligations.bounded));
+  const oblVis = S.obligationVisibility(bundle, base.asOfMs);
+  const penalties = [...(bundle.penalties || []), ...S.obligationPenalties(oblVis)];
+  const overallScore = S.overall(dims, gateList, penalties, oblVis.bounded);
   const cov = S.dataCoverage(base, bundle);
 
   for (const d of dims) {
@@ -156,7 +158,7 @@ function buildReport(entity, bundle, base, peerNrts) {
       impact: COLLECTOR_WARNING_IMPACT[w.code] || "Values were delivered as collected; the flag asks for curator review.",
       remediation: "Curator reviews the checks the collector recorded with this evidence.",
     }));
-  const penaltyRisks = (bundle.penalties || []).map((p) => ({ id: `penalty_${p.id}`, category: "other", severity: "medium", description: `Documented penalty of ${p.points} points: ${p.reason}`, monitoring_action: "Re-evaluate at next refresh." }));
+  const penaltyRisks = penalties.map((p) => ({ id: `penalty_${p.id}`, category: "other", severity: "medium", description: `Documented penalty of ${p.points} points: ${p.reason}`, monitoring_action: "Re-evaluate at next refresh." }));
 
   const statusMap = { eligible: "ready", provisional: "provisional", insufficient_data: "insufficient_data", ineligible: "insufficient_data" };
   const d1 = dims[0];

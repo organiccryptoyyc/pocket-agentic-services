@@ -1,0 +1,953 @@
+{
+  "case": "12-obligations-stale-report",
+  "note": "Checklist block complete but report 120 days old: graded unknown, overall score withheld.",
+  "method_version": "tcs-6/1.0",
+  "schema_version": "tcs-6-paid-response/1.0",
+  "input": {
+    "entity": {
+      "entity_id": "example-dao",
+      "name": "example-dao",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "synthetic"
+    },
+    "bundle": {
+      "entity_id": "example-dao",
+      "collected_at": "2026-10-01T12:00:00Z",
+      "collector": {
+        "name": "tcs6-pi-collector",
+        "version": "0.1.0"
+      },
+      "holdings": [
+        {
+          "asset_id": "eth:usdc",
+          "exposure_id": "usdc-main-safe",
+          "symbol": "USDC",
+          "chain": "ethereum",
+          "address": "0x0000000000000000000000000000000000000001",
+          "bucket": "onchain",
+          "asset_class": "fiat_stablecoin",
+          "control": "verified",
+          "quantity": 40000000,
+          "holdings_observed_at": "2026-10-01T11:58:00Z",
+          "prices": [
+            {
+              "source_ref": "S2",
+              "usd": 1,
+              "observed_at": "2026-10-01T11:55:00Z"
+            },
+            {
+              "source_ref": "S3",
+              "usd": 0.9998,
+              "observed_at": "2026-10-01T11:56:00Z"
+            }
+          ],
+          "haircut_flags": [],
+          "source_refs": [
+            "S1"
+          ]
+        },
+        {
+          "asset_id": "eth:weth",
+          "symbol": "WETH",
+          "chain": "ethereum",
+          "address": "0x0000000000000000000000000000000000000001",
+          "bucket": "onchain",
+          "asset_class": "major_crypto",
+          "control": "verified",
+          "quantity": 5000,
+          "holdings_observed_at": "2026-10-01T11:58:00Z",
+          "prices": [
+            {
+              "source_ref": "S2",
+              "usd": 3000,
+              "observed_at": "2026-10-01T11:55:00Z"
+            }
+          ],
+          "haircut_flags": [
+            "thin_depth"
+          ],
+          "source_refs": [
+            "S1"
+          ]
+        },
+        {
+          "asset_id": "eth:native",
+          "symbol": "EXD",
+          "chain": "ethereum",
+          "address": "0x0000000000000000000000000000000000000002",
+          "bucket": "onchain",
+          "asset_class": "native_token",
+          "control": "verified",
+          "quantity": 100000000,
+          "holdings_observed_at": "2026-10-01T11:58:00Z",
+          "prices": [
+            {
+              "source_ref": "S2",
+              "usd": 0.5,
+              "observed_at": "2026-10-01T11:55:00Z"
+            }
+          ],
+          "haircut_flags": [],
+          "source_refs": [
+            "S1"
+          ]
+        },
+        {
+          "asset_id": "offchain:tbills",
+          "bucket": "offchain",
+          "asset_class": "cash_equivalent",
+          "control": "verified",
+          "fair_value_usd": 10000000,
+          "holdings_observed_at": "2026-09-15T00:00:00Z",
+          "source_refs": [
+            "S4"
+          ]
+        },
+        {
+          "asset_id": "eth:unknown-wallet",
+          "bucket": "onchain",
+          "asset_class": "liquid_alt",
+          "control": "unverified",
+          "quantity": 1000,
+          "holdings_observed_at": "2026-10-01T11:58:00Z",
+          "prices": [
+            {
+              "source_ref": "S2",
+              "usd": 100,
+              "observed_at": "2026-10-01T11:55:00Z"
+            }
+          ],
+          "source_refs": [
+            "S5"
+          ]
+        }
+      ],
+      "obligations": {
+        "visibility": "adequate",
+        "bounded": true,
+        "material_unresolved_claim": false,
+        "items": [
+          {
+            "type": "payable",
+            "usd": 2000000,
+            "source_refs": [
+              "S4"
+            ]
+          },
+          {
+            "type": "contingency",
+            "usd": 5000000,
+            "probability": 0.2,
+            "source_refs": [
+              "S6"
+            ]
+          }
+        ],
+        "source_refs": [
+          "S4",
+          "S6"
+        ],
+        "obligation_visibility": {
+          "status": "adequate",
+          "report_date": "2026-06-03",
+          "publication_date": "2026-09-05",
+          "liabilities_listed": true,
+          "debt_covered": true,
+          "payables_covered": true,
+          "streams_and_grants_covered": true,
+          "legal_or_contingent_claims_covered": true,
+          "scope_reconciled": true,
+          "material_conflicts": []
+        }
+      },
+      "cash_uses_12m": {
+        "usd": 18000000,
+        "status": "single_source",
+        "source_refs": [
+          "S6"
+        ]
+      },
+      "flows_12m": {
+        "recurring_treasury_inflows_usd": 15000000,
+        "controllable_cash_uses_usd": 18000000,
+        "repeatable": true,
+        "status": "single_source",
+        "source_refs": [
+          "S6"
+        ]
+      },
+      "governance": {
+        "control_known": true,
+        "contradictory": false,
+        "reconciliation_pct": 88,
+        "disclosure_age_days": 16,
+        "has_treasury_policy": true,
+        "multisig": {
+          "threshold": 4,
+          "signers": 7
+        },
+        "timelock": true,
+        "independent_attestation": false,
+        "governance_transparent": true,
+        "governance_opaque": false,
+        "status": "verified",
+        "source_refs": [
+          "S1",
+          "S7"
+        ]
+      },
+      "penalties": [],
+      "risks": [],
+      "gaps": [],
+      "perimeter_gaps": [],
+      "sources": [
+        {
+          "source_ref": "S1",
+          "title": "Treasury Safe state",
+          "publisher": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/",
+          "retrieved_at": "2026-10-01T11:58:00Z",
+          "observation_time": "2026-10-01T11:58:00Z",
+          "source_tier": 1,
+          "rights_status": "permitted_for_derived_output"
+        },
+        {
+          "source_ref": "S2",
+          "title": "Spot prices",
+          "publisher": "CoinGecko",
+          "url": "https://www.coingecko.com/",
+          "retrieved_at": "2026-10-01T11:55:00Z",
+          "observation_time": "2026-10-01T11:55:00Z",
+          "source_tier": 2,
+          "rights_status": "permitted_for_derived_output"
+        },
+        {
+          "source_ref": "S3",
+          "title": "Spot prices (second source)",
+          "publisher": "DefiLlama",
+          "url": "https://defillama.com/",
+          "retrieved_at": "2026-10-01T11:56:00Z",
+          "observation_time": "2026-10-01T11:56:00Z",
+          "source_tier": 2,
+          "rights_status": "permitted_for_derived_output"
+        },
+        {
+          "source_ref": "S4",
+          "title": "Quarterly treasury report",
+          "publisher": "Example DAO",
+          "url": "https://example.invalid/report",
+          "retrieved_at": "2026-10-01T11:00:00Z",
+          "observation_time": "2026-09-15T00:00:00Z",
+          "source_tier": 1,
+          "rights_status": "permitted_for_derived_output"
+        },
+        {
+          "source_ref": "S5",
+          "title": "Unattributed wallet",
+          "publisher": "Block explorer",
+          "url": "https://example.invalid/wallet",
+          "retrieved_at": "2026-10-01T11:58:00Z",
+          "observation_time": null,
+          "source_tier": 3,
+          "rights_status": "internal_only"
+        },
+        {
+          "source_ref": "S6",
+          "title": "Budget proposal",
+          "publisher": "Example DAO forum",
+          "url": "https://example.invalid/budget",
+          "retrieved_at": "2026-10-01T11:00:00Z",
+          "observation_time": "2026-08-01T00:00:00Z",
+          "source_tier": 1,
+          "rights_status": "permitted_for_derived_output"
+        },
+        {
+          "source_ref": "S7",
+          "title": "Governance space",
+          "publisher": "Snapshot",
+          "url": "https://snapshot.org/",
+          "retrieved_at": "2026-10-01T11:58:00Z",
+          "observation_time": "2026-10-01T11:58:00Z",
+          "source_tier": 2,
+          "rights_status": "permitted_for_derived_output"
+        }
+      ]
+    },
+    "peer_nrts": null
+  },
+  "expected_report": {
+    "schema_version": "tcs-6-paid-response/1.0",
+    "report_id": "<report_id>",
+    "analysis_status": "insufficient_data",
+    "as_of": "2026-10-01T12:00:00Z",
+    "currency": "USD",
+    "entity": {
+      "entity_id": "example-dao",
+      "name": "example-dao",
+      "entity_type": "defi_protocol",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified"
+    },
+    "payment_entitlement": {
+      "release_condition": "verified_payment_webhook_and_ready_validated_report",
+      "entitlement_id": "assigned_at_delivery",
+      "payment_verified_at": "2026-10-01T12:00:00Z",
+      "delivery_expires_at": null
+    },
+    "capital_perimeter": {
+      "included_classes": [
+        "On-chain assets controlled by a verified treasury address, Safe, timelock, or governance-controlled contract",
+        "Publicly disclosed off-chain cash, money-market funds, T-bills, and custody balances",
+        "Protocol-owned liquidity and LP positions net of embedded borrowing and realization costs",
+        "Staked or locked assets after unbonding, exit-liquidity, and market-impact haircuts"
+      ],
+      "excluded_classes": [
+        "TVL, deposits, collateral, bridge balances, or insurance funds beneficially owned by users",
+        "Circulating market capitalization, FDV, token price, and unissued token supply",
+        "Unvested grants, unsigned commitments, and expected future token emissions",
+        "Unverified wallet balances and assets whose beneficial owner cannot be established"
+      ],
+      "beneficial_ownership_rule": "Only assets whose control by the entity is evidenced count toward treasury capital; one economic exposure is counted once across addresses, wrappers, and bridges.",
+      "known_perimeter_gaps": [
+        "synthetic"
+      ]
+    },
+    "headline": {
+      "gross_adjusted_treasury_usd": 69908740,
+      "obligations_usd": 3000000,
+      "net_realizable_treasury_usd": 66908740,
+      "capital_scale_percentile": null,
+      "capital_scale_peer_count": 1
+    },
+    "hard_gates": [
+      {
+        "id": "entity_identity",
+        "status": "pass",
+        "evidence_refs": [],
+        "effect": "Entity perimeter is distinguishable from user funds and unrelated wallets."
+      },
+      {
+        "id": "control_coverage",
+        "status": "pass",
+        "evidence_refs": [],
+        "effect": "99.9% of reported gross value has verified control evidence (threshold 60%)."
+      },
+      {
+        "id": "valuation_freshness",
+        "status": "pass",
+        "evidence_refs": [],
+        "effect": "All verified positions priced within 60 minutes and holdings within 90 days of as_of."
+      },
+      {
+        "id": "obligation_visibility",
+        "status": "unknown_gate",
+        "evidence_refs": [
+          "S4",
+          "S6"
+        ],
+        "effect": "Unobserved obligation risk is not bounded; overall score withheld. Checklist: obligations report is 120 days old (limit 90)."
+      },
+      {
+        "id": "source_rights",
+        "status": "pass",
+        "evidence_refs": [],
+        "effect": "1 source(s) not cleared for customer delivery were withheld from this report; delivered content is derived values and citations only."
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "D1",
+        "name": "Net Realizable Capital Scale",
+        "weight_pct": 20,
+        "score": null,
+        "status": "insufficient_data",
+        "confidence": 46.7,
+        "primary_metrics": [
+          {
+            "name": "gross_adjusted_treasury_usd",
+            "value": 69908740,
+            "unit": "USD",
+            "method": "sum(fair_value * (1 - haircut) * control_factor)",
+            "status": "single_source",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          {
+            "name": "net_realizable_treasury_usd",
+            "value": 66908740,
+            "unit": "USD",
+            "method": "gross_adjusted - recorded obligations (contingencies probability-weighted)",
+            "status": "single_source",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          {
+            "name": "same_cohort_nrt_percentile",
+            "value": null,
+            "unit": "percentile",
+            "method": "mid-rank within cohort; requires >= 20 eligible peers (have 1)",
+            "status": "insufficient_data",
+            "source_refs": []
+          }
+        ],
+        "evidence_refs": [
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "rationale": "Net Realizable Treasury is $66.9M. Percentile not computed: the cohort has 1 eligible peers and the method requires 20; dimension excluded from coverage."
+      },
+      {
+        "id": "D2",
+        "name": "Liquidity and Operating Runway",
+        "weight_pct": 20,
+        "score": 100,
+        "status": "complete",
+        "confidence": 63.3,
+        "primary_metrics": [
+          {
+            "name": "tier_0_to_1_hqla_usd",
+            "value": 47346240,
+            "unit": "USD",
+            "method": "post-haircut value of cash equivalents, fiat-backed stablecoins, BTC/ETH-class assets; excludes any flagged for redemption limits, legal restriction, lockup, active depeg, thin depth, or custody concentration",
+            "status": "single_source",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          {
+            "name": "expected_12m_cash_uses_usd",
+            "value": 18000000,
+            "unit": "USD",
+            "method": "documented budget + debt service + unavoidable commitments",
+            "status": "single_source",
+            "source_refs": [
+              "S6"
+            ]
+          },
+          {
+            "name": "liquidity_runway_months",
+            "value": 31.56,
+            "unit": "months",
+            "method": "12 * hqla / expected_12m_cash_uses",
+            "status": "estimated",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "S6"
+            ]
+          }
+        ],
+        "evidence_refs": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S6"
+        ],
+        "rationale": "Tier 0-1 liquid assets of $47.3M cover 31.56 months of documented cash needs."
+      },
+      {
+        "id": "D3",
+        "name": "Obligation and Claim Coverage",
+        "weight_pct": 15,
+        "score": 100,
+        "status": "complete",
+        "confidence": 73.3,
+        "primary_metrics": [
+          {
+            "name": "obligations_due_or_enforceable_usd",
+            "value": 3000000,
+            "unit": "USD",
+            "method": "debt + payables + pledge claims + pending distributions + probability-weighted contingencies",
+            "status": "verified",
+            "source_refs": [
+              "S4",
+              "S6"
+            ]
+          },
+          {
+            "name": "net_realizable_treasury_usd",
+            "value": 66908740,
+            "unit": "USD",
+            "method": "see D1",
+            "status": "single_source",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          {
+            "name": "claim_coverage_ratio",
+            "value": 22.3,
+            "unit": "x",
+            "method": "nrt / obligations",
+            "status": "estimated",
+            "source_refs": [
+              "S4",
+              "S6"
+            ]
+          }
+        ],
+        "evidence_refs": [
+          "S4",
+          "S6",
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "rationale": "NRT covers recorded obligations of $3.0M 22.3x."
+      },
+      {
+        "id": "D4",
+        "name": "Concentration and Stress Resilience",
+        "weight_pct": 15,
+        "score": 97.5,
+        "status": "complete",
+        "confidence": 63.3,
+        "primary_metrics": [
+          {
+            "name": "top_1_asset_weight_pct",
+            "value": 43.48,
+            "unit": "pct",
+            "method": "largest verified exposure / gross verified fair value",
+            "status": "single_source",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          {
+            "name": "native_token_weight_pct",
+            "value": 43.48,
+            "unit": "pct",
+            "method": "native-token fair value / gross verified fair value",
+            "status": "single_source",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          {
+            "name": "largest_correlated_group_weight_pct",
+            "value": 0,
+            "unit": "pct",
+            "method": "combined weight of the largest group of 2+ non-cash exposures sharing a correlation_group; above 50% caps D4 at 60",
+            "status": "single_source",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          {
+            "name": "herfindahl_hirschman_index",
+            "value": 3345.93,
+            "unit": "index_0_10000",
+            "method": "sum of squared percentage weights",
+            "status": "single_source",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          {
+            "name": "post_stress_nrt_usd",
+            "value": 48867866,
+            "unit": "USD",
+            "method": "tcs6-stress-v1, severe stress scenario (not a forecast): cash_equivalent -0%, fiat_stablecoin -10%, major_crypto -50%, liquid_alt -70%, lp_position -60%, native_token -80%, locked_unverifiable -80%; haircuts re-applied after shock",
+            "status": "estimated",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          {
+            "name": "nrt_survival_pct",
+            "value": 73.04,
+            "unit": "pct",
+            "method": "post_stress_nrt / pre_stress_nrt * 100 under the severe stress scenario (not a forecast)",
+            "status": "estimated",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          }
+        ],
+        "evidence_refs": [
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "rationale": "Under the severe stress scenario (not a forecast) (tcs6-stress-v1), 73.04% of NRT survives. Largest single exposure is 43.48% of verified value; native token is 43.48%."
+      },
+      {
+        "id": "D5",
+        "name": "Capital Productivity and Replenishment",
+        "weight_pct": 15,
+        "score": 41.7,
+        "status": "complete",
+        "confidence": 60,
+        "primary_metrics": [
+          {
+            "name": "trailing_12m_recurring_treasury_inflows_usd",
+            "value": 15000000,
+            "unit": "USD",
+            "method": "income verifiably accruing to the treasury only",
+            "status": "single_source",
+            "source_refs": [
+              "S6"
+            ]
+          },
+          {
+            "name": "trailing_12m_controllable_cash_uses_usd",
+            "value": 18000000,
+            "unit": "USD",
+            "method": "documented controllable spend",
+            "status": "single_source",
+            "source_refs": [
+              "S6"
+            ]
+          },
+          {
+            "name": "net_treasury_flow_usd",
+            "value": -3000000,
+            "unit": "USD",
+            "method": "inflows - uses",
+            "status": "estimated",
+            "source_refs": [
+              "S6"
+            ]
+          },
+          {
+            "name": "self_funding_ratio",
+            "value": -16.67,
+            "unit": "pct",
+            "method": "(inflows - uses) / uses * 100",
+            "status": "estimated",
+            "source_refs": [
+              "S6"
+            ]
+          }
+        ],
+        "evidence_refs": [
+          "S6"
+        ],
+        "rationale": "Trailing 12-month self-funding ratio is -16.67% (recurring treasury inflows $15.0M vs controllable uses $18.0M)."
+      },
+      {
+        "id": "D6",
+        "name": "Control, Governance, and Transparency",
+        "weight_pct": 15,
+        "score": 75,
+        "status": "complete",
+        "confidence": 89.3,
+        "primary_metrics": [
+          {
+            "name": "verified_control_value_pct",
+            "value": 99.91,
+            "unit": "pct",
+            "method": "verified-control fair value / reported gross fair value",
+            "status": "estimated",
+            "source_refs": [
+              "S1",
+              "S2",
+              "S3",
+              "S4"
+            ]
+          },
+          {
+            "name": "offchain_disclosure_value_pct",
+            "value": 8.69,
+            "unit": "pct",
+            "method": "off-chain disclosed fair value / reported gross fair value",
+            "status": "estimated",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "address_or_custody_reconciliation_pct",
+            "value": 88,
+            "unit": "pct",
+            "method": "collector reconciliation of disclosed vs observed value",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "disclosure_age_days",
+            "value": 16,
+            "unit": "days",
+            "method": "age of most recent treasury disclosure at as_of",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "treasury_policy_and_multisig_controls",
+            "value": "4-of-7 multisig + timelock; treasury policy documented",
+            "unit": "text",
+            "method": "rubric anchors 0/25/50/75/100 per blueprint D6",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "control_known",
+            "value": "yes",
+            "unit": "flag",
+            "method": "D6 rubric input, as evidenced at collection time",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "control_contradictory",
+            "value": "no",
+            "unit": "flag",
+            "method": "D6 rubric input, as evidenced at collection time",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "independent_attestation",
+            "value": "no",
+            "unit": "flag",
+            "method": "D6 rubric input, as evidenced at collection time",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "documented_treasury_policy",
+            "value": "yes",
+            "unit": "flag",
+            "method": "D6 rubric input, as evidenced at collection time",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "timelock_present",
+            "value": "yes",
+            "unit": "flag",
+            "method": "D6 rubric input, as evidenced at collection time",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "multisig_threshold",
+            "value": "4-of-7",
+            "unit": "flag",
+            "method": "D6 rubric input, as evidenced at collection time",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "governance_transparent",
+            "value": "yes",
+            "unit": "flag",
+            "method": "D6 rubric input, as evidenced at collection time",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "governance_opaque",
+            "value": "no",
+            "unit": "flag",
+            "method": "D6 rubric input, as evidenced at collection time",
+            "status": "verified",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          },
+          {
+            "name": "d6_rubric_step",
+            "value": "75: reconciliation >=80%, visible controls, documented policy",
+            "unit": "text",
+            "method": "first rubric rule satisfied, checked from 0 upward",
+            "status": "estimated",
+            "source_refs": [
+              "S1",
+              "S7"
+            ]
+          }
+        ],
+        "evidence_refs": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S7"
+        ],
+        "rationale": "Verified control covers 99.91% of reported value; reconciliation 88%, latest disclosure 16 days old; controls: 4-of-7 multisig + timelock; treasury policy documented."
+      }
+    ],
+    "overall_score": {
+      "score": null,
+      "coverage_pct": 80,
+      "decision_band": null,
+      "status": "insufficient_data",
+      "method_version": "tcs-6/1.0"
+    },
+    "confidence": {
+      "score": 85.1,
+      "label": "high",
+      "source_quality": 87.5,
+      "data_coverage": 80,
+      "cross_source_consistency": 77.4,
+      "recency_fit": 100
+    },
+    "data_coverage": {
+      "verified_control_value_pct": 99.9,
+      "offchain_disclosed_value_pct": 8.7,
+      "fresh_price_value_pct": 100,
+      "obligation_visibility_status": "unknown"
+    },
+    "source_manifest": [
+      {
+        "source_ref": "S1",
+        "title": "Treasury Safe state",
+        "publisher": "Safe Transaction Service",
+        "url": "https://safe-transaction-mainnet.safe.global/",
+        "retrieved_at": "2026-10-01T11:58:00Z",
+        "observation_time": "2026-10-01T11:58:00Z",
+        "source_tier": 1,
+        "rights_status": "permitted_for_derived_output"
+      },
+      {
+        "source_ref": "S2",
+        "title": "Spot prices",
+        "publisher": "CoinGecko",
+        "url": "https://www.coingecko.com/",
+        "retrieved_at": "2026-10-01T11:55:00Z",
+        "observation_time": "2026-10-01T11:55:00Z",
+        "source_tier": 2,
+        "rights_status": "permitted_for_derived_output"
+      },
+      {
+        "source_ref": "S3",
+        "title": "Spot prices (second source)",
+        "publisher": "DefiLlama",
+        "url": "https://defillama.com/",
+        "retrieved_at": "2026-10-01T11:56:00Z",
+        "observation_time": "2026-10-01T11:56:00Z",
+        "source_tier": 2,
+        "rights_status": "permitted_for_derived_output"
+      },
+      {
+        "source_ref": "S4",
+        "title": "Quarterly treasury report",
+        "publisher": "Example DAO",
+        "url": "https://example.invalid/report",
+        "retrieved_at": "2026-10-01T11:00:00Z",
+        "observation_time": "2026-09-15T00:00:00Z",
+        "source_tier": 1,
+        "rights_status": "permitted_for_derived_output"
+      },
+      {
+        "source_ref": "S6",
+        "title": "Budget proposal",
+        "publisher": "Example DAO forum",
+        "url": "https://example.invalid/budget",
+        "retrieved_at": "2026-10-01T11:00:00Z",
+        "observation_time": "2026-08-01T00:00:00Z",
+        "source_tier": 1,
+        "rights_status": "permitted_for_derived_output"
+      },
+      {
+        "source_ref": "S7",
+        "title": "Governance space",
+        "publisher": "Snapshot",
+        "url": "https://snapshot.org/",
+        "retrieved_at": "2026-10-01T11:58:00Z",
+        "observation_time": "2026-10-01T11:58:00Z",
+        "source_tier": 2,
+        "rights_status": "permitted_for_derived_output"
+      }
+    ],
+    "risks": [
+      {
+        "id": "obligation_visibility",
+        "category": "legal_claim",
+        "severity": "medium",
+        "description": "Obligation visibility is unknown; undisclosed liabilities may exist.",
+        "monitoring_action": "Re-check governance forums and filings for debt, pledges, and commitments."
+      }
+    ],
+    "data_gaps": [
+      {
+        "field": "overall_score.coverage_pct",
+        "reason": "Only 80% of dimension weight is scored.",
+        "impact": "Score is allowed but rests on incomplete dimensions.",
+        "remediation": "Close the dimension gaps listed below."
+      },
+      {
+        "field": "D1.same_cohort_nrt_percentile",
+        "reason": "Required evidence is not yet available for this metric.",
+        "impact": "D1 excluded from coverage.",
+        "remediation": "Collector or registry curation to supply a cited source."
+      }
+    ],
+    "disclaimer": "This report is derived from public evidence and stated assumptions as of the reported timestamp. It is not legal, tax, accounting, or personalized investment advice, and it does not authorize or execute any transaction."
+  }
+}

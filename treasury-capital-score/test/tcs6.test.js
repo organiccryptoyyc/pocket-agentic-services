@@ -196,3 +196,29 @@ test("D6 publishes its rubric inputs and the step that fired", () => {
   for (const n of ["control_known", "independent_attestation", "documented_treasury_policy", "timelock_present", "multisig_threshold", "d6_rubric_step"]) assert.ok(names.includes(n), n);
   assert.match(d6.primary_metrics.find((m) => m.name === "d6_rubric_step").value, /^75: /);
 });
+
+test("obligations checklist: the lower of the graded and claimed status wins (O2)", () => {
+  const block = { status: "adequate", report_date: "2026-09-01", liabilities_listed: true, debt_covered: true, payables_covered: true,
+    streams_and_grants_covered: true, legal_or_contingent_claims_covered: true, scope_reconciled: true, material_conflicts: [] };
+  const asOf = Date.parse("2026-10-01T12:00:00Z");
+  const vis = (extra, obl = {}) => S.obligationVisibility({ obligations: { visibility: "partial", bounded: true, ...obl, obligation_visibility: { ...block, ...extra } } }, asOf);
+  assert.strictEqual(vis({}).status, "adequate");
+  assert.strictEqual(vis({ status: "partial" }).status, "partial");                       // curator may grade down, never up
+  assert.strictEqual(vis({ material_conflicts: ["forum says 2M debt"] }).status, "partial");
+  assert.match(vis({ material_conflicts: ["forum says 2M debt"] }).missing.join(), /forum says 2M debt/);
+  assert.strictEqual(vis({ report_date: "2026-07-03" }).status, "adequate");             // 90 days at as_of: still inside
+  assert.strictEqual(vis({ report_date: "2026-07-01" }).status, "unknown");
+  assert.strictEqual(vis({ report_date: undefined }).status, "unknown");
+  assert.strictEqual(vis({ debt_covered: undefined }).status, "partial");                // a missing flag is not a pass
+  assert.deepStrictEqual(S.obligationVisibility({ obligations: { visibility: "partial", bounded: true } }, asOf).status, "partial");
+});
+
+test("partial obligations deduct the 10-point penalty and show it as a risk", () => {
+  const b = clone(EXAMPLE);
+  const full = report(clone(EXAMPLE)).overall_score.score;
+  b.obligations.visibility = "partial";
+  const r = report(b);
+  assert.strictEqual(r.overall_score.score, full - S.PARTIAL_OBLIGATIONS_PENALTY);
+  assert.strictEqual(r.overall_score.status, "provisional");
+  assert.ok(r.risks.some((x) => x.id === "penalty_obligation_visibility_partial"));
+});

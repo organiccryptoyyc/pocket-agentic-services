@@ -27,6 +27,13 @@ const entity = (id, extra = {}) => ({ entity_id: id, name: id, entity_type: "def
 
 const PEERS_24 = Array.from({ length: 24 }, (_, i) => (i + 1) * 5e6);
 
+// Complete obligations checklist dated 30 days before the example's collected_at (2026-10-01).
+const OBL_BLOCK = {
+  status: "adequate", report_date: "2026-09-01", publication_date: "2026-09-05",
+  liabilities_listed: true, debt_covered: true, payables_covered: true, streams_and_grants_covered: true,
+  legal_or_contingent_claims_covered: true, scope_reconciled: true, material_conflicts: [],
+};
+
 const CASES = {
   "01-example-ready": {
     note: "Example bundle, cohort below 20: D1 null, coverage 80, eligible, ready.",
@@ -61,6 +68,22 @@ const CASES = {
   "07-no-cash-uses": {
     note: "No 12-month cash-use data: D2 at the blueprint 0 anchor.",
     bundle: () => { const b = clone(EXAMPLE); b.cash_uses_12m = null; return b; },
+  },
+  "09-obligations-partial": {
+    note: "Curated partial + bounded (no checklist block): provisional, 10-point obligations penalty (O2).",
+    bundle: () => { const b = clone(EXAMPLE); b.obligations.visibility = "partial"; return b; },
+  },
+  "10-obligations-graded-adequate": {
+    note: "Checklist block complete, report 30 days old: adequate, no penalty.",
+    bundle: () => { const b = clone(EXAMPLE); b.obligations.obligation_visibility = { ...OBL_BLOCK }; return b; },
+  },
+  "11-obligations-graded-partial": {
+    note: "Checklist block missing streams/grants and scope reconciliation: graded partial, 10-point penalty, provisional.",
+    bundle: () => { const b = clone(EXAMPLE); b.obligations.obligation_visibility = { ...OBL_BLOCK, streams_and_grants_covered: false, scope_reconciled: false }; return b; },
+  },
+  "12-obligations-stale-report": {
+    note: "Checklist block complete but report 120 days old: graded unknown, overall score withheld.",
+    bundle: () => { const b = clone(EXAMPLE); b.obligations.obligation_visibility = { ...OBL_BLOCK, report_date: "2026-06-03" }; return b; },
   },
   "08-insufficient-unvetted": {
     note: "Unvetted registry entity: insufficient-data report (fixed timestamp).",
