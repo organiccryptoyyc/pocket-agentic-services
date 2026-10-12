@@ -57,9 +57,9 @@ test("a verification_summary (Verified layer 1.3) is schema-valid and changes no
   const schema = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "spec", "evidence_input_v1.schema.json"), "utf8"));
   const vs = {
     method_version: "pmic-verify-1.0", as_of: "2026-10-12T22:00:00Z", agreement_rate: 0.75,
-    field_counts: { agree: 2, partial: 0, disagree: 1, unavailable: 0 },
+    field_counts: { agree: 2, partial: 0, disagree: 1, unavailable: 0 }, fields_total: 2, truncated: false,
     fields: [
-      { field: "price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0", status: "agree", observed_at: "2026-10-12T21:00:00Z",
+      { field: "price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0", label: "USDC", status: "agree", observed_at: "2026-10-12T21:00:00Z",
         sources: [{ source: "chainlink", agreement: "agree", delta_pct: 0.1 }, { source: "cmc", agreement: "agree", delta_pct: 0.2 }] },
       { field: "treasury.reconciled_usd", status: "disagree", observed_at: "2026-10-12T21:00:00Z",
         sources: [{ source: "report", agreement: "disagree", delta_pct: 12.4 }] },

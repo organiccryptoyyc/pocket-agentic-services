@@ -175,6 +175,12 @@
         "field_counts": {
           "type": "object"
         },
+        "fields_total": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
         "fields": {
           "type": "array",
           "items": {
@@ -187,6 +193,9 @@
             ],
             "properties": {
               "field": {
+                "type": "string"
+              },
+              "label": {
                 "type": "string"
               },
               "status": {
