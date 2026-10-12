@@ -151,6 +151,88 @@
         }
       }
     },
+    "verification_summary": {
+      "description": "Optional (Verified layer 1.3). Latest independent cross-check per field from the Pi evidence bank: verdicts, deltas and dates only, never values, upstream payloads or evidence hashes. Does not affect scoring.",
+      "type": "object",
+      "required": [
+        "method_version",
+        "as_of",
+        "fields"
+      ],
+      "properties": {
+        "method_version": {
+          "type": "string"
+        },
+        "as_of": {
+          "type": "string"
+        },
+        "agreement_rate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "field_counts": {
+          "type": "object"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "field",
+              "status",
+              "sources",
+              "observed_at"
+            ],
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "agree",
+                  "partial",
+                  "disagree",
+                  "unavailable"
+                ]
+              },
+              "observed_at": {
+                "type": "string"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "source",
+                    "agreement"
+                  ],
+                  "properties": {
+                    "source": {
+                      "type": "string"
+                    },
+                    "agreement": {
+                      "type": "string",
+                      "enum": [
+                        "agree",
+                        "partial",
+                        "disagree",
+                        "unavailable"
+                      ]
+                    },
+                    "delta_pct": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "collector_warnings": {
       "description": "Flags the collector raised for this bundle (e.g. value_swing). Each carries the checks it ran; the bundle is still delivered as collected.",
       "type": "array",

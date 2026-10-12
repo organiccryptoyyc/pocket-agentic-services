@@ -51,3 +51,32 @@ test("every golden input bundle conforms to spec/evidence_input_v1.schema.json",
     assert.ok(r.ok, `${f}: ${r.errors.join("; ")}`);
   }
 });
+
+test("a verification_summary (Verified layer 1.3) is schema-valid and changes no golden report", () => {
+  const { validate } = require("../lib/schema");
+  const schema = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "spec", "evidence_input_v1.schema.json"), "utf8"));
+  const vs = {
+    method_version: "pmic-verify-1.0", as_of: "2026-10-12T22:00:00Z", agreement_rate: 0.75,
+    field_counts: { agree: 2, partial: 0, disagree: 1, unavailable: 0 },
+    fields: [
+      { field: "price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0", status: "agree", observed_at: "2026-10-12T21:00:00Z",
+        sources: [{ source: "chainlink", agreement: "agree", delta_pct: 0.1 }, { source: "cmc", agreement: "agree", delta_pct: 0.2 }] },
+      { field: "treasury.reconciled_usd", status: "disagree", observed_at: "2026-10-12T21:00:00Z",
+        sources: [{ source: "report", agreement: "disagree", delta_pct: 12.4 }] },
+    ],
+  };
+  let n = 0;
+  for (const f of files) {
+    const g = JSON.parse(fs.readFileSync(path.join(DIR, f), "utf8"));
+    if (!g.input.bundle) continue;
+    const bundle = { ...g.input.bundle, verification_summary: vs };
+    const r = validate(schema, bundle);
+    assert.ok(r.ok, `${f}: ${r.errors.join("; ")}`);
+    const base = S.computeBase(bundle);
+    const peers = g.input.peer_nrts && g.input.peer_nrts.length ? g.input.peer_nrts : [base.nrt];
+    const report = buildReport(g.input.entity, bundle, base, peers);
+    assert.strictEqual(JSON.stringify(normalizeReport(report), null, 2), JSON.stringify(g.expected_report, null, 2), f);
+    n++;
+  }
+  assert.ok(n >= 1);
+});
