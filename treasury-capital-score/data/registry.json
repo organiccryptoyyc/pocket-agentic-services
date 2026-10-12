@@ -843,7 +843,8 @@
       "scoreable": true,
       "treasury_perimeter": "CoW DAO Safe, Core Treasury (kpk-managed) Safe under CIP-62, and the Legal Defense Reserve Safe (CIP-50, stewarded by the CoW Foundation under DAO mandate). Excludes the CoW TWAP Safe, GNO Validators Safe and residual Balancer safe (outside the Core Treasury Mandate per the DAO reports), solver bonds, and user funds.",
       "notes": [
-        "Registry expansion batch 1 (D9), owner-approved 2026-10-03. Curated inputs not filled yet, so reports are insufficient_data until they are; NRT still counts toward the D1 cohort."
+        "Registry expansion batch 1 (D9), owner-approved 2026-10-03. Curated inputs not filled yet, so reports are insufficient_data until they are; NRT still counts toward the D1 cohort.",
+        "2026-10-12: Safe 0x04deD6C97b5109f8371FabcC9D4E84f927FdA84f (2-of-3, signers disjoint from the treasury Safes) is the operating-budget payment Safe: topped up quarterly by the Core Treasury (3.15M USDC on 2026-04-02, 07-09 and 10-06) and paid out monthly. Excluded from the perimeter (budget already disbursed); the 10-06 top-up explains the gap to kpk's 2026-08-31 figure."
       ],
       "sources": [
         "https://forum.cow.fi/t/cow-dao-treasury-august-2026-monthly-report/3573",
@@ -879,7 +880,8 @@
           "source": "https://forum.cow.fi/t/cip-62-core-treasury-team-mandate-and-funding/2770",
           "verified_at": "2026-10-03",
           "onchain_check": "safe 3-of-6",
-          "note": "kpk-managed Core Treasury (CIP-62): Aave, Morpho kpk USDC Prime vault, LSTs."
+          "note": "kpk-managed Core Treasury (CIP-62): Aave, Morpho kpk USDC Prime vault, LSTs.",
+          "stakewise_vaults": ["0x15639e82d2072fa510e5d2b5f0db361c823bcad3"]
         },
         {
           "chain": "gnosis",
