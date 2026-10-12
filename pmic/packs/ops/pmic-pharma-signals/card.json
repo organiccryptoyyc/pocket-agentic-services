@@ -17,12 +17,6 @@
       "kind": "openapi",
       "api": "pmic-pharma-signals-briefs",
       "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs/ops/pmic-pharma-signals/openapi.json"
-    },
-    {
-      "kind": "docs",
-      "api": "pmic-pharma-signals-briefs",
-      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs/README.md",
-      "notes": "How briefs are scored."
     }
   ],
   "access": "public",
@@ -76,5 +70,5 @@
     "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
   },
   "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/pmic/packs/README.md",
-  "updated": "2026-10-06"
+  "updated": "2026-10-12"
 }

@@ -1,0 +1,2 @@
+# Service cards are submitted to chain byte-for-byte; keep LF so Windows checkouts do not add bytes.
+*.json text eol=lf

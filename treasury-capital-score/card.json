@@ -18,12 +18,6 @@
       "kind": "openapi",
       "api": "treasury-capital-score-score",
       "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/treasury-capital-score/openapi.json"
-    },
-    {
-      "kind": "docs",
-      "api": "treasury-capital-score-score",
-      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/treasury-capital-score/methodology/tcs6_scoring_blueprint_v1.json",
-      "notes": "Full scoring methodology."
     }
   ],
   "access": "public",
@@ -58,5 +52,5 @@
     "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
   },
   "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/treasury-capital-score/README.md",
-  "updated": "2026-10-01"
+  "updated": "2026-10-12"
 }
