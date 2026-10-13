@@ -13,6 +13,15 @@
 //            FRED's copy of payrolls, unemployment and JOLTS against BLS, the original publisher),
 //            recorded here too: latest common observation, same tolerance as derive.js (0.5% relative
 //            or 0.05 absolute, whichever is larger), each observation once. Stored values only.
+//   pairs    Tier 1, stored values only: FRED's CPI against BLS's (same index, 0.05%); FRED's real GDP
+//            level turned into the annualized quarterly rate against BEA's published rate (0.15 point
+//            agree, 0.5 partial); World Bank against IMF WEO for GDP growth, inflation and unemployment,
+//            latest common year before this one (0.3 point agree, 1.0 partial: methods differ).
+//   kev      CISA's weekly count of known exploited vulnerabilities against NVD's count of CVEs added
+//            to KEV in the same Monday-Sunday window (one NVD request per week, last 2 complete weeks).
+//   pokt     Pocket Network now: the indexer's latest block (staked suppliers, apps, gateways,
+//            validators) against the chain's own API (LCD); once a day. Equal = agree, within 2% =
+//            partial (suppliers mid-unstake are still listed by the chain), more = disagree.
 //
 // A failed second read is an "unavailable" row; a failure of the whole step is returned to the
 // caller and never stops the collect pass.
@@ -186,12 +195,147 @@ function checkCrossGroups(db, catalog, ctx) {
   }
 }
 
+const NVD = "https://services.nvd.nist.gov/rest/json/cves/2.0";
+const POKT_GQL = "https://data.pocket.network/graphql";
+const POKT_LCD = "https://sauron-api.infra.pocket.network";
+const POKT_LIVE = [ // series feed -> indexer field, LCD list path
+  ["staked_suppliers", "stakedSuppliers", "/pokt-network/poktroll/supplier/supplier"],
+  ["staked_apps", "stakedApps", "/pokt-network/poktroll/application/application"],
+  ["gateways", "stakedGateways", "/pokt-network/poktroll/gateway/gateway"],
+  ["validators", "stakedValidators", "/cosmos/staking/v1beta1/validators?status=BOND_STATUS_BONDED"],
+];
+const round4 = (x) => Math.round(x * 10000) / 10000;
+const at = (t) => (t.length === 10 ? `${t}T00:00:00Z` : t);
+
+// One stored-value comparison: verdict from the difference (relative % or absolute points).
+function pairRow(ctx, { ours, peer, t, av, bv, mode, agreeTol, partialTol, service }) {
+  const diff = Math.abs(av - bv);
+  const measure = mode === "pct" ? (bv ? (diff / Math.abs(bv)) * 100 : Infinity) : diff;
+  const agreement = measure <= agreeTol ? "agree" : partialTol !== undefined && measure <= partialTol ? "partial" : "disagree";
+  ctx.rows.push({ run_id: ctx.runId, field: `series:${ours.series_id}`, entity_id: ours.entity_id,
+    our_value: { date: t, value: av }, upstream_service: service, upstream_value: { series_id: peer, value: bv },
+    agreement, delta_pct: bv ? round4((diff / Math.abs(bv)) * 100) : null, tolerance_pct: mode === "pct" ? agreeTol : null,
+    observed_at: at(t) });
+  ctx.calls.push([service, { disagreed: agreement === "disagree" }]);
+}
+
+function checkPairs(db, catalog, ctx) {
+  const byId = new Map(catalog.series.map((s) => [s.series_id, s]));
+  const obs = db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time DESC LIMIT 8");
+  const once = (key, t, fn) => { if (kvGet(db, key) !== t) { fn(); kvSet(db, key, t); } };
+  // latest observation time both series have, before maxT
+  const common = (a, b, maxT = "9999") => {
+    const bm = new Map(obs.all(b).map((r) => [r.t, r.v]));
+    const hit = obs.all(a).find((r) => r.t < maxT && bm.has(r.t) && Number.isFinite(r.v));
+    return hit ? { t: hit.t, av: hit.v, bv: bm.get(hit.t) } : null;
+  };
+  // FRED CPI vs BLS CPI-U (same seasonally adjusted index)
+  if (byId.has("fred:CPIAUCSL") && byId.has("bls:CUSR0000SA0")) {
+    const c = common("fred:CPIAUCSL", "bls:CUSR0000SA0");
+    if (c) once("verified:pair:cpi", c.t, () => pairRow(ctx, { ours: byId.get("fred:CPIAUCSL"), peer: "bls:CUSR0000SA0", ...c, mode: "pct", agreeTol: 0.05, service: "bls" }));
+  }
+  // FRED real GDP level -> annualized q/q growth vs BEA's published rate
+  if (byId.has("fred:GDPC1") && byId.has("bea:NIPA:T10101:1")) {
+    const g = obs.all("fred:GDPC1");
+    const bea = new Map(obs.all("bea:NIPA:T10101:1").map((r) => [r.t, r.v]));
+    if (g.length >= 2 && bea.has(g[0].t)) {
+      const rate = Math.round((Math.pow(g[0].v / g[1].v, 4) - 1) * 100 * 1000) / 1000;
+      once("verified:pair:gdp", g[0].t, () => pairRow(ctx, { ours: byId.get("fred:GDPC1"), peer: "bea:NIPA:T10101:1", t: g[0].t, av: rate, bv: bea.get(g[0].t),
+        mode: "points", agreeTol: 0.15, partialTol: 0.5, service: "bea" }));
+    }
+  }
+  // World Bank vs IMF WEO, latest common year before this one (IMF also carries projections)
+  const thisYear = `${ctx.now.getUTCFullYear()}`;
+  const WB_IMF = [["NY.GDP.MKTP.KD.ZG", "NGDP_RPCH"], ["FP.CPI.TOTL.ZG", "PCPIPCH"], ["SL.UEM.TOTL.ZS", "LUR"]];
+  for (const s of catalog.series.filter((x) => x.source_id === "worldbank")) {
+    const m = WB_IMF.find(([wb]) => s.series_id.endsWith(`:${wb}`));
+    const peer = m && `imf:${s.entity_id}:${m[1]}`;
+    if (!peer || !byId.has(peer)) continue;
+    const c = common(s.series_id, peer, thisYear);
+    if (c) once(`verified:pair:${s.series_id}`, c.t, () => pairRow(ctx, { ours: s, peer, ...c, mode: "points", agreeTol: 0.3, partialTol: 1.0, service: "imf" }));
+  }
+}
+
+async function getJson(ctx, url, init) {
+  const r = await ctx.fetchImpl(url, init || {});
+  if (!(r.status >= 200 && r.status < 300)) throw new Error(`${hostOf(url)}: HTTP ${r.status}`);
+  return JSON.parse(r.text);
+}
+
+async function checkKev(db, catalog, ctx) {
+  const s = catalog.series.find((x) => x.series_id === "cisa:kev_added_weekly");
+  if (!s) return;
+  const weeks = db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time DESC LIMIT 3").all(s.series_id);
+  const done = kvGet(db, "verified:kev") || {};
+  for (const w of weeks.slice(1)) { // skip the newest week: it may still be filling
+    if (done[w.t]) continue;
+    const end = new Date(Date.parse(`${w.t}T00:00:00Z`) + 7 * DAY - 1).toISOString();
+    const row = { run_id: ctx.runId, field: `series:${s.series_id}`, entity_id: s.entity_id, our_value: { week: w.t, count: w.v },
+      upstream_service: "nvd", tolerance_pct: 0, observed_at: at(w.t) };
+    const t0 = Date.now();
+    try {
+      const j = await getJson(ctx, `${NVD}?kevStartDate=${w.t}T00:00:00.000Z&kevEndDate=${end}&resultsPerPage=1`);
+      if (!Number.isFinite(j.totalResults)) throw new Error("nvd: no totalResults");
+      const agreement = j.totalResults === w.v ? "agree" : "disagree";
+      ctx.rows.push({ ...row, upstream_value: { week: w.t, count: j.totalResults }, agreement,
+        delta_pct: w.v ? round4((Math.abs(j.totalResults - w.v) / w.v) * 100) : null });
+      ctx.calls.push(["nvd", { disagreed: agreement === "disagree", latencyMs: Date.now() - t0 }]);
+    } catch (e) {
+      ctx.rows.push({ ...row, upstream_value: null, agreement: "unavailable" });
+      ctx.calls.push(["nvd", { ok: false }]);
+      ctx.notes.push(`nvd ${w.t}: ${String(e.message).slice(0, 120)}`);
+    }
+    done[w.t] = ctx.nowIso;
+    kvSet(db, "verified:kev", done);
+  }
+}
+
+async function checkPoktLive(db, catalog, ctx) {
+  const today = ymd(ctx.now);
+  if (kvGet(db, "verified:pokt_live") === today) return;
+  const series = new Map(catalog.series.filter((x) => x.source_id === "pokt").map((x) => [x.params && x.params.feed, x]));
+  if (!series.size) return;
+  let idx;
+  try {
+    const q = `{ blocks(orderBy: ID_DESC, first: 1) { nodes { id ${POKT_LIVE.map(([, f]) => f).join(" ")} } } }`;
+    const j = await getJson(ctx, POKT_GQL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query: q }) });
+    idx = j.data.blocks.nodes[0];
+  } catch (e) {
+    ctx.notes.push(`pokt indexer: ${String(e.message).slice(0, 120)}`);
+    return; // our side failed: nothing to compare, retry next pass
+  }
+  for (const [feed, field, path] of POKT_LIVE) {
+    const s = series.get(feed);
+    if (!s) continue;
+    const row = { run_id: ctx.runId, field: `pokt.live:${feed}`, entity_id: s.entity_id, our_value: { block: Number(idx.id), count: idx[field] },
+      upstream_service: "pokt-lcd", tolerance_pct: 0, observed_at: ctx.nowIso };
+    const t0 = Date.now();
+    try {
+      const j = await getJson(ctx, `${POKT_LCD}${path}${path.includes("?") ? "&" : "?"}pagination.count_total=true&pagination.limit=1`);
+      const total = Number(j.pagination && j.pagination.total);
+      if (!Number.isFinite(total)) throw new Error("lcd: no pagination.total");
+      const pct = total ? (Math.abs(idx[field] - total) / total) * 100 : 0;
+      const agreement = idx[field] === total ? "agree" : pct <= 2 ? "partial" : "disagree";
+      ctx.rows.push({ ...row, upstream_value: { count: total }, agreement, delta_pct: round4(pct) });
+      ctx.calls.push(["pokt-lcd", { disagreed: agreement === "disagree", latencyMs: Date.now() - t0 }]);
+    } catch (e) {
+      ctx.rows.push({ ...row, upstream_value: null, agreement: "unavailable" });
+      ctx.calls.push(["pokt-lcd", { ok: false }]);
+      ctx.notes.push(`pokt lcd ${feed}: ${String(e.message).slice(0, 120)}`);
+    }
+  }
+  kvSet(db, "verified:pokt_live", today);
+}
+
 async function verify(db, catalog, { now = new Date(), fetchImpl = null } = {}) {
   const ctx = { now, nowIso: now.toISOString().replace(/\.\d{3}Z$/, "Z"), runId: `pmic/${now.toISOString()}`,
     fetchImpl: fetchImpl || fetchText, rows: [], calls: [], notes: [] };
   await checkPrices(db, catalog, ctx);
   await checkSupplyNodes(db, catalog, ctx);
   checkCrossGroups(db, catalog, ctx);
+  checkPairs(db, catalog, ctx);
+  await checkKev(db, catalog, ctx);
+  await checkPoktLive(db, catalog, ctx);
   if (ctx.rows.length || ctx.calls.length) {
     tx(db, () => {
       addConfirmations(db, ctx.rows);

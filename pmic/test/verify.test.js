@@ -96,7 +96,7 @@ test("FRED vs BLS cross_check groups are recorded once per observation, with dis
   const { verify } = require("../lib/verify");
   const db = dbLib.open({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "pmic-xcheck-")) });
   await collectOnce(db, catalog, { now: NOW, dataDir: os.tmpdir(), env: {}, fetchImpl: makeFetch(catalog, { now: NOW, blsMirrorsFred: true }), sources: ["fred", "bls"], force: true });
-  const x = () => rows(db).filter((r) => r.upstream_service === "bls");
+  const x = () => rows(db).filter((r) => r.upstream_service === "bls" && r.field !== "series:fred:CPIAUCSL"); // the cross_check groups only
   assert.deepEqual(x().map((r) => r.field).sort(), ["series:fred:JTSJOL", "series:fred:PAYEMS", "series:fred:UNRATE"]);
   assert.ok(x().every((r) => r.agreement === "agree" && r.delta_pct < 0.5), JSON.stringify(x()[0]));
   await verify(db, catalog, { now: NOW, fetchImpl: makeFetch(catalog, { now: NOW }) });
@@ -111,5 +111,62 @@ test("FRED vs BLS cross_check groups are recorded once per observation, with dis
   assert.equal(pay[1].agreement, "disagree");
   assert.ok(Math.abs(pay[1].delta_pct - 1.9608) < 0.001, String(pay[1].delta_pct));
   const q = db.prepare("SELECT calls, disagreements FROM upstream_quality WHERE service_id = 'bls'").get();
-  assert.deepEqual({ ...q }, { calls: 4, disagreements: 1 });
+  const all = rows(db).filter((r) => r.upstream_service === "bls"); // includes the Tier 1 CPI pair
+  assert.deepEqual({ ...q }, { calls: all.length, disagreements: all.filter((r) => r.agreement === "disagree").length });
+});
+
+test("Tier 1: CPI and GDP pairs, World Bank vs IMF, CISA vs NVD, Pocket indexer vs chain", async () => {
+  const { verify } = require("../lib/verify");
+  const db = dbLib.open({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "pmic-tier1-")) });
+  const base = makeFetch(catalog, { now: NOW, blsMirrorsFred: true });
+  await collectOnce(db, catalog, { now: NOW, dataDir: os.tmpdir(), env: { BEA_API_KEY: "test", PMIC_VERIFY: "0" }, fetchImpl: base,
+    sources: ["fred", "bls", "bea", "worldbank", "imf", "cisa", "pokt"], force: true });
+  const latest = (id) => db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time DESC LIMIT 2").all(id);
+  const set = (id, t, v) => db.prepare("UPDATE observations SET metric_value = ? WHERE series_id = ? AND observation_time = ?").run(v, id, t);
+  // CPI: BLS equal to FRED -> agree
+  const cpi = latest("fred:CPIAUCSL")[0];
+  set("bls:CUSR0000SA0", cpi.t, cpi.v);
+  // GDP: BEA's rate 0.1 point off FRED's annualized rate -> agree (0.15 tolerance)
+  const [g0, g1] = latest("fred:GDPC1");
+  const rate = (Math.pow(g0.v / g1.v, 4) - 1) * 100;
+  set("bea:NIPA:T10101:1", g0.t, Math.round((rate + 0.1) * 10) / 10);
+  // World Bank vs IMF, latest common year before 2026: GDP 0.5 off -> partial, unemployment 0.1 off -> agree
+  const wbG = latest("worldbank:us:NY.GDP.MKTP.KD.ZG")[0];
+  set("imf:us:NGDP_RPCH", wbG.t, wbG.v + 0.5);
+  const wbU = latest("worldbank:us:SL.UEM.TOTL.ZS")[0];
+  set("imf:us:LUR", wbU.t, wbU.v + 0.1);
+  const kev = latest("cisa:kev_added_weekly");
+  const fetchImpl = async (url, init, opts) => {
+    const u = new URL(url);
+    if (u.host === "services.nvd.nist.gov" && u.searchParams.has("kevStartDate")) {
+      const wk = u.searchParams.get("kevStartDate").slice(0, 10);
+      const stored = db.prepare("SELECT metric_value v FROM observations WHERE series_id = 'cisa:kev_added_weekly' AND observation_time = ?").get(wk);
+      return { status: 200, ok: true, text: JSON.stringify({ totalResults: stored ? stored.v : 0 }) };
+    }
+    if (u.host === "data.pocket.network" && init && init.body && init.body.includes("first: 1")) {
+      return { status: 200, ok: true, text: JSON.stringify({ data: { blocks: { nodes: [{ id: "962403", stakedSuppliers: 4545, stakedApps: 264, stakedGateways: 8, stakedValidators: 21 }] } } }) };
+    }
+    if (u.host === "sauron-api.infra.pocket.network") {
+      const total = u.pathname.endsWith("/supplier") ? 4579 : u.pathname.endsWith("/application") ? 264 : u.pathname.endsWith("/gateway") ? 8 : 25;
+      return { status: 200, ok: true, text: JSON.stringify({ pagination: { total: String(total) } }) };
+    }
+    return base(url, init, opts);
+  };
+  await verify(db, catalog, { now: NOW, fetchImpl });
+  const by = (field, svc) => rows(db).filter((r) => r.field === field && r.upstream_service === svc).map((r) => r.agreement);
+  assert.deepEqual(by("series:fred:CPIAUCSL", "bls"), ["agree"]);
+  assert.deepEqual(by("series:fred:GDPC1", "bea"), ["agree"]);
+  assert.deepEqual(by("series:worldbank:us:NY.GDP.MKTP.KD.ZG", "imf"), ["partial"]);
+  assert.deepEqual(by("series:worldbank:us:SL.UEM.TOTL.ZS", "imf"), ["agree"]);
+  assert.equal(by("series:cisa:kev_added_weekly", "nvd").length, 2, "the 2 complete weeks before the newest");
+  assert.ok(kev.length === 2);
+  assert.ok(by("series:cisa:kev_added_weekly", "nvd").every((a) => a === "agree"));
+  assert.deepEqual(by("pokt.live:staked_suppliers", "pokt-lcd"), ["partial"]);
+  assert.deepEqual(by("pokt.live:staked_apps", "pokt-lcd"), ["agree"]);
+  assert.deepEqual(by("pokt.live:gateways", "pokt-lcd"), ["agree"]);
+  assert.deepEqual(by("pokt.live:validators", "pokt-lcd"), ["disagree"]);
+  // a second pass the same day adds nothing
+  const n = rows(db).length;
+  await verify(db, catalog, { now: NOW, fetchImpl });
+  assert.equal(rows(db).length, n);
 });
