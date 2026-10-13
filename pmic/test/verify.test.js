@@ -284,6 +284,10 @@ test("keyed checks: EIA prices and GovInfo counts; skipped without keys; keys ne
       return { status: 200, ok: true, text: JSON.stringify({ response: { data: [{ period: u.searchParams.get("start"), value: v }] } }) };
     }
     if (u.host === "api.govinfo.gov") {
+      if (u.pathname.startsWith("/published/")) {
+        const [, , start, end] = u.pathname.split("/");
+        assert.ok(start.endsWith("-01") && end.endsWith("-01") && end > start, `month runs to the 1st of the next (end exclusive): ${start}..${end}`);
+      }
       if (u.pathname.startsWith("/published/") && u.searchParams.get("collection") === "FR") {
         return { status: 200, ok: true, text: JSON.stringify({ packages: [{ packageId: "FR-A" }, { packageId: "FR-B" }], nextPage: null }) };
       }

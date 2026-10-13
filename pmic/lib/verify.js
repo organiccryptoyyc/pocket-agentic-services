@@ -532,9 +532,10 @@ async function govAll(ctx, url, key, field) {
   return out;
 }
 
+// GovInfo's /published/{start}/{end} excludes the end date, so a month runs to the 1st of the next.
 const monthBounds = (t) => {
   const d = new Date(Date.parse(`${t}T00:00:00Z`));
-  return [ymd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1))), ymd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)))];
+  return [ymd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1))), ymd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)))];
 };
 
 async function checkKeyed(db, catalog, ctx) {
