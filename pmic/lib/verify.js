@@ -27,6 +27,13 @@
 //            York Fed's EFFR; ECB deposit rate vs FRED ECBDFR; BLS hourly earnings and PPI final demand
 //            vs FRED's copies; FRED's Monthly Treasury Statement receipts, outlays and deficit vs
 //            Treasury's Fiscal Data API (deficit sign flipped: Treasury reports a deficit as positive).
+//   tier3    USGS's monthly count of magnitude 6+ quakes worldwide against EMSC's (an independent
+//            network; magnitudes differ slightly between agencies: within 1 quake or 10% agrees, 25%
+//            partial). Form 990 records: the IRS extract stays primary; each sampled large filer's
+//            revenue is checked against ProPublica's Nonprofit Explorer record for the same EIN and tax
+//            period. ProPublica's Data Terms of Use bar charging to view, sub-licensing or reselling
+//            their data, so these rows are INTERNAL_ONLY: kept in the evidence bank for our own quality
+//            control and never put into a paid response or bundle.
 //
 // A failed second read is an "unavailable" row; a failure of the whole step is returned to the
 // caller and never stops the collect pass.
@@ -425,6 +432,83 @@ async function checkTier2(db, catalog, ctx) {
   }
 }
 
+const EMSC = (from, to) => `https://www.seismicportal.eu/fdsnws/event/1/query?start=${from}&end=${to}&minmag=6&format=json&limit=2000`;
+const PROPUBLICA = (ein) => `https://projects.propublica.org/nonprofits/api/v2/organizations/${ein}.json`;
+// Sources whose terms do not allow their data, or verdicts built on it, in a paid product.
+const INTERNAL_ONLY = new Set(["propublica"]);
+const MAX_PROPUBLICA_PER_PASS = 10;
+
+async function checkEmsc(db, catalog, ctx) {
+  const s = catalog.series.find((x) => x.series_id === "usgs:global_quakes_m6_monthly");
+  if (!s) return;
+  const months = db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time DESC LIMIT 2").all(s.series_id);
+  const done = kvGet(db, "verified:emsc") || {};
+  for (const m of months) {
+    if (done[m.t]) continue;
+    const d = new Date(Date.parse(`${m.t}T00:00:00Z`));
+    const next = ymd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)));
+    const row = { run_id: ctx.runId, field: `series:${s.series_id}`, entity_id: s.entity_id, our_value: { month: m.t, count: m.v },
+      upstream_service: "emsc", tolerance_pct: 10, observed_at: at(m.t) };
+    const t0 = Date.now();
+    try {
+      const j = await getJson(ctx, EMSC(m.t, next));
+      const n = j.metadata && Number.isFinite(j.metadata.count) ? j.metadata.count : (j.features || []).length;
+      const diff = Math.abs(n - m.v);
+      const pct = m.v ? (diff / m.v) * 100 : (n ? 100 : 0);
+      const agreement = diff <= 1 || pct <= 10 ? "agree" : pct <= 25 ? "partial" : "disagree";
+      ctx.rows.push({ ...row, upstream_value: { month: m.t, count: n }, agreement, delta_pct: round4(pct) });
+      ctx.calls.push(["emsc", { disagreed: agreement === "disagree", latencyMs: Date.now() - t0 }]);
+    } catch (e) {
+      ctx.rows.push({ ...row, upstream_value: null, agreement: "unavailable" });
+      ctx.calls.push(["emsc", { ok: false }]);
+      ctx.notes.push(`emsc ${m.t}: ${String(e.message).slice(0, 120)}`);
+    }
+    done[m.t] = ctx.nowIso;
+    kvSet(db, "verified:emsc", done);
+  }
+}
+
+async function checkPropublica(db, catalog, ctx) {
+  const s = catalog.series.find((x) => x.series_id === "irs990:total_revenue");
+  if (!s) return;
+  const years = kvGet(db, "irs990:years") || {};
+  const newest = Object.keys(years).filter((y) => Array.isArray(years[y].sample)).sort().pop();
+  if (!newest) return;
+  const done = kvGet(db, "verified:propublica") || {};
+  let budget = MAX_PROPUBLICA_PER_PASS;
+  for (const rec of years[newest].sample) {
+    const key = `${rec.ein}:${rec.tax_pd}`;
+    if (done[key] || budget-- <= 0) continue;
+    const row = { run_id: ctx.runId, field: `record:irs990:${rec.ein}:${rec.tax_pd}`, entity_id: s.entity_id,
+      our_value: { ein: rec.ein, tax_pd: rec.tax_pd, totrevenue: rec.totrevenue, processing_year: newest, internal_only: true },
+      upstream_service: "propublica", tolerance_pct: 0.5, observed_at: ctx.nowIso };
+    const t0 = Date.now();
+    try {
+      const r = await ctx.fetchImpl(PROPUBLICA(rec.ein), {});
+      let filing;
+      if (r.status === 200) {
+        const j = JSON.parse(r.text);
+        filing = (j.filings_with_data || []).find((f) => String(f.tax_prd) === rec.tax_pd);
+      } else if (r.status !== 404) throw new Error(`propublica: HTTP ${r.status}`);
+      if (!filing || !Number.isFinite(Number(filing.totrevenue))) {
+        ctx.rows.push({ ...row, upstream_value: null, agreement: "unavailable" }); // ProPublica has no such filing
+        ctx.calls.push(["propublica", { latencyMs: Date.now() - t0 }]);
+      } else {
+        const theirs = Number(filing.totrevenue);
+        const pct = theirs ? (Math.abs(rec.totrevenue - theirs) / Math.abs(theirs)) * 100 : (rec.totrevenue ? 100 : 0);
+        const agreement = pct <= 0.5 ? "agree" : "disagree";
+        ctx.rows.push({ ...row, upstream_value: { totrevenue: theirs }, agreement, delta_pct: round4(pct) });
+        ctx.calls.push(["propublica", { disagreed: agreement === "disagree", latencyMs: Date.now() - t0 }]);
+      }
+      done[key] = ctx.nowIso;
+    } catch (e) {
+      ctx.calls.push(["propublica", { ok: false }]);
+      ctx.notes.push(`propublica ${rec.ein}: ${String(e.message).slice(0, 120)}`); // not marked: retried next pass
+    }
+    kvSet(db, "verified:propublica", done);
+  }
+}
+
 async function verify(db, catalog, { now = new Date(), fetchImpl = null } = {}) {
   const ctx = { now, nowIso: now.toISOString().replace(/\.\d{3}Z$/, "Z"), runId: `pmic/${now.toISOString()}`,
     fetchImpl: fetchImpl || fetchText, rows: [], calls: [], notes: [] };
@@ -435,6 +519,8 @@ async function verify(db, catalog, { now = new Date(), fetchImpl = null } = {}) 
   await checkKev(db, catalog, ctx);
   await checkPoktLive(db, catalog, ctx);
   await checkTier2(db, catalog, ctx);
+  await checkEmsc(db, catalog, ctx);
+  await checkPropublica(db, catalog, ctx);
   if (ctx.rows.length || ctx.calls.length) {
     tx(db, () => {
       addConfirmations(db, ctx.rows);
@@ -446,4 +532,4 @@ async function verify(db, catalog, { now = new Date(), fetchImpl = null } = {}) 
   return { rows: ctx.rows.length, by_agreement: by, notes: ctx.notes.slice(0, 5) };
 }
 
-module.exports = { verify, CHAINLINK, FALLBACK_RPC, PRICE_TOLERANCE_PCT };
+module.exports = { verify, CHAINLINK, FALLBACK_RPC, PRICE_TOLERANCE_PCT, INTERNAL_ONLY };

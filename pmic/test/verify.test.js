@@ -217,3 +217,47 @@ test("Tier 2: Treasury yields, NY Fed EFFR, FRED copies of BLS/ECB, Treasury MTS
   await verify(db, catalog, { now: NOW, fetchImpl });
   assert.equal(rows(db).length, n, "each observation once");
 });
+
+test("Tier 3: IRS 990 sample of the largest filers, EMSC vs USGS, ProPublica record checks (internal only)", async () => {
+  const { verify, INTERNAL_ONLY } = require("../lib/verify");
+  const db = dbLib.open({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "pmic-tier3-")) });
+  const base = makeFetch(catalog, { now: NOW });
+  await collectOnce(db, catalog, { now: NOW, dataDir: os.tmpdir(), env: { PMIC_VERIFY: "0" }, fetchImpl: base, sources: ["irs990", "usgs"], force: true });
+  const years = dbLib.kvGet(db, "irs990:years");
+  const newest = Object.keys(years).sort().pop();
+  const sample = years[newest].sample;
+  assert.equal(sample.length, 10);
+  assert.ok(sample.every((r, i) => i === 0 || r.totrevenue <= sample[i - 1].totrevenue), "largest first");
+  const usgs = db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = 'usgs:global_quakes_m6_monthly' ORDER BY observation_time DESC LIMIT 2").all();
+  let ppDown = true;
+  const fetchImpl = async (url, init, opts) => {
+    const u = new URL(url);
+    if (u.host === "www.seismicportal.eu") { // newest month within one quake; the month before 30% off
+      const m = usgs.find((x) => x.t === u.searchParams.get("start"));
+      const n = m === usgs[0] ? m.v + 1 : Math.round(m.v * 1.3) + 2;
+      return { status: 200, ok: true, text: JSON.stringify({ metadata: { count: n }, features: [] }) };
+    }
+    if (u.host === "projects.propublica.org") {
+      if (ppDown) return { status: 503, ok: false, text: "" };
+      const ein = u.pathname.split("/").pop().replace(".json", "");
+      const rec = sample.find((r) => r.ein === ein);
+      if (rec === sample[9]) return { status: 404, ok: false, text: "{}" };
+      const rev = rec === sample[8] ? rec.totrevenue * 1.1 : rec.totrevenue;
+      return { status: 200, ok: true, text: JSON.stringify({ filings_with_data: [{ tax_prd: Number(rec.tax_pd), totrevenue: rev }] }) };
+    }
+    return base(url, init, opts);
+  };
+  await verify(db, catalog, { now: NOW, fetchImpl });
+  const r = rows(db);
+  assert.deepEqual(r.filter((x) => x.upstream_service === "emsc").map((x) => x.agreement), ["agree", "disagree"]);
+  assert.equal(r.filter((x) => x.upstream_service === "propublica").length, 0, "ProPublica down: nothing recorded, retried next pass");
+  ppDown = false;
+  await verify(db, catalog, { now: NOW, fetchImpl });
+  const pp = rows(db).filter((x) => x.upstream_service === "propublica");
+  assert.equal(pp.length, 10);
+  assert.deepEqual(pp.map((x) => x.agreement).sort(), [...Array(8).fill("agree"), "disagree", "unavailable"].sort());
+  assert.ok(pp.every((x) => JSON.parse(x.our_value).internal_only === true));
+  assert.ok(INTERNAL_ONLY.has("propublica"));
+  await verify(db, catalog, { now: NOW, fetchImpl });
+  assert.equal(rows(db).filter((x) => x.upstream_service === "propublica").length, 10, "each filing once");
+});
