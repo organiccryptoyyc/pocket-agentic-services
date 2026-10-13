@@ -91,3 +91,25 @@ test("verification never changes series or scores, and PMIC_VERIFY=0 turns it of
   assert.ok(rows(on.db).length > 0);
   assert.equal(snap(on.db), snap(off.db));
 });
+
+test("FRED vs BLS cross_check groups are recorded once per observation, with disagreements", async () => {
+  const { verify } = require("../lib/verify");
+  const db = dbLib.open({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "pmic-xcheck-")) });
+  await collectOnce(db, catalog, { now: NOW, dataDir: os.tmpdir(), env: {}, fetchImpl: makeFetch(catalog, { now: NOW, blsMirrorsFred: true }), sources: ["fred", "bls"], force: true });
+  const x = () => rows(db).filter((r) => r.upstream_service === "bls");
+  assert.deepEqual(x().map((r) => r.field).sort(), ["series:fred:JTSJOL", "series:fred:PAYEMS", "series:fred:UNRATE"]);
+  assert.ok(x().every((r) => r.agreement === "agree" && r.delta_pct < 0.5), JSON.stringify(x()[0]));
+  await verify(db, catalog, { now: NOW, fetchImpl: makeFetch(catalog, { now: NOW }) });
+  assert.equal(x().length, 3, "the same observation is not recorded twice");
+  // BLS revises the latest payrolls number by 2%: the next check of that observation disagrees
+  const last = db.prepare("SELECT MAX(observation_time) t FROM observations WHERE series_id = 'bls:CES0000000001'").get().t;
+  db.prepare("UPDATE observations SET metric_value = metric_value * 1.02 WHERE series_id = 'bls:CES0000000001' AND observation_time = ?").run(last);
+  db.prepare("DELETE FROM kv WHERE k = 'verified:xcheck:us_payrolls:bls:CES0000000001'").run();
+  await verify(db, catalog, { now: NOW, fetchImpl: makeFetch(catalog, { now: NOW }) });
+  const pay = x().filter((r) => r.field === "series:fred:PAYEMS");
+  assert.equal(pay.length, 2);
+  assert.equal(pay[1].agreement, "disagree");
+  assert.ok(Math.abs(pay[1].delta_pct - 1.9608) < 0.001, String(pay[1].delta_pct));
+  const q = db.prepare("SELECT calls, disagreements FROM upstream_quality WHERE service_id = 'bls'").get();
+  assert.deepEqual({ ...q }, { calls: 4, disagreements: 1 });
+});

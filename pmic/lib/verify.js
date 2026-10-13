@@ -1,4 +1,4 @@
-// Verified layer 1.5: independent cross-checks of the crypto series, written to the confirmations
+// Verified layer 1.5: independent cross-checks of collected series, written to the confirmations
 // table (migration 006). Nothing here changes a series, a score or what is pushed to the hub.
 //
 //   price    the Uniswap v3 ETH and BTC prices (chainrpc:eth_usd, chainrpc:btc_usd) against the
@@ -8,6 +8,11 @@
 //   supply   USDC/USDT totalSupply() on each EVM chain with a second public RPC (publicnode), read at
 //            the same recent block from both: two independent nodes must return the same number.
 //            One token per chain per day.
+//
+//   xcheck   the cross_check groups PMIC already compares while scoring (lib/derive.js crossCheck:
+//            FRED's copy of payrolls, unemployment and JOLTS against BLS, the original publisher),
+//            recorded here too: latest common observation, same tolerance as derive.js (0.5% relative
+//            or 0.05 absolute, whichever is larger), each observation once. Stored values only.
 //
 // A failed second read is an "unavailable" row; a failure of the whole step is returned to the
 // caller and never stops the collect pass.
@@ -152,11 +157,41 @@ async function checkSupplyNodes(db, catalog, ctx) {
   }
 }
 
-async function verifyCrypto(db, catalog, { now = new Date(), fetchImpl = null } = {}) {
+function checkCrossGroups(db, catalog, ctx) {
+  const groups = new Map();
+  for (const s of catalog.series) {
+    if (!s.cross_check) continue;
+    if (!groups.has(s.cross_check)) groups.set(s.cross_check, []);
+    groups.get(s.cross_check).push(s);
+  }
+  const latest = db.prepare(`SELECT a.observation_time t, a.metric_value av, b.metric_value bv FROM observations a
+    JOIN observations b ON b.series_id = ? AND b.observation_time = a.observation_time
+    WHERE a.series_id = ? ORDER BY a.observation_time DESC LIMIT 1`);
+  for (const [group, members] of groups) {
+    const ours = members.find((m) => m.source_id === "fred") || members[0]; // the copy we serve
+    for (const peer of members.filter((m) => m !== ours)) {
+      const r = latest.get(peer.series_id, ours.series_id);
+      if (!r) continue;
+      const key = `verified:xcheck:${group}:${peer.series_id}`;
+      if (kvGet(db, key) === r.t) continue;
+      const diff = Math.abs(r.av - r.bv);
+      const agreement = diff <= Math.max(0.05, 0.005 * Math.abs(r.bv)) ? "agree" : "disagree";
+      ctx.rows.push({ run_id: ctx.runId, field: `series:${ours.series_id}`, entity_id: ours.entity_id,
+        our_value: { date: r.t, value: r.av }, upstream_service: peer.source_id, upstream_value: { series_id: peer.series_id, value: r.bv },
+        agreement, delta_pct: r.bv ? Math.round((diff / Math.abs(r.bv)) * 100 * 10000) / 10000 : null, tolerance_pct: 0.5,
+        observed_at: r.t.length === 10 ? `${r.t}T00:00:00Z` : r.t });
+      ctx.calls.push([peer.source_id, { disagreed: agreement === "disagree" }]);
+      kvSet(db, key, r.t);
+    }
+  }
+}
+
+async function verify(db, catalog, { now = new Date(), fetchImpl = null } = {}) {
   const ctx = { now, nowIso: now.toISOString().replace(/\.\d{3}Z$/, "Z"), runId: `pmic/${now.toISOString()}`,
     fetchImpl: fetchImpl || fetchText, rows: [], calls: [], notes: [] };
   await checkPrices(db, catalog, ctx);
   await checkSupplyNodes(db, catalog, ctx);
+  checkCrossGroups(db, catalog, ctx);
   if (ctx.rows.length || ctx.calls.length) {
     tx(db, () => {
       addConfirmations(db, ctx.rows);
@@ -168,4 +203,4 @@ async function verifyCrypto(db, catalog, { now = new Date(), fetchImpl = null } 
   return { rows: ctx.rows.length, by_agreement: by, notes: ctx.notes.slice(0, 5) };
 }
 
-module.exports = { verifyCrypto, CHAINLINK, FALLBACK_RPC, PRICE_TOLERANCE_PCT };
+module.exports = { verify, CHAINLINK, FALLBACK_RPC, PRICE_TOLERANCE_PCT };
