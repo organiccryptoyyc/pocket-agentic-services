@@ -22,6 +22,11 @@
 //   pokt     Pocket Network now: the indexer's latest block (staked suppliers, apps, gateways,
 //            validators) against the chain's own API (LCD); once a day. Equal = agree, within 2% =
 //            partial (suppliers mid-unstake are still listed by the chain), more = disagree.
+//   tier2    a second publisher's copy, fetched once per new observation of ours (keyless):
+//            FRED Treasury yields vs Treasury's daily par yield curve CSV; FRED fed funds vs the New
+//            York Fed's EFFR; ECB deposit rate vs FRED ECBDFR; BLS hourly earnings and PPI final demand
+//            vs FRED's copies; FRED's Monthly Treasury Statement receipts, outlays and deficit vs
+//            Treasury's Fiscal Data API (deficit sign flipped: Treasury reports a deficit as positive).
 //
 // A failed second read is an "unavailable" row; a failure of the whole step is returned to the
 // caller and never stops the collect pass.
@@ -327,6 +332,96 @@ async function checkPoktLive(db, catalog, ctx) {
   kvSet(db, "verified:pokt_live", today);
 }
 
+const FRED_CSV = (id) => `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}`;
+const TREASURY_CSV = (year) => `https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/${year}/all?type=daily_treasury_yield_curve&field_tdr_date_value=${year}&page&_format=csv`;
+const NYFED_EFFR = (from, to) => `https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=${from}&endDate=${to}`;
+const MTS_T1 = (date) => `https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/mts/mts_table_1?filter=record_date:eq:${date}&page[size]=40&fields=classification_desc,current_month_gross_rcpt_amt,current_month_gross_outly_amt,current_month_dfct_sur_amt`;
+const TREASURY_COL = { "fred:DGS1MO": "1 Mo", "fred:DGS3MO": "3 Mo", "fred:DGS1": "1 Yr", "fred:DGS2": "2 Yr", "fred:DGS5": "5 Yr", "fred:DGS10": "10 Yr", "fred:DGS30": "30 Yr" };
+// ours -> [FRED id, mode, agree tolerance]: the copy FRED republishes
+const FRED_TWIN = {
+  "bls:CES0500000003": ["CES0500000003", "points", 0.005],
+  "bls:WPUFD4": ["PPIFIS", "pct", 0.05],
+  "ecb:FM.B.U2.EUR.4F.KR.DFR.LEV": ["ECBDFR", "points", 0.005],
+};
+const MTS_FIELD = { "fred:MTSR133FMS": ["current_month_gross_rcpt_amt", 1], "fred:MTSO133FMS": ["current_month_gross_outly_amt", 1], "fred:MTSDS133FMS": ["current_month_dfct_sur_amt", -1] };
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+async function getText(ctx, url) {
+  const r = await ctx.fetchImpl(url, {});
+  if (!(r.status >= 200 && r.status < 300)) throw new Error(`${hostOf(url)}: HTTP ${r.status}`);
+  return r.text;
+}
+const csvRows = (text) => text.trim().split(/\r?\n/).map((l) => l.split(",").map((c) => c.replace(/^"|"$/g, "").trim()));
+const fredMap = (text) => new Map(csvRows(text).slice(1).filter((r) => r[1] !== "." && r[1] !== "").map((r) => [r[0], Number(r[1])]));
+
+// Compare our latest stored observation with a fetched value, once per observation.
+async function fetchedPair(db, ctx, s, { service, mode, agreeTol, read }) {
+  const ours = db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time DESC LIMIT 1").get(s.series_id);
+  if (!ours) return;
+  const key = `verified:t2:${s.series_id}`;
+  if (kvGet(db, key) === ours.t) return;
+  const row = { run_id: ctx.runId, field: `series:${s.series_id}`, entity_id: s.entity_id, our_value: { date: ours.t, value: ours.v },
+    upstream_service: service, tolerance_pct: mode === "pct" ? agreeTol : null, observed_at: at(ours.t) };
+  const t0 = Date.now();
+  try {
+    const theirs = await read(ours.t);
+    if (theirs === undefined) return; // the second source has not published this date yet: try again next pass
+    const diff = Math.abs(ours.v - theirs);
+    const measure = mode === "pct" ? (theirs ? (diff / Math.abs(theirs)) * 100 : Infinity) : diff;
+    const agreement = measure <= agreeTol ? "agree" : "disagree";
+    ctx.rows.push({ ...row, upstream_value: { date: ours.t, value: theirs }, agreement, delta_pct: theirs ? round4((diff / Math.abs(theirs)) * 100) : null });
+    ctx.calls.push([service, { disagreed: agreement === "disagree", latencyMs: Date.now() - t0 }]);
+  } catch (e) {
+    ctx.rows.push({ ...row, upstream_value: null, agreement: "unavailable" });
+    ctx.calls.push([service, { ok: false }]);
+    ctx.notes.push(`${service} ${s.series_id}: ${String(e.message).slice(0, 120)}`);
+  }
+  kvSet(db, key, ours.t);
+}
+
+async function checkTier2(db, catalog, ctx) {
+  const byId = new Map(catalog.series.map((x) => [x.series_id, x]));
+  const memo = new Map(); // one download per URL per pass
+  const once = (url) => { if (!memo.has(url)) memo.set(url, getText(ctx, url)); return memo.get(url); };
+  // Treasury par yield curve (CSV per year, dates MM/DD/YYYY)
+  for (const [id, col] of Object.entries(TREASURY_COL)) {
+    if (!byId.has(id)) continue;
+    await fetchedPair(db, ctx, byId.get(id), { service: "treasury", mode: "points", agreeTol: 0.005, read: async (t) => {
+      const rows = csvRows(await once(TREASURY_CSV(t.slice(0, 4))));
+      const c = rows[0].indexOf(col);
+      if (c < 0) throw new Error(`treasury csv: no column ${col}`);
+      const us = `${t.slice(5, 7)}/${t.slice(8, 10)}/${t.slice(0, 4)}`;
+      const r = rows.find((x) => x[0] === us);
+      return r && r[c] !== "" ? Number(r[c]) : undefined;
+    } });
+  }
+  // FRED fed funds (7-day series) vs New York Fed EFFR (business days)
+  if (byId.has("fred:DFF")) {
+    await fetchedPair(db, ctx, byId.get("fred:DFF"), { service: "nyfed", mode: "points", agreeTol: 0.005, read: async (t) => {
+      const j = JSON.parse(await once(NYFED_EFFR(ymd(new Date(Date.parse(`${t}T00:00:00Z`) - 7 * DAY)), t)));
+      const r = (j.refRates || []).find((x) => x.effectiveDate === t);
+      return r ? Number(r.percentRate) : undefined; // a weekend or holiday: no EFFR for that date
+    } });
+  }
+  // FRED's republished copies of BLS and ECB series
+  for (const [id, [fredId, mode, tol]] of Object.entries(FRED_TWIN)) {
+    if (!byId.has(id)) continue;
+    await fetchedPair(db, ctx, byId.get(id), { service: "fred", mode, agreeTol: tol, read: async (t) => fredMap(await once(FRED_CSV(fredId))).get(t) });
+  }
+  // FRED's Monthly Treasury Statement copies vs Treasury's Fiscal Data API (USD -> USD millions)
+  for (const [id, [field, sign]] of Object.entries(MTS_FIELD)) {
+    if (!byId.has(id)) continue;
+    await fetchedPair(db, ctx, byId.get(id), { service: "fiscaldata", mode: "pct", agreeTol: 0.05, read: async (t) => {
+      const d = new Date(Date.parse(`${t}T00:00:00Z`));
+      const last = ymd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)));
+      const j = JSON.parse(await once(MTS_T1(last)));
+      const r = (j.data || []).find((x) => x.classification_desc === MONTHS[d.getUTCMonth()]);
+      if (!r || r[field] === "null") return undefined;
+      return Math.round((sign * Number(r[field])) / 1e6);
+    } });
+  }
+}
+
 async function verify(db, catalog, { now = new Date(), fetchImpl = null } = {}) {
   const ctx = { now, nowIso: now.toISOString().replace(/\.\d{3}Z$/, "Z"), runId: `pmic/${now.toISOString()}`,
     fetchImpl: fetchImpl || fetchText, rows: [], calls: [], notes: [] };
@@ -336,6 +431,7 @@ async function verify(db, catalog, { now = new Date(), fetchImpl = null } = {}) 
   checkPairs(db, catalog, ctx);
   await checkKev(db, catalog, ctx);
   await checkPoktLive(db, catalog, ctx);
+  await checkTier2(db, catalog, ctx);
   if (ctx.rows.length || ctx.calls.length) {
     tx(db, () => {
       addConfirmations(db, ctx.rows);

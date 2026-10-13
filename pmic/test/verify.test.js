@@ -170,3 +170,48 @@ test("Tier 1: CPI and GDP pairs, World Bank vs IMF, CISA vs NVD, Pocket indexer 
   await verify(db, catalog, { now: NOW, fetchImpl });
   assert.equal(rows(db).length, n);
 });
+
+test("Tier 2: Treasury yields, NY Fed EFFR, FRED copies of BLS/ECB, Treasury MTS (sign flip), once per observation", async () => {
+  const { verify } = require("../lib/verify");
+  const db = dbLib.open({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "pmic-tier2-")) });
+  const base = makeFetch(catalog, { now: NOW, blsMirrorsFred: true });
+  await collectOnce(db, catalog, { now: NOW, dataDir: os.tmpdir(), env: { PMIC_VERIFY: "0" }, fetchImpl: base, sources: ["fred", "bls", "ecb"], force: true });
+  const latest = (id) => db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time DESC LIMIT 1").get(id);
+  const L = Object.fromEntries(["fred:DGS10", "fred:DGS2", "fred:DFF", "bls:CES0500000003", "bls:WPUFD4", "ecb:FM.B.U2.EUR.4F.KR.DFR.LEV",
+    "fred:MTSR133FMS", "fred:MTSO133FMS", "fred:MTSDS133FMS"].map((id) => [id, latest(id)]));
+  for (const [id, o] of Object.entries(L)) assert.ok(o, `stub has ${id}`);
+  const us = (t) => `${t.slice(5, 7)}/${t.slice(8, 10)}/${t.slice(0, 4)}`;
+  const fetchImpl = async (url, init, opts) => {
+    const u = new URL(url);
+    if (u.host === "home.treasury.gov") { // 10y matches, 2y is 3 bp off
+      return { status: 200, ok: true, text: `Date,"2 Yr","10 Yr"\n${us(L["fred:DGS10"].t)},${(L["fred:DGS2"].v + 0.03).toFixed(2)},${L["fred:DGS10"].v.toFixed(2)}\n` };
+    }
+    if (u.host === "markets.newyorkfed.org") {
+      return { status: 200, ok: true, text: JSON.stringify({ refRates: [{ effectiveDate: L["fred:DFF"].t, percentRate: L["fred:DFF"].v }] }) };
+    }
+    if (u.host === "fred.stlouisfed.org" && u.pathname.endsWith("fredgraph.csv") && ["CES0500000003", "PPIFIS", "ECBDFR"].includes(u.searchParams.get("id"))) {
+      const id = u.searchParams.get("id");
+      const ours = { CES0500000003: L["bls:CES0500000003"], PPIFIS: L["bls:WPUFD4"], ECBDFR: L["ecb:FM.B.U2.EUR.4F.KR.DFR.LEV"] }[id];
+      return { status: 200, ok: true, text: `observation_date,${id}\n${ours.t},${ours.v}\n` };
+    }
+    if (u.host === "api.fiscaldata.treasury.gov") {
+      const m = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][new Date(`${L["fred:MTSR133FMS"].t}T00:00:00Z`).getUTCMonth()];
+      return { status: 200, ok: true, text: JSON.stringify({ data: [{ classification_desc: m,
+        current_month_gross_rcpt_amt: String(L["fred:MTSR133FMS"].v * 1e6), current_month_gross_outly_amt: String(L["fred:MTSO133FMS"].v * 1e6),
+        current_month_dfct_sur_amt: String(-L["fred:MTSDS133FMS"].v * 1e6) }] }) };
+    }
+    return base(url, init, opts);
+  };
+  await verify(db, catalog, { now: NOW, fetchImpl });
+  const v = (id, svc) => rows(db).filter((r) => r.field === `series:${id}` && r.upstream_service === svc).map((r) => r.agreement);
+  assert.deepEqual(v("fred:DGS10", "treasury"), ["agree"]);
+  assert.deepEqual(v("fred:DGS2", "treasury"), ["disagree"]);
+  assert.deepEqual(v("fred:DFF", "nyfed"), ["agree"]);
+  assert.deepEqual(v("bls:CES0500000003", "fred"), ["agree"]);
+  assert.deepEqual(v("bls:WPUFD4", "fred"), ["agree"]);
+  assert.deepEqual(v("ecb:FM.B.U2.EUR.4F.KR.DFR.LEV", "fred"), ["agree"]);
+  assert.deepEqual(["fred:MTSR133FMS", "fred:MTSO133FMS", "fred:MTSDS133FMS"].map((id) => v(id, "fiscaldata")[0]), ["agree", "agree", "agree"], "deficit sign flipped");
+  const n = rows(db).length;
+  await verify(db, catalog, { now: NOW, fetchImpl });
+  assert.equal(rows(db).length, n, "each observation once");
+});
