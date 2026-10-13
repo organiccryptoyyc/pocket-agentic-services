@@ -10,7 +10,9 @@ let tronCalls = 0;
 
 function crypto(u, init, now, json) {
   const t = Math.floor(now.getTime() / 1000);
-  const m = /^([a-z-]+)\.api\.pocket\.network$/.exec(u.host);
+  // publicnode: the verification step's second RPC, answering like the Pocket gateway for the same chain
+  const PUBLICNODE = { "ethereum-rpc.publicnode.com": "eth", "base-rpc.publicnode.com": "base", "arbitrum-one-rpc.publicnode.com": "arb-one", "polygon-bor-rpc.publicnode.com": "poly" };
+  const m = /^([a-z-]+)\.api\.pocket\.network$/.exec(u.host) || (PUBLICNODE[u.host] && [u.host, PUBLICNODE[u.host]]);
   if (m) {
     const chain = m[1];
     const req = JSON.parse(init.body);
@@ -55,8 +57,15 @@ function crypto(u, init, now, json) {
         const sqrt = BigInt(Math.round(Math.sqrt(p01) * 2 ** 48)) * 2n ** 48n;
         return ok(`0x${word(sqrt)}${word(1)}${word(1)}${word(1)}${word(1)}${word(1)}${word(1)}`);
       }
+      if (data === "0xfeaf968c") {
+        // Chainlink latestRoundData: ETH/USD or BTC/USD (8 decimals), 0.2% above the pool price
+        const isEth = to.toLowerCase().startsWith("0x5f4e");
+        const usd = (isEth ? 2600 : 85000) * (1 + 0.15 * Math.sin(days / 20)) * 1.002;
+        return ok(`0x${word(1)}${word(Math.round(usd * 1e8))}${word(tsOf(n) - 600)}${word(tsOf(n) - 600)}${word(1)}`);
+      }
       return json({ jsonrpc: "2.0", id: req.id, error: { code: -32000, message: "execution reverted" } });
     }
+    if (req.method === "eth_blockNumber") return ok(hex(latest));
     return json({ jsonrpc: "2.0", id: req.id, error: { code: -32601, message: "Method not found" } });
   }
   if (u.host === "publicreporting.cftc.gov") {

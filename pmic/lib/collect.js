@@ -7,6 +7,7 @@ const raw = require("./raw");
 const { tx, syncCatalog, raiseAlert, resolveAlerts, kvGet, kvSet } = require("./db");
 const { ingestObservation, ingestEvent } = require("./qc");
 const { scoreSeries } = require("./derive");
+const { verifyCrypto } = require("./verify");
 const { SchemaError } = require("./adapters/common");
 
 const ADAPTERS = {
@@ -234,7 +235,13 @@ async function collectOnce(db, catalog, { now = new Date(), dataDir, env = proce
     r.scored = (r.touched || []).length;
     delete r.touched;
   }
-  const summary = { started_at: now.toISOString(), finished_at: new Date().toISOString(), due: due.length, scored, sources: runs };
+  // Verified layer 1.5: cross-checks of the crypto series into the confirmations table. Evidence
+  // only: it never changes a series or a score, and a failure never fails the pass.
+  let verify = null;
+  if (env.PMIC_VERIFY !== "0" && catalog.sources.some((x) => x.source_id === "chainrpc")) {
+    verify = await verifyCrypto(db, catalog, { now, fetchImpl }).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
+  }
+  const summary = { started_at: now.toISOString(), finished_at: new Date().toISOString(), due: due.length, scored, sources: runs, ...(verify ? { verify } : {}) };
   kvSet(db, "last_collect", summary);
   return summary;
 }
