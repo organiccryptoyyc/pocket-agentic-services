@@ -239,7 +239,7 @@ async function collectOnce(db, catalog, { now = new Date(), dataDir, env = proce
   // table. Evidence only: it never changes a series or a score, and a failure never fails the pass.
   let verify = null;
   if (env.PMIC_VERIFY !== "0") {
-    verify = await verifySeries(db, catalog, { now, fetchImpl }).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
+    verify = await verifySeries(db, catalog, { now, fetchImpl, env }).catch((e) => ({ error: String(e.message || e).slice(0, 200) }));
   }
   const summary = { started_at: now.toISOString(), finished_at: new Date().toISOString(), due: due.length, scored, sources: runs, ...(verify ? { verify } : {}) };
   kvSet(db, "last_collect", summary);

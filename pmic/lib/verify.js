@@ -34,6 +34,12 @@
 //            period. ProPublica's Data Terms of Use bar charging to view, sub-licensing or reselling
 //            their data, so these rows are INTERNAL_ONLY: kept in the evidence bank for our own quality
 //            control and never put into a paid response or bundle.
+//   keyed    with free keys in the environment (never logged or stored): FRED's WTI and Henry Hub spot
+//            prices against EIA's own API for the same date (EIA_API_KEY); Federal Register final and
+//            proposed rules per month against GovInfo's Federal Register issues, documents classed RULE
+//            and PRORULE (2% agree, 10% partial); public laws per month against GovInfo's PLAW
+//            collection; bills introduced per month against GovInfo's introduced bill versions (ih/is;
+//            the printing office lags, so 5% agree, 20% partial) (GOVINFO_API_KEY). Skipped without a key.
 //
 // A failed second read is an "unavailable" row; a failure of the whole step is returned to the
 // caller and never stops the collect pass.
@@ -509,9 +515,96 @@ async function checkPropublica(db, catalog, ctx) {
   }
 }
 
-async function verify(db, catalog, { now = new Date(), fetchImpl = null } = {}) {
+const EIA_SERIES = { "fred:DCOILWTICO": ["petroleum/pri/spt", "RWTC"], "fred:DHHNGSP": ["natural-gas/pri/fut", "RNGWHHD"] };
+const GOV_FR_CLASS = { "fedreg:final_rules_monthly": "RULE", "fedreg:proposed_rules_monthly": "PRORULE" };
+const GOVINFO = "https://api.govinfo.gov";
+const withKey = (url, key) => `${url}${url.includes("?") ? "&" : "?"}api_key=${key}`;
+
+// Every page of a GovInfo listing (nextPage links omit the key, so it is added back each time).
+async function govAll(ctx, url, key, field) {
+  const out = [];
+  let next = url;
+  for (let i = 0; next && i < 20; i++) {
+    const j = await getJson(ctx, withKey(next, key));
+    out.push(...(j[field] || []));
+    next = j.nextPage || null;
+  }
+  return out;
+}
+
+const monthBounds = (t) => {
+  const d = new Date(Date.parse(`${t}T00:00:00Z`));
+  return [ymd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1))), ymd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)))];
+};
+
+async function checkKeyed(db, catalog, ctx) {
+  const byId = new Map(catalog.series.map((x) => [x.series_id, x]));
+  const eia = ctx.env.EIA_API_KEY;
+  if (eia) {
+    for (const [id, [route, series]] of Object.entries(EIA_SERIES)) {
+      if (!byId.has(id)) continue;
+      await fetchedPair(db, ctx, byId.get(id), { service: "eia", mode: "points", agreeTol: 0.005, read: async (t) => {
+        const j = await getJson(ctx, `https://api.eia.gov/v2/${route}/data/?frequency=daily&data[0]=value&facets[series][]=${series}&start=${t}&end=${t}&api_key=${eia}`);
+        const r = ((j.response && j.response.data) || []).find((x) => x.period === t);
+        return r && r.value !== null && r.value !== "" ? Number(r.value) : undefined;
+      } });
+    }
+  }
+  const gov = ctx.env.GOVINFO_API_KEY;
+  if (!gov) return;
+  const memo = new Map();
+  const frMonth = (first, last) => {
+    const k = `fr:${first}`;
+    if (!memo.has(k)) memo.set(k, (async () => {
+      const issues = await govAll(ctx, `${GOVINFO}/published/${first}/${last}?collection=FR&pageSize=100&offsetMark=*`, gov, "packages");
+      const counts = {};
+      for (const pkg of issues) {
+        for (const g of await govAll(ctx, `${GOVINFO}/packages/${pkg.packageId}/granules?pageSize=1000&offsetMark=*`, gov, "granules")) {
+          counts[g.granuleClass] = (counts[g.granuleClass] || 0) + 1;
+        }
+      }
+      return counts;
+    })());
+    return memo.get(k);
+  };
+  const monthly = async (s, service, agreeTol, partialTol, read) => {
+    const ours = db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time DESC LIMIT 1").get(s.series_id);
+    if (!ours) return;
+    const key = `verified:gov:${s.series_id}`;
+    if (kvGet(db, key) === ours.t) return;
+    const row = { run_id: ctx.runId, field: `series:${s.series_id}`, entity_id: s.entity_id, our_value: { month: ours.t, count: ours.v },
+      upstream_service: service, tolerance_pct: agreeTol, observed_at: at(ours.t) };
+    const t0 = Date.now();
+    try {
+      const n = await read(...monthBounds(ours.t));
+      const pct = n ? (Math.abs(ours.v - n) / n) * 100 : (ours.v ? 100 : 0);
+      const agreement = pct <= agreeTol || Math.abs(ours.v - n) <= 1 ? "agree" : pct <= partialTol ? "partial" : "disagree";
+      ctx.rows.push({ ...row, upstream_value: { month: ours.t, count: n }, agreement, delta_pct: round4(pct) });
+      ctx.calls.push([service, { disagreed: agreement === "disagree", latencyMs: Date.now() - t0 }]);
+    } catch (e) {
+      ctx.rows.push({ ...row, upstream_value: null, agreement: "unavailable" });
+      ctx.calls.push([service, { ok: false }]);
+      ctx.notes.push(`${service} ${s.series_id}: ${String(e.message).slice(0, 120)}`);
+    }
+    kvSet(db, key, ours.t);
+  };
+  for (const [id, cls] of Object.entries(GOV_FR_CLASS)) {
+    if (byId.has(id)) await monthly(byId.get(id), "govinfo", 2, 10, async (first, last) => (await frMonth(first, last))[cls] || 0);
+  }
+  if (byId.has("congress:laws_enacted_monthly")) {
+    await monthly(byId.get("congress:laws_enacted_monthly"), "govinfo", 0, 20, async (first, last) =>
+      (await govAll(ctx, `${GOVINFO}/published/${first}/${last}?collection=PLAW&pageSize=1000&offsetMark=*`, gov, "packages")).length);
+  }
+  if (byId.has("congress:bills_introduced_monthly")) {
+    await monthly(byId.get("congress:bills_introduced_monthly"), "govinfo", 5, 20, async (first, last) =>
+      (await govAll(ctx, `${GOVINFO}/published/${first}/${last}?collection=BILLS&pageSize=1000&offsetMark=*`, gov, "packages"))
+        .filter((pkg) => /^BILLS-\d+(hr|s)\d+(ih|is)$/.test(pkg.packageId)).length);
+  }
+}
+
+async function verify(db, catalog, { now = new Date(), fetchImpl = null, env = process.env } = {}) {
   const ctx = { now, nowIso: now.toISOString().replace(/\.\d{3}Z$/, "Z"), runId: `pmic/${now.toISOString()}`,
-    fetchImpl: fetchImpl || fetchText, rows: [], calls: [], notes: [] };
+    fetchImpl: fetchImpl || fetchText, env, rows: [], calls: [], notes: [] };
   await checkPrices(db, catalog, ctx);
   await checkSupplyNodes(db, catalog, ctx);
   checkCrossGroups(db, catalog, ctx);
@@ -521,6 +614,7 @@ async function verify(db, catalog, { now = new Date(), fetchImpl = null } = {}) 
   await checkTier2(db, catalog, ctx);
   await checkEmsc(db, catalog, ctx);
   await checkPropublica(db, catalog, ctx);
+  await checkKeyed(db, catalog, ctx);
   if (ctx.rows.length || ctx.calls.length) {
     tx(db, () => {
       addConfirmations(db, ctx.rows);

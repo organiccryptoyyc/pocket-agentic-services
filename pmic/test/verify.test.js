@@ -261,3 +261,58 @@ test("Tier 3: IRS 990 sample of the largest filers, EMSC vs USGS, ProPublica rec
   await verify(db, catalog, { now: NOW, fetchImpl });
   assert.equal(rows(db).filter((x) => x.upstream_service === "propublica").length, 10, "each filing once");
 });
+
+test("keyed checks: EIA prices and GovInfo counts; skipped without keys; keys never stored", async () => {
+  const { verify } = require("../lib/verify");
+  const db = dbLib.open({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "pmic-keyed-")) });
+  const base = makeFetch(catalog, { now: NOW });
+  await collectOnce(db, catalog, { now: NOW, dataDir: os.tmpdir(), env: { PMIC_VERIFY: "0", CONGRESS_API_KEY: "k" }, fetchImpl: base, sources: ["fred", "fedreg", "congress"], force: true });
+  const latest = (id) => db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time DESC LIMIT 1").get(id);
+  const L = Object.fromEntries(["fred:DCOILWTICO", "fred:DHHNGSP", "fedreg:final_rules_monthly", "fedreg:proposed_rules_monthly", "congress:laws_enacted_monthly"].map((id) => [id, latest(id)]));
+  for (const [id, o] of Object.entries(L)) assert.ok(o, `stub has ${id}`);
+  const KEY = "TESTKEY0123456789abcdef0123456789abcdef";
+  const seen = [];
+  const fetchImpl = async (url, init, opts) => {
+    const u = new URL(url);
+    if (u.host === "api.eia.gov" || u.host === "api.govinfo.gov") {
+      assert.equal(u.searchParams.get("api_key"), KEY, "key sent as api_key");
+      seen.push(u.pathname);
+    }
+    if (u.host === "api.eia.gov") {
+      const id = u.searchParams.get("facets[series][]") === "RWTC" ? "fred:DCOILWTICO" : "fred:DHHNGSP";
+      const v = id === "fred:DCOILWTICO" ? L[id].v : L[id].v + 0.05; // Henry Hub 5 cents off
+      return { status: 200, ok: true, text: JSON.stringify({ response: { data: [{ period: u.searchParams.get("start"), value: v }] } }) };
+    }
+    if (u.host === "api.govinfo.gov") {
+      if (u.pathname.startsWith("/published/") && u.searchParams.get("collection") === "FR") {
+        return { status: 200, ok: true, text: JSON.stringify({ packages: [{ packageId: "FR-A" }, { packageId: "FR-B" }], nextPage: null }) };
+      }
+      if (u.pathname.endsWith("/granules")) { // split the month's counts over two issues
+        const half = (n, first) => (first ? Math.ceil(n / 2) : Math.floor(n / 2));
+        const first = u.pathname.includes("FR-A");
+        const g = [];
+        for (let i = 0; i < half(L["fedreg:final_rules_monthly"].v, first); i++) g.push({ granuleClass: "RULE" });
+        for (let i = 0; i < half(Math.round(L["fedreg:proposed_rules_monthly"].v * 1.3), first); i++) g.push({ granuleClass: "PRORULE" });
+        g.push({ granuleClass: "NOTICE" });
+        return { status: 200, ok: true, text: JSON.stringify({ granules: g, nextPage: null }) };
+      }
+      if (u.searchParams.get("collection") === "PLAW") {
+        return { status: 200, ok: true, text: JSON.stringify({ packages: Array.from({ length: L["congress:laws_enacted_monthly"].v }, (_, i) => ({ packageId: `PLAW-119publ${i}` })), nextPage: null }) };
+      }
+      if (u.searchParams.get("collection") === "BILLS") return { status: 200, ok: true, text: JSON.stringify({ packages: [], nextPage: null }) };
+    }
+    return base(url, init, opts);
+  };
+  await verify(db, catalog, { now: NOW, fetchImpl, env: {} });
+  assert.equal(seen.length, 0, "no keys: EIA and GovInfo are not called");
+  await verify(db, catalog, { now: NOW, fetchImpl, env: { EIA_API_KEY: KEY, GOVINFO_API_KEY: KEY } });
+  const v = (id, svc) => rows(db).filter((r) => r.field === `series:${id}` && r.upstream_service === svc).map((r) => r.agreement);
+  assert.deepEqual(v("fred:DCOILWTICO", "eia"), ["agree"]);
+  assert.deepEqual(v("fred:DHHNGSP", "eia"), ["disagree"]);
+  assert.deepEqual(v("fedreg:final_rules_monthly", "govinfo"), ["agree"]);
+  assert.deepEqual(v("fedreg:proposed_rules_monthly", "govinfo"), ["disagree"], "30% off is beyond the 10% partial band");
+  assert.deepEqual(v("congress:laws_enacted_monthly", "govinfo"), ["agree"]);
+  const everything = JSON.stringify(db.prepare("SELECT * FROM confirmations").all()) + JSON.stringify(db.prepare("SELECT * FROM kv").all())
+    + JSON.stringify(db.prepare("SELECT * FROM upstream_quality").all());
+  assert.ok(!everything.includes(KEY), "the key is never stored");
+});
