@@ -255,7 +255,10 @@ function countryTable(vertical, signalsByMetric, { horizon, countries = null }) 
       .sort((a, b) => b.value - a.value)
       .map((r, i) => ({ rank: i + 1, ...r }));
     if (!rows.length) continue;
-    metrics.push({ metric, label: rows[0].label, unit: sigs[0].metric.unit, polarity: rows[0].polarity, rows: rows.map(({ label, polarity, ...r }) => r) });
+    // A vertical can name its metrics; otherwise the series label is used (fine for World Bank and IMF
+    // tables, but state series carry the state in their label, so state-labor sets its own).
+    const label = (vertical.metric_labels && vertical.metric_labels[metric]) || rows[0].label;
+    metrics.push({ metric, label, unit: sigs[0].metric.unit, polarity: rows[0].polarity, rows: rows.map(({ label: _l, polarity, ...r }) => r) });
     for (const r of rows) {
       if (!byCountry.has(r.country)) byCountry.set(r.country, { country: r.country, name: r.name, scores: [] });
       if (r.polarity !== 0 && r.score !== null) byCountry.get(r.country).scores.push(r.score);

@@ -2,7 +2,7 @@
   "_comment": "One file per on-chain service. Related verticals are bundled into one service so they share one registration fee and one container. Member scores: when a member's own polarity matches (or no 'direction' is set) the hub's composite_score is used; when 'direction' differs from the hub's polarity (for example a neutral price series read as cost pressure), the pack scores it from the percentile in that direction. Neutral members without a direction are reported under 'watch', not averaged.",
   "service_id": "pmic-macro-signals",
   "display_name": "PMIC Macro and Markets Signals",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "category": "finance",
   "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
   "default_horizon": "90d",
@@ -400,7 +400,8 @@
       "source_id": "fred",
       "unit_word": "states",
       "note": "Monthly BLS state data via FRED for the 12 largest states: unemployment rate (seasonally adjusted) and nonfarm payroll growth year over year. Ranked values compare states with each other; each state's score compares it with its own history. Pass countries as state ids, e.g. [\"us-ca\",\"us-tx\"].",
-      "metrics": ["state_unemployment_rate", "state_nonfarm_payrolls"]
+      "metrics": ["state_unemployment_rate", "state_nonfarm_payrolls"],
+      "metric_labels": {"state_unemployment_rate": "Unemployment rate (BLS LAUS, SA)", "state_nonfarm_payrolls": "Nonfarm payroll employment (BLS CES, SA)"}
     },
     {
       "id": "imf-outlook",

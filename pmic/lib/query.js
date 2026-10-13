@@ -175,8 +175,10 @@ function series(db, body) {
   return out;
 }
 
-// "Why" explanations from stored history: what moved between the score at the start of the
-// horizon and the latest one, and what happened to the entity in between.
+// "Why" explanations from stored history: what moved between the observation nearest to
+// (latest - horizon) and the latest one, the largest steps across that window (by absolute size,
+// signed), and what happened to the entity in between. Scores are attached where one was stored
+// for those exact dates; the window itself comes from observations, so it always matches the horizon.
 function explain(db, body) {
   const id = str(body, "series_id", { required: true, max: 128 });
   const s = seriesRow(db, id);
@@ -184,31 +186,42 @@ function explain(db, body) {
   const days = Number(h.replace("d", ""));
   const now = latestScore(db, id);
   if (!now) return { series_id: id, horizon: h, status: "no_data", explanation: "No observations collected yet." };
-  const cutoff = new Date(Date.parse(now.as_of) - days * DAY).toISOString().slice(0, 10);
-  const then = db.prepare("SELECT * FROM scores WHERE series_id = ? AND as_of <= ? ORDER BY as_of DESC, computed_at DESC LIMIT 1").get(id, cutoff);
-  const obs = db.prepare("SELECT observation_time, metric_value FROM observations WHERE series_id = ? AND observation_time > ? ORDER BY observation_time").all(id, cutoff);
+  const target = new Date(Date.parse(now.as_of) - days * DAY).toISOString().slice(0, 10);
+  const before = db.prepare("SELECT observation_time, metric_value FROM observations WHERE series_id = ? AND observation_time <= ? ORDER BY observation_time DESC LIMIT 1").get(id, target);
+  const after = db.prepare("SELECT observation_time, metric_value FROM observations WHERE series_id = ? AND observation_time > ? AND observation_time < ? ORDER BY observation_time LIMIT 1").get(id, target, now.as_of);
+  const gap = (o) => Math.abs(Date.parse(o.observation_time) - Date.parse(target));
+  const prev = before && after ? (gap(after) < gap(before) ? after : before) : before || after || null;
+  const then = prev ? db.prepare("SELECT * FROM scores WHERE series_id = ? AND as_of = ? ORDER BY computed_at DESC LIMIT 1").get(id, prev.observation_time) : null;
+  const start = prev ? prev.observation_time : target;
+  const obs = db.prepare("SELECT observation_time, metric_value FROM observations WHERE series_id = ? AND observation_time >= ? AND observation_time <= ? ORDER BY observation_time").all(id, start, now.as_of);
   const steps = [];
-  for (let i = 1; i < obs.length; i++) steps.push({ from: obs[i - 1].observation_time, to: obs[i].observation_time, change: obs[i].metric_value - obs[i - 1].metric_value });
-  const biggest = [...steps].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 3);
+  const tidy = (x) => Number(x.toPrecision(10)); // float noise: 4.1 - 4.2 is -0.10000000000000053
+  for (let i = 1; i < obs.length; i++) steps.push({ from: obs[i - 1].observation_time, to: obs[i].observation_time, change: tidy(obs[i].metric_value - obs[i - 1].metric_value) });
+  const biggest = steps.filter((x) => x.change !== 0).sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 3);
   const events = db.prepare(`SELECT event_type, event_time, title, severity, source_url FROM events WHERE entity_id = ? AND event_time >= ?
-    ORDER BY CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, event_time DESC LIMIT 10`).all(s.entity_id, cutoff);
+    ORDER BY CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, event_time DESC LIMIT 10`).all(s.entity_id, start);
+  const unit = s.unit.replace(/_/g, " ");
+  const signed = (x) => `${x >= 0 ? "+" : ""}${Number(x.toPrecision(6))}`;
   const reasons = [];
-  if (then) {
-    const dc = now.composite_score !== null && then.composite_score !== null ? now.composite_score - then.composite_score : null;
-    if (dc !== null) reasons.push(`Composite moved ${dc >= 0 ? "+" : ""}${dc} (from ${then.composite_score} on ${then.as_of} to ${now.composite_score} on ${now.as_of}).`);
-    if (now.percentile !== null && then.percentile !== null) reasons.push(`Percentile vs trailing history went from ${Math.round(then.percentile * 100)} to ${Math.round(now.percentile * 100)}.`);
-    reasons.push(`Value went from ${then.current_value} to ${now.current_value} ${s.unit.replace(/_/g, " ")}.`);
+  if (prev) {
+    reasons.push(`Value went from ${prev.metric_value} ${unit} on ${prev.observation_time} to ${now.current_value} ${unit} on ${now.as_of} (${signed(tidy(now.current_value - prev.metric_value))}).`);
+    if (then && now.composite_score !== null && then.composite_score !== null) {
+      reasons.push(`Composite moved ${signed(now.composite_score - then.composite_score)} (from ${then.composite_score} to ${now.composite_score}).`);
+    }
+    if (then && now.percentile !== null && then.percentile !== null) reasons.push(`Percentile vs trailing history went from ${Math.round(then.percentile * 100)} to ${Math.round(now.percentile * 100)}.`);
   } else {
-    reasons.push(`No stored score from ${h} ago (history starts later); explaining from observations only.`);
+    reasons.push(`No observation from about ${h} ago (history starts later); explaining from the observations available.`);
   }
-  for (const b of biggest) reasons.push(`Largest step: ${b.change >= 0 ? "+" : ""}${Number(b.change.toPrecision(6))} between ${b.from} and ${b.to}.`);
+  reasons.push(biggest.length
+    ? `Largest ${biggest.length === 1 ? "step" : "steps"}: ${biggest.map((b) => `${signed(b.change)} (${b.from} to ${b.to})`).join("; ")}.`
+    : "No change between observations in the window.");
   if (events.length) reasons.push(`${events.length} event(s) for ${s.entity_id} in the window, ${events.filter((e) => e.severity === "high").length} high severity.`);
   return {
     series_id: id,
     horizon: h,
     status: "ok",
     current: answer(db, s, now, { withEvents: false }),
-    previous: then ? { as_of: then.as_of, current_value: then.current_value, composite_score: then.composite_score, percentile: then.percentile, trend: then.trend } : null,
+    previous: prev ? { as_of: prev.observation_time, current_value: prev.metric_value, composite_score: then ? then.composite_score : null, percentile: then ? then.percentile : null, trend: then ? then.trend : null } : null,
     largest_steps: biggest,
     events,
     explanation: reasons.join(" "),

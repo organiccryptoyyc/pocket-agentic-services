@@ -84,6 +84,10 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
     assert.equal(r.status, 200, JSON.stringify(r.json));
     if (v.kind === "country_table") {
       assert.equal(r.json.status, "ok");
+      if (v.id === "state-labor") { // PNF 2026-10-13: labels name no single state; the state is in each row
+        assert.deepEqual(r.json.metrics.map((m) => m.label), ["Unemployment rate (BLS LAUS, SA)", "Nonfarm payroll employment (BLS CES, SA)"]);
+        assert.ok(r.json.metrics.every((m) => m.rows.length > 1 && m.rows.every((row) => row.name || row.country)));
+      }
       assert.ok(r.json.country_scores.length >= 7);
       assert.ok(r.json.metrics.every((m) => m.rows.every((row, i) => row.rank === i + 1)));
       continue;

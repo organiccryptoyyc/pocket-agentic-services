@@ -268,7 +268,7 @@ test("query layer: marketplace answer shape, filters, explain, bad input", async
   assert.ok(ranked.count > 0 && ranked.signals.every((s) => s.metric.category === "health"));
   const ex = Q.explain(db, { series_id: "fred:DGS10", horizon: "90d" });
   assert.equal(ex.status, "ok");
-  assert.ok(ex.explanation.includes("Composite moved") || ex.explanation.includes("No stored score"));
+  assert.ok(ex.explanation.startsWith("Value went from") || ex.explanation.startsWith("No observation from about"));
   assert.ok(Q.events(db, { entity_id: "pfe", severity: "high" }).count >= 1);
   assert.ok(Q.catalog(db, { industry: "banking" }).count > 0);
   assert.throws(() => Q.signal(db, { series_id: "nope" }), /not in the catalog/);
@@ -297,4 +297,27 @@ test("outliers: only new observations are checked, ordinary lumpy steps are not 
   db.exec(fs.readFileSync(path.join(__dirname, "..", "migrations", "002_clear_backfill_outliers.sql"), "utf8"));
   assert.equal(db.prepare("SELECT qc_flags FROM observations WHERE observation_time = '2020-04-01'").get().qc_flags, "[]");
   assert.equal(count(db, "SELECT COUNT(*) n FROM alerts WHERE kind = 'outlier' AND resolved_at IS NULL"), 1);
+});
+
+test("explain follows the horizon: previous is the observation nearest to as_of - horizon, signed largest steps (PNF 2026-10-13)", async () => {
+  const { db } = await fresh({ sources: ["fred"] });
+  // Reproduce PNF's case: monthly unemployment, sparse stored scores (only the newest one and one in February).
+  const obs = db.prepare("SELECT observation_time t FROM observations WHERE series_id = 'fred:UNRATE' ORDER BY observation_time DESC LIMIT 9").all().map((r) => r.t);
+  const vals = [4.2, 4.1, 4.0, 4.2, 4.3, 4.4, 4.4, 4.4, 4.4]; // newest first: a fall from 4.4 into a 4.0 trough and back to 4.2
+  obs.forEach((t, i) => db.prepare("UPDATE observations SET metric_value = ? WHERE series_id = 'fred:UNRATE' AND observation_time = ?").run(vals[i], t));
+  db.prepare("UPDATE scores SET current_value = 4.2 WHERE series_id = 'fred:UNRATE' AND as_of = ?").run(obs[0]);
+  const ex = Q.explain(db, { series_id: "fred:UNRATE", horizon: "90d" });
+  const asOf = ex.current.value ? ex.current.value.as_of : obs[0];
+  const target = Date.parse(asOf) - 90 * 86400000;
+  const distance = (d) => Math.abs(Date.parse(d) - target);
+  assert.ok(obs.every((t) => distance(ex.previous.as_of) <= distance(t)), `previous ${ex.previous.as_of} is the observation nearest to as_of - 90d`);
+  assert.ok((Date.parse(asOf) - Date.parse(ex.previous.as_of)) / 86400000 < 120, "not months earlier");
+  const inWindow = obs.filter((t) => t >= ex.previous.as_of);
+  assert.ok(ex.largest_steps.every((st) => inWindow.includes(st.from) && inWindow.includes(st.to)), "steps lie inside the window");
+  const sum = ex.largest_steps.length ? ex.largest_steps.map((st) => Math.abs(st.change)) : [];
+  assert.deepEqual(sum, [...sum].sort((a, b) => b - a), "largest first by absolute size");
+  assert.ok(ex.largest_steps.every((st) => st.change !== 0), "zero steps are not 'largest steps'");
+  assert.equal((ex.explanation.match(/Largest step/g) || []).length, 1, "the label is not repeated");
+  assert.match(ex.explanation, /Value went from [\d.]+ percent on \d{4}-\d{2}-\d{2} to 4\.2 percent on /);
+  assert.ok(ex.largest_steps.every((st) => String(st.change).length <= 6), "no float noise in steps");
 });
