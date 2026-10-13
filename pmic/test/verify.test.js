@@ -189,16 +189,18 @@ test("Tier 2: Treasury yields, NY Fed EFFR, FRED copies of BLS/ECB, Treasury MTS
     if (u.host === "markets.newyorkfed.org") {
       return { status: 200, ok: true, text: JSON.stringify({ refRates: [{ effectiveDate: L["fred:DFF"].t, percentRate: L["fred:DFF"].v }] }) };
     }
-    if (u.host === "fred.stlouisfed.org" && u.pathname.endsWith("fredgraph.csv") && ["CES0500000003", "PPIFIS", "ECBDFR"].includes(u.searchParams.get("id"))) {
+    if (u.host === "fred.stlouisfed.org" && u.pathname.endsWith("fredgraph.csv") && ["CES0500000003", "PPIFID", "ECBDFR"].includes(u.searchParams.get("id"))) {
       const id = u.searchParams.get("id");
-      const ours = { CES0500000003: L["bls:CES0500000003"], PPIFIS: L["bls:WPUFD4"], ECBDFR: L["ecb:FM.B.U2.EUR.4F.KR.DFR.LEV"] }[id];
+      const ours = { CES0500000003: L["bls:CES0500000003"], PPIFID: L["bls:WPUFD4"], ECBDFR: L["ecb:FM.B.U2.EUR.4F.KR.DFR.LEV"] }[id];
       return { status: 200, ok: true, text: `observation_date,${id}\n${ours.t},${ours.v}\n` };
     }
     if (u.host === "api.fiscaldata.treasury.gov") {
       const m = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][new Date(`${L["fred:MTSR133FMS"].t}T00:00:00Z`).getUTCMonth()];
-      return { status: 200, ok: true, text: JSON.stringify({ data: [{ classification_desc: m,
-        current_month_gross_rcpt_amt: String(L["fred:MTSR133FMS"].v * 1e6), current_month_gross_outly_amt: String(L["fred:MTSO133FMS"].v * 1e6),
-        current_month_dfct_sur_amt: String(-L["fred:MTSDS133FMS"].v * 1e6) }] }) };
+      // the same month twice: last fiscal year's (line 12, different numbers) and this year's (line 26)
+      return { status: 200, ok: true, text: JSON.stringify({ data: [
+        { classification_desc: m, src_line_nbr: "12", current_month_gross_rcpt_amt: "1", current_month_gross_outly_amt: "1", current_month_dfct_sur_amt: "1" },
+        { classification_desc: m, src_line_nbr: "26", current_month_gross_rcpt_amt: String(L["fred:MTSR133FMS"].v * 1e6), current_month_gross_outly_amt: String(L["fred:MTSO133FMS"].v * 1e6),
+          current_month_dfct_sur_amt: String(-L["fred:MTSDS133FMS"].v * 1e6) }] }) };
     }
     return base(url, init, opts);
   };

@@ -335,12 +335,12 @@ async function checkPoktLive(db, catalog, ctx) {
 const FRED_CSV = (id) => `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}`;
 const TREASURY_CSV = (year) => `https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/${year}/all?type=daily_treasury_yield_curve&field_tdr_date_value=${year}&page&_format=csv`;
 const NYFED_EFFR = (from, to) => `https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=${from}&endDate=${to}`;
-const MTS_T1 = (date) => `https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/mts/mts_table_1?filter=record_date:eq:${date}&page[size]=40&fields=classification_desc,current_month_gross_rcpt_amt,current_month_gross_outly_amt,current_month_dfct_sur_amt`;
+const MTS_T1 = (date) => `https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/mts/mts_table_1?filter=record_date:eq:${date}&page[size]=40&fields=classification_desc,src_line_nbr,current_month_gross_rcpt_amt,current_month_gross_outly_amt,current_month_dfct_sur_amt`;
 const TREASURY_COL = { "fred:DGS1MO": "1 Mo", "fred:DGS3MO": "3 Mo", "fred:DGS1": "1 Yr", "fred:DGS2": "2 Yr", "fred:DGS5": "5 Yr", "fred:DGS10": "10 Yr", "fred:DGS30": "30 Yr" };
 // ours -> [FRED id, mode, agree tolerance]: the copy FRED republishes
 const FRED_TWIN = {
   "bls:CES0500000003": ["CES0500000003", "points", 0.005],
-  "bls:WPUFD4": ["PPIFIS", "pct", 0.05],
+  "bls:WPUFD4": ["PPIFID", "pct", 0.05], // not seasonally adjusted, like WPUFD4 (PPIFIS is the adjusted one)
   "ecb:FM.B.U2.EUR.4F.KR.DFR.LEV": ["ECBDFR", "points", 0.005],
 };
 const MTS_FIELD = { "fred:MTSR133FMS": ["current_month_gross_rcpt_amt", 1], "fred:MTSO133FMS": ["current_month_gross_outly_amt", 1], "fred:MTSDS133FMS": ["current_month_dfct_sur_amt", -1] };
@@ -415,7 +415,10 @@ async function checkTier2(db, catalog, ctx) {
       const d = new Date(Date.parse(`${t}T00:00:00Z`));
       const last = ymd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)));
       const j = JSON.parse(await once(MTS_T1(last)));
-      const r = (j.data || []).find((x) => x.classification_desc === MONTHS[d.getUTCMonth()]);
+      // Table 1 lists each month twice (prior fiscal year, then the current one): the current
+      // fiscal year's block comes last, so the month's row with the highest line number is ours.
+      const r = (j.data || []).filter((x) => x.classification_desc === MONTHS[d.getUTCMonth()])
+        .sort((a, b) => Number(b.src_line_nbr) - Number(a.src_line_nbr))[0];
       if (!r || r[field] === "null") return undefined;
       return Math.round((sign * Number(r[field])) / 1e6);
     } });
