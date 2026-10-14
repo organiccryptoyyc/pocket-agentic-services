@@ -53,7 +53,8 @@ const compose = fs.readFileSync(path.join(SRC, "ops/psm/docker-compose.template.
   .replaceAll("{{INGEST_TOKEN}}", fs.readFileSync(SECRET, "utf8").match(/TCS6_INGEST_TOKEN=([0-9a-f]+)/)[1]);
 fs.mkdirSync(path.join(OUT, "deploy"), { recursive: true });
 fs.writeFileSync(path.join(OUT, "deploy/docker-compose.yaml"), compose);
-fs.writeFileSync(path.join(OUT, "deploy/routes.json"), JSON.stringify([{ path: ROUTE, port: 8090 }], null, 2) + "\n");
+// PSM 0.1.27 wants {"routes": [...]} (older versions also took a bare list).
+fs.writeFileSync(path.join(OUT, "deploy/routes.json"), JSON.stringify({ routes: [{ path: ROUTE, port: 8090 }] }, null, 2) + "\n");
 copy("card.json", "card.json");
 copy("service.json", "service.json");
 console.log(JSON.stringify({ network: NETWORK, deploy_id: DEPLOY_ID, backend_url: `http://${DEPLOY_ID}-backend:8080`, ingest_route: ROUTE, folder: OUT }));
