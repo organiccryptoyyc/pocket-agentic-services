@@ -17,10 +17,18 @@ See [`RUNBOOK.md`](RUNBOOK.md) for the gated steps.
 |---|---|---|
 | `POST /v1/tcs6/score` | `{"entity_id":"aave"}` | Full report. `analysis_status` `ready` / `provisional` / `insufficient_data` are all 200. |
 | `POST /v1/tcs6/entities` | `{}` or `{"peer_cohort":"DeFi protocol"}` | Registry listing + each entity's latest report status. |
-| `GET /v1/version` | | `{"service":"treasury-capital-score","version":"1.0.0"}` |
+| `GET /v1/version` | | `{"service":"treasury-capital-score","version":"1.1.0"}` |
 | `GET /v1/health` | | `{"status":"ok","last_pipeline_run":...}` |
 
 Missing/unknown `entity_id` or bad JSON → 400 + JSON.
+
+Since 1.1.0 a report may also carry an optional **`verification`** block (Verified layer). It lists independent
+cross-checks of the report's inputs from the Pi's evidence bank: second price sources, a second RPC node at the
+same block, proxy slots and Sourcify, exit liquidity, ENS, and reported-vs-observed reconciliation. It gives the
+agreement rate, counts, each confirmed field with its per-source verdict and delta, and the disagreeing and
+unconfirmed fields. It carries verdicts only: no values, no upstream payloads, no internal-only sources. It never
+changes a score; a disagreement is a review flag. It is absent when the evidence bundle has no verification
+summary. `schema_version` stays `tcs-6-paid-response/1.0` because the field is optional and additive.
 
 ## How it fits together
 

@@ -359,6 +359,163 @@
     "disclaimer": {
       "type": "string",
       "const": "This report is derived from public evidence and stated assumptions as of the reported timestamp. It is not legal, tax, accounting, or personalized investment advice, and it does not authorize or execute any transaction."
+    },
+    "verification": {
+      "description": "Optional (Verified layer). Independent cross-checks of this report's inputs: verdicts, deltas and dates only. Present when the evidence bundle carried a verification summary.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tier",
+        "method_version",
+        "as_of",
+        "agreement_rate",
+        "field_counts",
+        "fields_total",
+        "truncated",
+        "disagreements",
+        "unconfirmed_fields",
+        "confirmations",
+        "upstream_cu_spent",
+        "note"
+      ],
+      "properties": {
+        "tier": {
+          "type": "string",
+          "const": "verified"
+        },
+        "method_version": {
+          "type": "string"
+        },
+        "as_of": {
+          "type": "string"
+        },
+        "agreement_rate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "field_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "agree",
+            "partial",
+            "disagree",
+            "unavailable"
+          ],
+          "properties": {
+            "agree": {
+              "type": "integer"
+            },
+            "partial": {
+              "type": "integer"
+            },
+            "disagree": {
+              "type": "integer"
+            },
+            "unavailable": {
+              "type": "integer"
+            }
+          }
+        },
+        "fields_total": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "disagreements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unconfirmed_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confirmations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "field",
+              "label",
+              "status",
+              "observed_at",
+              "sources"
+            ],
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "agree",
+                  "partial",
+                  "disagree",
+                  "unavailable"
+                ]
+              },
+              "observed_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "source",
+                    "agreement",
+                    "delta_pct"
+                  ],
+                  "properties": {
+                    "source": {
+                      "type": "string"
+                    },
+                    "agreement": {
+                      "type": "string",
+                      "enum": [
+                        "agree",
+                        "partial",
+                        "disagree",
+                        "unavailable"
+                      ]
+                    },
+                    "delta_pct": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "upstream_cu_spent": {
+          "type": "integer"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
     }
   },
   "$defs": {

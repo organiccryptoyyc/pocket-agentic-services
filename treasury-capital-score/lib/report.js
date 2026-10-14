@@ -160,6 +160,7 @@ function buildReport(entity, bundle, base, peerNrts) {
     }));
   const penaltyRisks = penalties.map((p) => ({ id: `penalty_${p.id}`, category: "other", severity: "medium", description: `Documented penalty of ${p.points} points: ${p.reason}`, monitoring_action: "Re-evaluate at next refresh." }));
 
+  const verification = verificationBlock(bundle);
   const statusMap = { eligible: "ready", provisional: "provisional", insufficient_data: "insufficient_data", ineligible: "insufficient_data" };
   const d1 = dims[0];
   return cleanText({
@@ -187,7 +188,52 @@ function buildReport(entity, bundle, base, peerNrts) {
     risks: [...curatedRisks, ...derivedRisks(dims, cov), ...penaltyRisks],
     data_gaps: [...derivedGaps(dims, overallScore), ...warningGaps, ...curatedGaps],
     disclaimer: DISCLAIMER,
+    ...(verification ? { verification } : {}),
   });
+}
+
+// Verified layer (Phase 2.1): independent cross-checks of this report's inputs, from the evidence
+// bundle's verification_summary (built on the Pi from the evidence bank: second price sources, two
+// RPC nodes, proxy slots and Sourcify, exit liquidity, ENS, reported-vs-observed reconciliation).
+// Verdicts, deltas and dates only: no values, no upstream payloads, no internal-only sources. Absent
+// when the bundle carries no summary, so older bundles (and the golden fixtures) are unchanged.
+const VERIFY_INTERNAL_ONLY = new Set(["propublica"]); // terms bar them from paid output (D16)
+const VERIFY_STATUSES = ["agree", "partial", "disagree", "unavailable"];
+const VERIFY_NOTE = "Independent confirmations of this report's inputs from different sources and methods: second price sources (Chainlink, CoinMarketCap), a second RPC node at the same block, proxy-slot and Sourcify checks, exit liquidity, ENS and reported-vs-observed reconciliation. Verdicts only; a disagreement is flagged for review and never changes a score.";
+
+function verificationBlock(bundle) {
+  const vs = bundle && bundle.verification_summary;
+  if (!vs || !Array.isArray(vs.fields)) return null;
+  const fields = [];
+  for (const f of vs.fields) {
+    if (!f || typeof f.field !== "string") continue;
+    const sources = (Array.isArray(f.sources) ? f.sources : [])
+      .filter((x) => x && typeof x.source === "string" && !VERIFY_INTERNAL_ONLY.has(x.source) && VERIFY_STATUSES.includes(x.agreement))
+      .map((x) => ({ source: x.source.slice(0, 64), agreement: x.agreement, delta_pct: typeof x.delta_pct === "number" && Number.isFinite(x.delta_pct) ? x.delta_pct : null }));
+    if (!sources.length) continue;
+    const verdicts = sources.map((x) => x.agreement);
+    const status = verdicts.includes("disagree") ? "disagree" : verdicts.includes("partial") ? "partial" : verdicts.includes("agree") ? "agree" : "unavailable";
+    fields.push({ field: f.field.slice(0, 160), label: typeof f.label === "string" ? f.label.slice(0, 120) : null, status,
+      observed_at: typeof f.observed_at === "string" ? f.observed_at : null, sources });
+  }
+  if (!fields.length) return null;
+  const decided = fields.flatMap((f) => f.sources.map((x) => x.agreement)).filter((a) => a !== "unavailable");
+  const counts = Object.fromEntries(VERIFY_STATUSES.map((st) => [st, fields.filter((f) => f.status === st).length]));
+  const named = (st) => fields.filter((f) => f.status === st).map((f) => f.label || f.field);
+  return {
+    tier: "verified",
+    method_version: typeof vs.method_version === "string" ? vs.method_version : "pmic-verify-1.0",
+    as_of: typeof vs.as_of === "string" ? vs.as_of : bundle.collected_at,
+    agreement_rate: decided.length ? Math.round((decided.filter((a) => a === "agree").length / decided.length) * 10000) / 10000 : null,
+    field_counts: counts,
+    fields_total: typeof vs.fields_total === "number" ? vs.fields_total : fields.length,
+    truncated: vs.truncated === true,
+    disagreements: named("disagree"),
+    unconfirmed_fields: named("unavailable"),
+    confirmations: fields,
+    upstream_cu_spent: 0,
+    note: VERIFY_NOTE,
+  };
 }
 
 // Schema-valid "nothing scored yet" answer for a known registry entity.
@@ -228,4 +274,4 @@ function stampEntitlement(report, nowIso) {
   return { ...report, payment_entitlement: { release_condition: RELEASE_CONDITION, entitlement_id: newId("ent"), payment_verified_at: nowIso, delivery_expires_at: null } };
 }
 
-module.exports = { buildReport, insufficientReport, stampEntitlement, SCHEMA_VERSION };
+module.exports = { buildReport, insufficientReport, stampEntitlement, verificationBlock, SCHEMA_VERSION };
