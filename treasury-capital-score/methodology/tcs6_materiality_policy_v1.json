@@ -49,7 +49,8 @@
     },
     "obligation_visibility": {
       "active": false,
-      "rule": "existing obligations policy: a one-time obligations_penalty_points deduction when materially incomplete; insufficient_data when missing obligations make the score non-reproducible"
+      "rule": "existing obligations policy: a one-time obligations_penalty_points deduction when materially incomplete; insufficient_data when missing obligations make the score non-reproducible",
+      "deferred_until": "Build C (owner 2026-10-17, D20): until the missing obligations can be valued, the existing rule stays live: PARTIAL_OBLIGATIONS_PENALTY (10 points, once per report) whenever obligations are partial and bounded, regardless of materiality"
     }
   }
 }
