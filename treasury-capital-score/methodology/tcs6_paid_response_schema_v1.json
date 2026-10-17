@@ -360,160 +360,449 @@
       "type": "string",
       "const": "This report is derived from public evidence and stated assumptions as of the reported timestamp. It is not legal, tax, accounting, or personalized investment advice, and it does not authorize or execute any transaction."
     },
-    "verification": {
-      "description": "Optional (Verified layer). Independent cross-checks of this report's inputs: verdicts, deltas and dates only. Present when the evidence bundle carried a verification summary.",
+    "attestation": {
+      "description": "Optional (Verified layer). Signed attestation of cross-source comparisons and validation controls on this report's inputs, exactly as the collector signed it (RFC 8785 canonical payload, Ed25519), plus this service's verification verdict. Present when the evidence bundle carried an attestation or a verification summary. Never used in scoring.",
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "tier",
-        "method_version",
-        "as_of",
-        "agreement_rate",
-        "field_counts",
-        "fields_total",
-        "truncated",
-        "disagreements",
-        "unconfirmed_fields",
-        "confirmations",
-        "upstream_cu_spent",
-        "note"
+        "verification_status",
+        "verification_detail",
+        "statement",
+        "payload",
+        "payload_hash",
+        "signature"
       ],
       "properties": {
-        "tier": {
+        "verification_status": {
           "type": "string",
-          "const": "verified"
-        },
-        "method_version": {
-          "type": "string"
-        },
-        "as_of": {
-          "type": "string"
-        },
-        "agreement_rate": {
-          "type": [
-            "number",
-            "null"
+          "enum": [
+            "valid",
+            "invalid",
+            "missing",
+            "stale"
           ]
         },
-        "field_counts": {
-          "type": "object",
+        "verification_detail": {
+          "type": "string"
+        },
+        "statement": {
+          "type": "string"
+        },
+        "payload": {
+          "type": [
+            "object",
+            "null"
+          ],
           "additionalProperties": false,
           "required": [
-            "agree",
-            "partial",
-            "disagree",
-            "unavailable"
+            "type",
+            "schema_version",
+            "method_version",
+            "attestation_id",
+            "subject",
+            "window",
+            "counters",
+            "checks_total",
+            "truncated",
+            "independence_classes",
+            "conflict_policy",
+            "score_boundary",
+            "checks",
+            "evidence_manifest",
+            "evidence_manifest_hash",
+            "statement"
           ],
           "properties": {
-            "agree": {
-              "type": "integer"
+            "type": {
+              "type": "string",
+              "const": "tcs6-input-attestation"
             },
-            "partial": {
-              "type": "integer"
+            "schema_version": {
+              "type": "string"
             },
-            "disagree": {
-              "type": "integer"
+            "method_version": {
+              "type": "string"
             },
-            "unavailable": {
-              "type": "integer"
-            }
-          }
-        },
-        "fields_total": {
-          "type": "integer"
-        },
-        "truncated": {
-          "type": "boolean"
-        },
-        "disagreements": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "unconfirmed_fields": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "confirmations": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "field",
-              "label",
-              "status",
-              "observed_at",
-              "sources"
-            ],
-            "properties": {
-              "field": {
-                "type": "string"
-              },
-              "label": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "status": {
-                "type": "string",
-                "enum": [
-                  "agree",
-                  "partial",
-                  "disagree",
-                  "unavailable"
-                ]
-              },
-              "observed_at": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "sources": {
-                "type": "array",
-                "items": {
+            "attestation_id": {
+              "type": "string"
+            },
+            "subject": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "service",
+                "entity_id",
+                "bundle_collected_at"
+              ],
+              "properties": {
+                "service": {
+                  "type": "string"
+                },
+                "entity_id": {
+                  "type": "string"
+                },
+                "bundle_collected_at": {
+                  "type": "string"
+                }
+              }
+            },
+            "window": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "first",
+                "last"
+              ],
+              "properties": {
+                "first": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "last": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "counters": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "comparisons",
+                "controls"
+              ],
+              "properties": {
+                "comparisons": {
                   "type": "object",
                   "additionalProperties": false,
                   "required": [
-                    "source",
-                    "agreement",
-                    "delta_pct"
+                    "attempted",
+                    "passed",
+                    "conflicted",
+                    "unavailable",
+                    "not_applicable",
+                    "completed",
+                    "requiring_review"
                   ],
                   "properties": {
-                    "source": {
-                      "type": "string"
+                    "attempted": {
+                      "type": "integer"
                     },
-                    "agreement": {
-                      "type": "string",
-                      "enum": [
-                        "agree",
-                        "partial",
-                        "disagree",
-                        "unavailable"
-                      ]
+                    "passed": {
+                      "type": "integer"
                     },
-                    "delta_pct": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
+                    "conflicted": {
+                      "type": "integer"
+                    },
+                    "unavailable": {
+                      "type": "integer"
+                    },
+                    "not_applicable": {
+                      "type": "integer"
+                    },
+                    "completed": {
+                      "type": "integer"
+                    },
+                    "requiring_review": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "controls": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "attempted",
+                    "passed",
+                    "failed",
+                    "unavailable",
+                    "not_applicable",
+                    "completed",
+                    "requiring_review"
+                  ],
+                  "properties": {
+                    "attempted": {
+                      "type": "integer"
+                    },
+                    "passed": {
+                      "type": "integer"
+                    },
+                    "failed": {
+                      "type": "integer"
+                    },
+                    "unavailable": {
+                      "type": "integer"
+                    },
+                    "not_applicable": {
+                      "type": "integer"
+                    },
+                    "completed": {
+                      "type": "integer"
+                    },
+                    "requiring_review": {
+                      "type": "integer"
                     }
                   }
                 }
               }
+            },
+            "checks_total": {
+              "type": "integer"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "independence_classes": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "independent",
+                "partially_independent",
+                "retrieval_redundancy",
+                "control"
+              ],
+              "properties": {
+                "independent": {
+                  "type": "string"
+                },
+                "partially_independent": {
+                  "type": "string"
+                },
+                "retrieval_redundancy": {
+                  "type": "string"
+                },
+                "control": {
+                  "type": "string"
+                }
+              }
+            },
+            "conflict_policy": {
+              "type": "string"
+            },
+            "score_boundary": {
+              "type": "string"
+            },
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "check_id",
+                  "group",
+                  "kind",
+                  "independence",
+                  "field",
+                  "label",
+                  "source",
+                  "source_ref",
+                  "chain_id",
+                  "block_number",
+                  "block_hash",
+                  "observed_at",
+                  "retrieved_at",
+                  "rule",
+                  "status",
+                  "our_value",
+                  "other_value",
+                  "other_value_disclosed",
+                  "delta_pct",
+                  "measure",
+                  "evidence_hash"
+                ],
+                "properties": {
+                  "check_id": {
+                    "type": "string"
+                  },
+                  "group": {
+                    "type": "string",
+                    "enum": [
+                      "comparison",
+                      "control"
+                    ]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "price_comparison",
+                      "disclosure_reconciliation",
+                      "retrieval_control",
+                      "contract_identity_control",
+                      "realizability_control",
+                      "naming_control"
+                    ]
+                  },
+                  "independence": {
+                    "type": "string",
+                    "enum": [
+                      "independent",
+                      "partially_independent",
+                      "retrieval_redundancy",
+                      "control"
+                    ]
+                  },
+                  "field": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "source_ref": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "chain_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "block_number": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "block_hash": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "observed_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "retrieved_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "rule": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "passed",
+                      "failed",
+                      "conflicted",
+                      "unavailable",
+                      "not_applicable"
+                    ]
+                  },
+                  "our_value": {
+                    "description": "Our observed value, as recorded (number, string, object or null)."
+                  },
+                  "other_value": {
+                    "description": "The other source's reading where its terms allow disclosure (on-chain, public data); null for vendor data."
+                  },
+                  "other_value_disclosed": {
+                    "type": "boolean"
+                  },
+                  "delta_pct": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "measure": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "evidence_hash": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "evidence_manifest": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "check_id",
+                  "evidence_hash"
+                ],
+                "properties": {
+                  "check_id": {
+                    "type": "string"
+                  },
+                  "evidence_hash": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "evidence_manifest_hash": {
+              "type": "string"
+            },
+            "statement": {
+              "type": "string"
             }
           }
         },
-        "upstream_cu_spent": {
-          "type": "integer"
+        "payload_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        "note": {
-          "type": "string"
+        "signature": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "alg",
+            "key_id",
+            "signed_at",
+            "attestation_id",
+            "value"
+          ],
+          "properties": {
+            "alg": {
+              "type": "string",
+              "const": "Ed25519"
+            },
+            "key_id": {
+              "type": "string"
+            },
+            "signed_at": {
+              "type": "string"
+            },
+            "attestation_id": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          }
         }
       }
     }

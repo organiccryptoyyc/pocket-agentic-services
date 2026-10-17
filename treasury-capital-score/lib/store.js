@@ -53,6 +53,7 @@ const paths = {
   evidence: (id) => path.join(DATA_DIR, "evidence", `${id}.json`),
   report: (id) => path.join(DATA_DIR, "reports", `${id}.json`),
   state: () => path.join(DATA_DIR, "pipeline-state.json"),
+  attestationState: () => path.join(DATA_DIR, "attestation-state.json"), // newest accepted signing time per entity (replay)
 };
 
 function loadRegistry() {

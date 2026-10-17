@@ -15,6 +15,7 @@
 
 const S = require("../lib/scoring");
 const { buildReport } = require("../lib/report");
+const { verifyEnvelope, loadKeys } = require("../lib/attestation");
 const { validateReport } = require("../lib/schema");
 const store = require("../lib/store");
 
@@ -38,6 +39,8 @@ function runOnce(now = new Date()) {
   const results = { started_at: now.toISOString(), scored: [], skipped: [], failed: [], snapshot_errors: [] };
   const snaps = openSnapshots(results);
 
+  const attestState = store.readJson(store.paths.attestationState()) || {};
+  const keys = loadKeys();
   const prepared = [];
   for (const entity of entities) {
     const bundle = store.readJson(store.paths.evidence(entity.entity_id));
@@ -56,7 +59,14 @@ function runOnce(now = new Date()) {
   for (const p of prepared) {
     const peers = prepared.filter((q) => q.entity.peer_cohort === p.entity.peer_cohort && q.base.nrt !== null).map((q) => q.base.nrt);
     try {
-      const report = buildReport(p.entity, p.bundle, p.base, peers);
+      // Replay protection: an attestation older than the newest one accepted for this entity is invalid.
+      const eid = p.entity.entity_id;
+      const verdict = verifyEnvelope(p.bundle.attestation, p.bundle, keys, { lastSignedAt: attestState[eid] && attestState[eid].signed_at, now });
+      const report = buildReport(p.entity, p.bundle, p.base, peers, { attestation: verdict });
+      if (verdict.status === "valid" || verdict.status === "stale") {
+        const sig = p.bundle.attestation.signature;
+        if (!attestState[eid] || Date.parse(sig.signed_at) > Date.parse(attestState[eid].signed_at)) attestState[eid] = { signed_at: sig.signed_at, attestation_id: sig.attestation_id };
+      }
       const v = validateReport(report);
       if (!v.ok) {
         results.failed.push({ entity_id: p.entity.entity_id, errors: v.errors.slice(0, 20) });
@@ -86,6 +96,11 @@ function runOnce(now = new Date()) {
       results.snapshot_errors.push(`backup: ${String(e && e.message)}`);
     }
     snaps.close();
+  }
+  try {
+    store.writeJsonAtomic(store.paths.attestationState(), attestState);
+  } catch (e) {
+    results.snapshot_errors.push(`attestation state: ${String(e && e.message)}`);
   }
   results.finished_at = new Date().toISOString();
   store.writeJsonAtomic(store.paths.state(), results);

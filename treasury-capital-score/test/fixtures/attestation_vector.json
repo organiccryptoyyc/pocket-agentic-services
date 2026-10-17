@@ -1,0 +1,272 @@
+{
+ "public_key_b64url": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+ "key_id": "tcs6-attest-Vkdap1RjR0wChd9d",
+ "canonical_payload": "{\"attestation_id\":\"att-e02PLw4CxmH6s9TVxhsw5R\",\"checks\":[{\"block_hash\":null,\"block_number\":null,\"chain_id\":null,\"check_id\":\"contract_identity_control|control.source_verified:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|sourcify\",\"delta_pct\":null,\"evidence_hash\":null,\"field\":\"control.source_verified:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"group\":\"control\",\"independence\":\"control\",\"kind\":\"contract_identity_control\",\"label\":\"Timelock source\",\"measure\":null,\"observed_at\":\"2026-10-17T11:00:00Z\",\"other_value\":null,\"other_value_disclosed\":false,\"our_value\":{\"usd\":1},\"retrieved_at\":\"2026-10-17T11:00:00Z\",\"rule\":\"passed if within threshold\",\"source\":\"sourcify\",\"source_ref\":\"sourcify\",\"status\":\"unavailable\"},{\"block_hash\":null,\"block_number\":null,\"chain_id\":null,\"check_id\":\"disclosure_reconciliation|treasury.reconciled_usd|report\",\"delta_pct\":null,\"evidence_hash\":null,\"field\":\"treasury.reconciled_usd\",\"group\":\"comparison\",\"independence\":\"independent\",\"kind\":\"disclosure_reconciliation\",\"label\":\"reported vs observed treasury total\",\"measure\":{\"reason\":\"not reconciled: scope 'unknown'\"},\"observed_at\":\"2026-10-17T11:00:00Z\",\"other_value\":null,\"other_value_disclosed\":false,\"our_value\":1000000.5,\"retrieved_at\":\"2026-10-17T11:00:00Z\",\"rule\":\"passed if within threshold\",\"source\":\"report\",\"source_ref\":\"report\",\"status\":\"not_applicable\"},{\"block_hash\":null,\"block_number\":null,\"chain_id\":1,\"check_id\":\"price_comparison|price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0|chainlink\",\"delta_pct\":0.01,\"evidence_hash\":\"sha256:mpIE3SRu0KBp_OjsQuKS0zmIjzco3_2_cU33QJ_L3lI\",\"field\":\"price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0\",\"group\":\"comparison\",\"independence\":\"partially_independent\",\"kind\":\"price_comparison\",\"label\":\"USDC\",\"measure\":null,\"observed_at\":\"2026-10-17T11:00:00Z\",\"other_value\":1.0001,\"other_value_disclosed\":true,\"our_value\":{\"usd\":1},\"retrieved_at\":\"2026-10-17T11:00:00Z\",\"rule\":\"passed if within threshold\",\"source\":\"chainlink\",\"source_ref\":\"chainlink\",\"status\":\"passed\"},{\"block_hash\":null,\"block_number\":null,\"chain_id\":1,\"check_id\":\"price_comparison|price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0|cmc\",\"delta_pct\":4.76,\"evidence_hash\":\"sha256:AP75QKaq8eA9wVe8tGuBiCOtW1koqQEdcAaAnwiTHrQ\",\"field\":\"price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0\",\"group\":\"comparison\",\"independence\":\"partially_independent\",\"kind\":\"price_comparison\",\"label\":\"USDC\",\"measure\":null,\"observed_at\":\"2026-10-17T11:00:00Z\",\"other_value\":null,\"other_value_disclosed\":false,\"our_value\":{\"usd\":1},\"retrieved_at\":\"2026-10-17T11:00:00Z\",\"rule\":\"passed if within threshold\",\"source\":\"cmc\",\"source_ref\":\"cmc\",\"status\":\"conflicted\"},{\"block_hash\":\"0xabababababababababababababababababababababababababababababababab\",\"block_number\":254,\"chain_id\":1,\"check_id\":\"realizability_control|exit.available:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|sim:aave\",\"delta_pct\":null,\"evidence_hash\":\"sha256:7Pdru3p_ul9Gzujjo_jiDaR6nvZzWK_oScoBH2cH1a0\",\"field\":\"exit.available:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"group\":\"control\",\"independence\":\"control\",\"kind\":\"realizability_control\",\"label\":\"USDC at Timelock\",\"measure\":{\"exitable_ratio\":0.25},\"observed_at\":\"2026-10-17T11:00:00Z\",\"other_value\":{\"exitable_ratio\":0.25},\"other_value_disclosed\":true,\"our_value\":{\"usd\":1},\"retrieved_at\":\"2026-10-17T11:00:00Z\",\"rule\":\"passed if within threshold\",\"source\":\"sim:aave\",\"source_ref\":\"sim:aave\",\"status\":\"failed\"},{\"block_hash\":\"0xabababababababababababababababababababababababababababababababab\",\"block_number\":254,\"chain_id\":1,\"check_id\":\"retrieval_control|rpc.balance:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|rpc:ethereum-rpc.publicnode.com\",\"delta_pct\":null,\"evidence_hash\":\"sha256:IiVUrzvIgo5drRG1TpUOemPdHQrYp-w4HaezMZZT2oY\",\"field\":\"rpc.balance:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"group\":\"control\",\"independence\":\"retrieval_redundancy\",\"kind\":\"retrieval_control\",\"label\":\"Timelock native balance\",\"measure\":null,\"observed_at\":\"2026-10-17T11:00:00Z\",\"other_value\":{\"block_hash\":\"0xabababababababababababababababababababababababababababababababab\",\"wei\":\"5\"},\"other_value_disclosed\":true,\"our_value\":{\"block\":254,\"wei\":\"5\"},\"retrieved_at\":\"2026-10-17T11:00:00Z\",\"rule\":\"passed if within threshold\",\"source\":\"rpc:ethereum-rpc.publicnode.com\",\"source_ref\":\"rpc:ethereum-rpc.publicnode.com\",\"status\":\"passed\"}],\"checks_total\":6,\"conflict_policy\":\"Conflicts, failures and unavailable sources are recorded with both readings where disclosure is allowed and flagged for review. They are never resolved automatically and never modify a reported value.\",\"counters\":{\"comparisons\":{\"attempted\":3,\"completed\":2,\"conflicted\":1,\"not_applicable\":1,\"passed\":1,\"requiring_review\":1,\"unavailable\":0},\"controls\":{\"attempted\":3,\"completed\":2,\"failed\":1,\"not_applicable\":0,\"passed\":1,\"requiring_review\":1,\"unavailable\":1}},\"evidence_manifest\":[{\"check_id\":\"contract_identity_control|control.source_verified:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|sourcify\",\"evidence_hash\":null},{\"check_id\":\"disclosure_reconciliation|treasury.reconciled_usd|report\",\"evidence_hash\":null},{\"check_id\":\"price_comparison|price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0|chainlink\",\"evidence_hash\":\"sha256:mpIE3SRu0KBp_OjsQuKS0zmIjzco3_2_cU33QJ_L3lI\"},{\"check_id\":\"price_comparison|price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0|cmc\",\"evidence_hash\":\"sha256:AP75QKaq8eA9wVe8tGuBiCOtW1koqQEdcAaAnwiTHrQ\"},{\"check_id\":\"realizability_control|exit.available:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|sim:aave\",\"evidence_hash\":\"sha256:7Pdru3p_ul9Gzujjo_jiDaR6nvZzWK_oScoBH2cH1a0\"},{\"check_id\":\"retrieval_control|rpc.balance:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|rpc:ethereum-rpc.publicnode.com\",\"evidence_hash\":\"sha256:IiVUrzvIgo5drRG1TpUOemPdHQrYp-w4HaezMZZT2oY\"}],\"evidence_manifest_hash\":\"sha256:5B_cU1ejbLgs_K2FIOSj94z297k1cbbLG7Hz4FGryBU\",\"independence_classes\":{\"control\":\"a validation control (contract identity, realizability, naming), not a value confirmation\",\"independent\":\"different publisher and method (for example a protocol's own disclosure against chain state)\",\"partially_independent\":\"a different provider that may share upstream market data (Chainlink, CoinMarketCap and CoinGecko)\",\"retrieval_redundancy\":\"the same chain state read from a second node: confirms retrieval, not economic truth\"},\"method_version\":\"tcs6-verify/2.0\",\"schema_version\":\"tcs6-attestation/1.0\",\"score_boundary\":\"attestation_layer != scoring_layer: these checks report on inputs and collection quality only. The score is computed from the prescribed inputs under the published scoring policy; a missing or conflicting input follows that policy, never an ad hoc review decision.\",\"statement\":\"Attestation of cross-source comparisons and validation controls performed on this report's inputs between 2026-10-17T11:00:00Z and 2026-10-17T11:00:00Z UTC under method version tcs6-verify/2.0. 2 of 3 cross-source comparisons were completed: 1 passed, 1 conflicted, 0 unavailable, 1 not applicable. 2 of 3 validation controls were completed: 1 passed, 1 failed, 1 unavailable, 0 not applicable. Each check records the observed value, chain ID, block number and hash where applicable, observation and retrieval time, source reference, threshold, result, and independence classification. Conflicts, failures and unavailable sources are preserved and flagged; they are never resolved automatically and do not modify the score. Evidence manifest sha256:5B_cU1ejbLgs_K2FIOSj94z297k1cbbLG7Hz4FGryBU.\",\"subject\":{\"bundle_collected_at\":\"2026-10-17T10:00:00Z\",\"entity_id\":\"dao\",\"service\":\"treasury-capital-score\"},\"truncated\":false,\"type\":\"tcs6-input-attestation\",\"window\":{\"first\":\"2026-10-17T11:00:00Z\",\"last\":\"2026-10-17T11:00:00Z\"}}",
+ "envelope": {
+  "payload": {
+   "type": "tcs6-input-attestation",
+   "schema_version": "tcs6-attestation/1.0",
+   "method_version": "tcs6-verify/2.0",
+   "subject": {
+    "service": "treasury-capital-score",
+    "entity_id": "dao",
+    "bundle_collected_at": "2026-10-17T10:00:00Z"
+   },
+   "window": {
+    "first": "2026-10-17T11:00:00Z",
+    "last": "2026-10-17T11:00:00Z"
+   },
+   "counters": {
+    "comparisons": {
+     "attempted": 3,
+     "passed": 1,
+     "conflicted": 1,
+     "unavailable": 0,
+     "not_applicable": 1,
+     "completed": 2,
+     "requiring_review": 1
+    },
+    "controls": {
+     "attempted": 3,
+     "passed": 1,
+     "failed": 1,
+     "unavailable": 1,
+     "not_applicable": 0,
+     "completed": 2,
+     "requiring_review": 1
+    }
+   },
+   "checks_total": 6,
+   "truncated": false,
+   "independence_classes": {
+    "independent": "different publisher and method (for example a protocol's own disclosure against chain state)",
+    "partially_independent": "a different provider that may share upstream market data (Chainlink, CoinMarketCap and CoinGecko)",
+    "retrieval_redundancy": "the same chain state read from a second node: confirms retrieval, not economic truth",
+    "control": "a validation control (contract identity, realizability, naming), not a value confirmation"
+   },
+   "conflict_policy": "Conflicts, failures and unavailable sources are recorded with both readings where disclosure is allowed and flagged for review. They are never resolved automatically and never modify a reported value.",
+   "score_boundary": "attestation_layer != scoring_layer: these checks report on inputs and collection quality only. The score is computed from the prescribed inputs under the published scoring policy; a missing or conflicting input follows that policy, never an ad hoc review decision.",
+   "checks": [
+    {
+     "check_id": "contract_identity_control|control.source_verified:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|sourcify",
+     "group": "control",
+     "kind": "contract_identity_control",
+     "independence": "control",
+     "field": "control.source_verified:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "label": "Timelock source",
+     "source": "sourcify",
+     "source_ref": "sourcify",
+     "chain_id": null,
+     "block_number": null,
+     "block_hash": null,
+     "observed_at": "2026-10-17T11:00:00Z",
+     "retrieved_at": "2026-10-17T11:00:00Z",
+     "rule": "passed if within threshold",
+     "status": "unavailable",
+     "our_value": {
+      "usd": 1.0
+     },
+     "other_value": null,
+     "other_value_disclosed": false,
+     "delta_pct": null,
+     "measure": null,
+     "evidence_hash": null
+    },
+    {
+     "check_id": "disclosure_reconciliation|treasury.reconciled_usd|report",
+     "group": "comparison",
+     "kind": "disclosure_reconciliation",
+     "independence": "independent",
+     "field": "treasury.reconciled_usd",
+     "label": "reported vs observed treasury total",
+     "source": "report",
+     "source_ref": "report",
+     "chain_id": null,
+     "block_number": null,
+     "block_hash": null,
+     "observed_at": "2026-10-17T11:00:00Z",
+     "retrieved_at": "2026-10-17T11:00:00Z",
+     "rule": "passed if within threshold",
+     "status": "not_applicable",
+     "our_value": 1000000.5,
+     "other_value": null,
+     "other_value_disclosed": false,
+     "delta_pct": null,
+     "measure": {
+      "reason": "not reconciled: scope 'unknown'"
+     },
+     "evidence_hash": null
+    },
+    {
+     "check_id": "price_comparison|price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0|chainlink",
+     "group": "comparison",
+     "kind": "price_comparison",
+     "independence": "partially_independent",
+     "field": "price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+     "label": "USDC",
+     "source": "chainlink",
+     "source_ref": "chainlink",
+     "chain_id": 1,
+     "block_number": null,
+     "block_hash": null,
+     "observed_at": "2026-10-17T11:00:00Z",
+     "retrieved_at": "2026-10-17T11:00:00Z",
+     "rule": "passed if within threshold",
+     "status": "passed",
+     "our_value": {
+      "usd": 1.0
+     },
+     "other_value": 1.0001,
+     "other_value_disclosed": true,
+     "delta_pct": 0.01,
+     "measure": null,
+     "evidence_hash": "sha256:mpIE3SRu0KBp_OjsQuKS0zmIjzco3_2_cU33QJ_L3lI"
+    },
+    {
+     "check_id": "price_comparison|price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0|cmc",
+     "group": "comparison",
+     "kind": "price_comparison",
+     "independence": "partially_independent",
+     "field": "price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+     "label": "USDC",
+     "source": "cmc",
+     "source_ref": "cmc",
+     "chain_id": 1,
+     "block_number": null,
+     "block_hash": null,
+     "observed_at": "2026-10-17T11:00:00Z",
+     "retrieved_at": "2026-10-17T11:00:00Z",
+     "rule": "passed if within threshold",
+     "status": "conflicted",
+     "our_value": {
+      "usd": 1.0
+     },
+     "other_value": null,
+     "other_value_disclosed": false,
+     "delta_pct": 4.76,
+     "measure": null,
+     "evidence_hash": "sha256:AP75QKaq8eA9wVe8tGuBiCOtW1koqQEdcAaAnwiTHrQ"
+    },
+    {
+     "check_id": "realizability_control|exit.available:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|sim:aave",
+     "group": "control",
+     "kind": "realizability_control",
+     "independence": "control",
+     "field": "exit.available:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "label": "USDC at Timelock",
+     "source": "sim:aave",
+     "source_ref": "sim:aave",
+     "chain_id": 1,
+     "block_number": 254,
+     "block_hash": "0xabababababababababababababababababababababababababababababababab",
+     "observed_at": "2026-10-17T11:00:00Z",
+     "retrieved_at": "2026-10-17T11:00:00Z",
+     "rule": "passed if within threshold",
+     "status": "failed",
+     "our_value": {
+      "usd": 1.0
+     },
+     "other_value": {
+      "exitable_ratio": 0.25
+     },
+     "other_value_disclosed": true,
+     "delta_pct": null,
+     "measure": {
+      "exitable_ratio": 0.25
+     },
+     "evidence_hash": "sha256:7Pdru3p_ul9Gzujjo_jiDaR6nvZzWK_oScoBH2cH1a0"
+    },
+    {
+     "check_id": "retrieval_control|rpc.balance:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|rpc:ethereum-rpc.publicnode.com",
+     "group": "control",
+     "kind": "retrieval_control",
+     "independence": "retrieval_redundancy",
+     "field": "rpc.balance:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "label": "Timelock native balance",
+     "source": "rpc:ethereum-rpc.publicnode.com",
+     "source_ref": "rpc:ethereum-rpc.publicnode.com",
+     "chain_id": 1,
+     "block_number": 254,
+     "block_hash": "0xabababababababababababababababababababababababababababababababab",
+     "observed_at": "2026-10-17T11:00:00Z",
+     "retrieved_at": "2026-10-17T11:00:00Z",
+     "rule": "passed if within threshold",
+     "status": "passed",
+     "our_value": {
+      "block": 254,
+      "wei": "5"
+     },
+     "other_value": {
+      "block_hash": "0xabababababababababababababababababababababababababababababababab",
+      "wei": "5"
+     },
+     "other_value_disclosed": true,
+     "delta_pct": null,
+     "measure": null,
+     "evidence_hash": "sha256:IiVUrzvIgo5drRG1TpUOemPdHQrYp-w4HaezMZZT2oY"
+    }
+   ],
+   "evidence_manifest": [
+    {
+     "check_id": "contract_identity_control|control.source_verified:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|sourcify",
+     "evidence_hash": null
+    },
+    {
+     "check_id": "disclosure_reconciliation|treasury.reconciled_usd|report",
+     "evidence_hash": null
+    },
+    {
+     "check_id": "price_comparison|price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0|chainlink",
+     "evidence_hash": "sha256:mpIE3SRu0KBp_OjsQuKS0zmIjzco3_2_cU33QJ_L3lI"
+    },
+    {
+     "check_id": "price_comparison|price:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0|cmc",
+     "evidence_hash": "sha256:AP75QKaq8eA9wVe8tGuBiCOtW1koqQEdcAaAnwiTHrQ"
+    },
+    {
+     "check_id": "realizability_control|exit.available:ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|sim:aave",
+     "evidence_hash": "sha256:7Pdru3p_ul9Gzujjo_jiDaR6nvZzWK_oScoBH2cH1a0"
+    },
+    {
+     "check_id": "retrieval_control|rpc.balance:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|rpc:ethereum-rpc.publicnode.com",
+     "evidence_hash": "sha256:IiVUrzvIgo5drRG1TpUOemPdHQrYp-w4HaezMZZT2oY"
+    }
+   ],
+   "evidence_manifest_hash": "sha256:5B_cU1ejbLgs_K2FIOSj94z297k1cbbLG7Hz4FGryBU",
+   "attestation_id": "att-e02PLw4CxmH6s9TVxhsw5R",
+   "statement": "Attestation of cross-source comparisons and validation controls performed on this report's inputs between 2026-10-17T11:00:00Z and 2026-10-17T11:00:00Z UTC under method version tcs6-verify/2.0. 2 of 3 cross-source comparisons were completed: 1 passed, 1 conflicted, 0 unavailable, 1 not applicable. 2 of 3 validation controls were completed: 1 passed, 1 failed, 1 unavailable, 0 not applicable. Each check records the observed value, chain ID, block number and hash where applicable, observation and retrieval time, source reference, threshold, result, and independence classification. Conflicts, failures and unavailable sources are preserved and flagged; they are never resolved automatically and do not modify the score. Evidence manifest sha256:5B_cU1ejbLgs_K2FIOSj94z297k1cbbLG7Hz4FGryBU."
+  },
+  "payload_hash": "sha256:N_HemeDUpzSb18v7H65TUqyjnMkFxusDOQ4F189KLJU",
+  "signature": {
+   "alg": "Ed25519",
+   "key_id": "tcs6-attest-Vkdap1RjR0wChd9d",
+   "signed_at": "2026-10-17T12:00:00Z",
+   "attestation_id": "att-e02PLw4CxmH6s9TVxhsw5R",
+   "value": "mNX9FDPLx6E3iev9Me_0NmqByrsBTeKJ9a8QZX9OCJJ8Kg2CvibQYZt3O9xBy_84dm2GpTbj7ReXYR1_jpq1Bw"
+  }
+ },
+ "bundle": {
+  "entity_id": "dao",
+  "collected_at": "2026-10-17T10:00:00Z",
+  "holdings": [
+   {
+    "asset_id": "ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "symbol": "USDC",
+    "prices": [
+     {
+      "source_ref": "CG",
+      "usd": 1
+     },
+     {
+      "source_ref": "CG",
+      "usd": 1
+     },
+     {
+      "source_ref": "CG",
+      "usd": 1
+     }
+    ]
+   }
+  ]
+ }
+}

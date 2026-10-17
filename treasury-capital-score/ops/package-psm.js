@@ -46,7 +46,7 @@ const copy = (from, to) => fs.cpSync(path.join(SRC, from), path.join(OUT, to), {
 
 fs.rmSync(OUT, { recursive: true, force: true });
 for (const f of ["server.js", "package.json", "Dockerfile"]) copy(f, `backend/${f}`);
-for (const d of ["lib", "pipeline", "methodology", "data", "migrations"]) copy(d, `backend/${d}`);
+for (const d of ["lib", "pipeline", "methodology", "data", "migrations", "config"]) copy(d, `backend/${d}`); // config: published attestation keys
 const compose = fs.readFileSync(path.join(SRC, "ops/psm/docker-compose.template.yaml"), "utf8")
   .replaceAll("{{NETWORK}}", NETWORK).replaceAll("{{DEPLOY_ID}}", DEPLOY_ID)
   .replaceAll("{{DEPLOY_STAMP}}", new Date().toISOString())

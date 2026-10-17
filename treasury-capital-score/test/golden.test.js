@@ -52,7 +52,7 @@ test("every golden input bundle conforms to spec/evidence_input_v1.schema.json",
   }
 });
 
-test("a verification_summary (Verified layer 1.3) is schema-valid; it adds only the verification block (2.1)", () => {
+test("a verification_summary (Verified layer 1.3) is schema-valid; without a signed attestation the report adds only attestation: missing", () => {
   const { validate } = require("../lib/schema");
   const schema = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "spec", "evidence_input_v1.schema.json"), "utf8"));
   const vs = {
@@ -76,28 +76,12 @@ test("a verification_summary (Verified layer 1.3) is schema-valid; it adds only 
     const peers = g.input.peer_nrts && g.input.peer_nrts.length ? g.input.peer_nrts : [base.nrt];
     const report = buildReport(g.input.entity, bundle, base, peers);
     assert.ok(validateReport(report).ok, `${f}: ${validateReport(report).errors.join("; ")}`);
-    const { verification, ...rest } = report;
+    const { attestation, ...rest } = report;
     assert.strictEqual(JSON.stringify(normalizeReport(rest), null, 2), JSON.stringify(g.expected_report, null, 2), `${f}: nothing but the block changes`);
-    assert.equal(verification.tier, "verified");
-    assert.equal(verification.agreement_rate, 0.6667, "2 agree of 3 decided source verdicts");
-    assert.deepEqual(verification.field_counts, { agree: 1, partial: 0, disagree: 1, unavailable: 0 });
-    assert.deepEqual(verification.disagreements, ["treasury.reconciled_usd"]);
-    assert.equal(verification.upstream_cu_spent, 0);
+    assert.equal(attestation.verification_status, "missing");
+    assert.equal(attestation.payload, null);
+    assert.equal(attestation.signature, null);
     n++;
   }
   assert.ok(n >= 1);
-});
-
-test("verification block: internal-only sources are dropped, bad entries ignored, absent without a summary (2.1)", () => {
-  const { verificationBlock } = require("../lib/report");
-  assert.equal(verificationBlock({}), null);
-  assert.equal(verificationBlock({ verification_summary: { fields: [] } }), null);
-  const vb = verificationBlock({ collected_at: "2026-10-14T00:00:00Z", verification_summary: { method_version: "pmic-verify-1.0", as_of: "2026-10-14T00:00:00Z", fields: [
-    { field: "record:irs990:1:2", label: "x", status: "agree", observed_at: "t", sources: [{ source: "propublica", agreement: "agree" }] },
-    { field: "price:ethereum:0xa0", label: "USDC", status: "agree", observed_at: "t", sources: [{ source: "cmc", agreement: "agree", delta_pct: 0.1 }, { source: "evil", agreement: "maybe" }] },
-    { nope: true },
-  ] } });
-  assert.deepEqual(vb.confirmations.map((c) => c.field), ["price:ethereum:0xa0"], "ProPublica-only field dropped (D16); malformed entries ignored");
-  assert.deepEqual(vb.confirmations[0].sources, [{ source: "cmc", agreement: "agree", delta_pct: 0.1 }]);
-  assert.equal(vb.agreement_rate, 1);
 });

@@ -17,18 +17,27 @@ See [`RUNBOOK.md`](RUNBOOK.md) for the gated steps.
 |---|---|---|
 | `POST /v1/tcs6/score` | `{"entity_id":"aave"}` | Full report. `analysis_status` `ready` / `provisional` / `insufficient_data` are all 200. |
 | `POST /v1/tcs6/entities` | `{}` or `{"peer_cohort":"DeFi protocol"}` | Registry listing + each entity's latest report status. |
-| `GET /v1/version` | | `{"service":"treasury-capital-score","version":"1.1.0"}` |
+| `GET /v1/version` | | `{"service":"treasury-capital-score","version":"1.2.0"}` |
 | `GET /v1/health` | | `{"status":"ok","last_pipeline_run":...}` |
 
 Missing/unknown `entity_id` or bad JSON → 400 + JSON.
 
-Since 1.1.0 a report may also carry an optional **`verification`** block (Verified layer). It lists independent
-cross-checks of the report's inputs from the Pi's evidence bank: second price sources, a second RPC node at the
-same block, proxy slots and Sourcify, exit liquidity, ENS, and reported-vs-observed reconciliation. It gives the
-agreement rate, counts, each confirmed field with its per-source verdict and delta, and the disagreeing and
-unconfirmed fields. It carries verdicts only: no values, no upstream payloads, no internal-only sources. It never
-changes a score; a disagreement is a review flag. It is absent when the evidence bundle has no verification
-summary. `schema_version` stays `tcs-6-paid-response/1.0` because the field is optional and additive.
+Since 1.2.0 a report may also carry an optional **`attestation`** block (Verified layer). It holds a signed attestation
+of the **cross-source comparisons** (prices against Chainlink and CoinMarketCap, reported vs observed treasury) and
+**validation controls** (second-node retrieval, contract identity, realizability, naming) made on the report's inputs.
+Each check records our observed value, the other reading where its terms allow (on-chain and public data; vendor data
+gives the difference only), the chain ID, block number and hash, observation and retrieval time, source reference, rule,
+status (`passed`, `failed`, `conflicted`, `unavailable`, `not_applicable`) and independence class.
+
+- **Counters:** per group they always add up: attempted, completed, passed, conflicted or failed, unavailable,
+  not_applicable, requiring_review.
+- **Signing:** the payload is RFC 8785 canonical JSON. The Pi signs a canonical record of its hash with Ed25519.
+  This service verifies the signature with the keys in `config/attestation_keys.json`, checks it is for this bundle,
+  not a replay and not stale, and passes payload, hash and signature through unchanged. `verification_status` is
+  `valid`, `invalid`, `missing` or `stale`.
+- **Score boundary:** it never changes a score (attestation_layer != scoring_layer).
+- **Absence:** it is absent for older bundles. `schema_version` stays `tcs-6-paid-response/1.0` because the field is
+  optional and additive.
 
 ## How it fits together
 
