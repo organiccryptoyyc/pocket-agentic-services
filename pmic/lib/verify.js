@@ -40,6 +40,13 @@
 //            and PRORULE (2% agree, 10% partial); public laws per month against GovInfo's PLAW
 //            collection; bills introduced per month against GovInfo's introduced bill versions (ih/is;
 //            the printing office lags, so 5% agree, 20% partial) (GOVINFO_API_KEY). Skipped without a key.
+//   fluview  CDC NSSP stays primary (owner D19). Its weekly share of emergency department visits
+//            diagnosed as influenza against FluView's ILINet weighted %ILI (outpatient influenza-like
+//            illness, a different CDC surveillance system), read through CMU Delphi's Epidata mirror
+//            (CDC has no stable FluView API). The two measure different things, so only the direction
+//            of the week-over-week change is compared: same direction (a change under 5% of the prior
+//            value counts as flat) agrees, one flat and one moving is partial, opposite directions
+//            disagree. Each NSSP week once; a week ILINet has not published yet is retried next pass.
 //
 // A failed second read is an "unavailable" row; a failure of the whole step is returned to the
 // caller and never stops the collect pass.
@@ -603,6 +610,51 @@ async function checkKeyed(db, catalog, ctx) {
   }
 }
 
+const FLUVIEW = (from, to) => `https://api.delphi.cmu.edu/epidata/fluview/?regions=nat&epiweeks=${from}-${to}`;
+const FLAT_SHARE = 0.05;
+
+// MMWR week: Sunday-Saturday; week 1 is the first week with at least four days in the year.
+function mmwrStart(year) {
+  const jan1 = Date.UTC(year, 0, 1);
+  const dow = new Date(jan1).getUTCDay();
+  return jan1 + (dow <= 3 ? -dow : 7 - dow) * DAY;
+}
+function epiweekOf(isoDate) {
+  const t = Date.parse(`${isoDate}T00:00:00Z`);
+  let y = new Date(t).getUTCFullYear() + 1;
+  while (mmwrStart(y) > t) y -= 1;
+  return y * 100 + Math.floor((t - mmwrStart(y)) / (7 * DAY)) + 1;
+}
+const direction = (now, prev) => (Math.abs(now - prev) < FLAT_SHARE * Math.abs(prev) ? 0 : Math.sign(now - prev));
+
+async function checkFluview(db, catalog, ctx) {
+  const s = catalog.series.find((x) => x.series_id === "cdc:ed_flu_weekly");
+  if (!s) return;
+  const [cur, prev] = db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time DESC LIMIT 2").all(s.series_id);
+  if (!cur || !prev || kvGet(db, "verified:fluview") === cur.t) return;
+  const [wkCur, wkPrev] = [epiweekOf(cur.t), epiweekOf(prev.t)];
+  const ourDir = direction(cur.v, prev.v);
+  const row = { run_id: ctx.runId, field: `series:${s.series_id}`, entity_id: s.entity_id,
+    our_value: { week_end: cur.t, value: cur.v, prev_week_end: prev.t, prev_value: prev.v, direction: ourDir },
+    upstream_service: "fluview", tolerance_pct: null, observed_at: at(cur.t) };
+  const t0 = Date.now();
+  try {
+    const j = await getJson(ctx, FLUVIEW(wkPrev, wkCur));
+    if (j.result !== 1 && j.result !== undefined && j.result !== -2) throw new Error(`delphi: ${String(j.message).slice(0, 80)}`);
+    const by = new Map((j.epidata || []).map((x) => [x.epiweek, Number(x.wili)]));
+    if (!by.has(wkCur) || !by.has(wkPrev)) return; // ILINet has not published this week yet: next pass
+    const theirDir = direction(by.get(wkCur), by.get(wkPrev));
+    const agreement = ourDir === theirDir ? "agree" : ourDir === 0 || theirDir === 0 ? "partial" : "disagree";
+    ctx.rows.push({ ...row, upstream_value: { epiweek: wkCur, wili: by.get(wkCur), prev_epiweek: wkPrev, prev_wili: by.get(wkPrev), direction: theirDir }, agreement, delta_pct: null });
+    ctx.calls.push(["fluview", { disagreed: agreement === "disagree", latencyMs: Date.now() - t0 }]);
+  } catch (e) {
+    ctx.rows.push({ ...row, upstream_value: null, agreement: "unavailable" });
+    ctx.calls.push(["fluview", { ok: false }]);
+    ctx.notes.push(`fluview ${cur.t}: ${String(e.message).slice(0, 120)}`);
+  }
+  kvSet(db, "verified:fluview", cur.t);
+}
+
 async function verify(db, catalog, { now = new Date(), fetchImpl = null, env = process.env } = {}) {
   const ctx = { now, nowIso: now.toISOString().replace(/\.\d{3}Z$/, "Z"), runId: `pmic/${now.toISOString()}`,
     fetchImpl: fetchImpl || fetchText, env, rows: [], calls: [], notes: [] };
@@ -616,6 +668,7 @@ async function verify(db, catalog, { now = new Date(), fetchImpl = null, env = p
   await checkEmsc(db, catalog, ctx);
   await checkPropublica(db, catalog, ctx);
   await checkKeyed(db, catalog, ctx);
+  await checkFluview(db, catalog, ctx);
   if (ctx.rows.length || ctx.calls.length) {
     tx(db, () => {
       addConfirmations(db, ctx.rows);
@@ -627,4 +680,4 @@ async function verify(db, catalog, { now = new Date(), fetchImpl = null, env = p
   return { rows: ctx.rows.length, by_agreement: by, notes: ctx.notes.slice(0, 5) };
 }
 
-module.exports = { verify, CHAINLINK, FALLBACK_RPC, PRICE_TOLERANCE_PCT, INTERNAL_ONLY };
+module.exports = { verify, CHAINLINK, FALLBACK_RPC, PRICE_TOLERANCE_PCT, INTERNAL_ONLY, epiweekOf };

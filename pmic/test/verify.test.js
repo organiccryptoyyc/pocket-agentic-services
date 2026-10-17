@@ -320,3 +320,35 @@ test("keyed checks: EIA prices and GovInfo counts; skipped without keys; keys ne
     + JSON.stringify(db.prepare("SELECT * FROM upstream_quality").all());
   assert.ok(!everything.includes(KEY), "the key is never stored");
 });
+
+test("FluView: NSSP flu ED share vs ILINet wILI, week-over-week direction, once per week (D19)", async () => {
+  const { verify, epiweekOf } = require("../lib/verify");
+  assert.equal(epiweekOf("2026-10-10"), 202640);
+  assert.equal(epiweekOf("2026-01-03"), 202553, "a Saturday in the last MMWR week of the prior year");
+  assert.equal(epiweekOf("2027-01-09"), 202701);
+  const db = dbLib.open({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "pmic-fluview-")) });
+  const ins = db.prepare("INSERT INTO observations (source_id, series_id, entity_id, metric_name, metric_value, unit, observation_time, fetch_time, source_url, transform_version, retention_class, confidence_score, updated_at) VALUES ('cdc','cdc:ed_flu_weekly','us-respiratory','ed_visits_influenza_pct',?,'percent',?,'2026-10-11T00:00:00Z','https://www.cdc.gov','1','standard',0.9,'2026-10-11T00:00:00Z')");
+  ins.run(0.30, "2026-10-03");
+  ins.run(0.36, "2026-10-10");
+  let wili = { 202639: 1.85, 202640: 2.07 };
+  let calls = 0;
+  const fetchImpl = async (url) => {
+    calls += 1;
+    assert.match(url, /api\.delphi\.cmu\.edu\/epidata\/fluview\/\?regions=nat&epiweeks=202639-202640/);
+    return { status: 200, text: JSON.stringify({ result: 1, epidata: Object.entries(wili).map(([w, v]) => ({ epiweek: Number(w), wili: v })) }) };
+  };
+  const now = new Date("2026-10-17T06:00:00Z");
+  await verify(db, catalog, { now, fetchImpl });
+  let r = rows(db).filter((x) => x.upstream_service === "fluview");
+  assert.equal(r.length, 1);
+  assert.equal(r[0].agreement, "agree", "both rose");
+  await verify(db, catalog, { now, fetchImpl });
+  assert.equal(rows(db).filter((x) => x.upstream_service === "fluview").length, 1, "same week only once");
+  ins.run(0.30, "2026-10-17");
+  wili = { 202640: 2.07, 202641: 2.4 };
+  const fetch2 = async (url) => ({ status: 200, text: JSON.stringify({ result: 1, epidata: Object.entries(wili).map(([w, v]) => ({ epiweek: Number(w), wili: v })) }) });
+  await verify(db, catalog, { now, fetchImpl: fetch2 });
+  r = rows(db).filter((x) => x.upstream_service === "fluview");
+  assert.equal(r[1].agreement, "disagree", "NSSP fell while ILINet rose");
+  assert.ok(calls >= 1);
+});
