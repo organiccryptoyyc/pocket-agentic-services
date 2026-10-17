@@ -4,7 +4,8 @@
 // This side applies the versioned policy to the failed checks of a *valid* attestation, using the report's
 // own counted treasury value:
 //
-//   affected value  verified positions held at the failed contract or of that token (fair value)
+//   affected value  verified positions on the failed check's chain held at the failed contract or of that
+//                   token (fair value). The chain matters: a Safe can sit at the same address on several chains.
 //   critical        affected / counted treasury value >= critical_core_share_threshold
 //   material        affected > value_threshold_usd OR affected / counted > treasury_share_threshold (strict)
 //   non_material    otherwise: disclosed, no score effect
@@ -19,11 +20,20 @@ const POLICY = require("../methodology/tcs6_materiality_policy_v1.json");
 
 const RANK = { none: 0, disclose: 1, provisional: 2, insufficient_data: 3 };
 
-function affectedRows(base, contract) {
+// The chain name in a check id: "<kind>|<prefix>:<chain>:<address>[:...]|<source>".
+function chainOf(checkId) {
+  const field = String(checkId || "").split("|")[1] || "";
+  const parts = field.split(":");
+  return parts.length >= 3 ? parts[1].toLowerCase() : null;
+}
+
+function affectedRows(base, contract, chain) {
   const c = String(contract || "").toLowerCase();
-  if (!/^0x[0-9a-f]{40}$/.test(c)) return null;
+  if (!/^0x[0-9a-f]{40}$/.test(c) || !chain) return null;
   return base.verifiedRows.filter((r) => {
     const parts = String(r.h.asset_id || "").toLowerCase().split(":");
+    const hChain = String(r.h.chain || parts[0] || "").toLowerCase();
+    if (hChain !== chain) return false;
     return String(r.h.address || "").toLowerCase() === c || parts[1] === c || parts[2] === c;
   });
 }
@@ -41,7 +51,7 @@ function assess(bundle, base, verdict, policy = POLICY) {
   for (const fc of [...ri.failed_checks, ...(ri.conflicted_checks || [])]) {
     const cls = policy.classes[fc.kind];
     const active = !!(cls && cls.active);
-    const rows = affectedRows(base, fc.contract);
+    const rows = affectedRows(base, fc.contract, chainOf(fc.check_id));
     const value = rows === null ? null : rows.reduce((s, r) => s + r.fair, 0);
     let materiality = "undetermined";
     if (value !== null && treasury > 0) {

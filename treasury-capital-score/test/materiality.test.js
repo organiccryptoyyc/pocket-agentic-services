@@ -110,6 +110,15 @@ test("classes not yet active are assessed but change nothing; invalid attestatio
   assert.equal(bad.attestation.materiality, undefined);
 });
 
+test("the chain must match: a failure on another chain at the same address is not this position (Morpho, Beta 2026-10-17)", () => {
+  const onBase = { ...failed(A2), check_id: `contract_identity_control|control.source_verified:base:${A2}|sourcify` };
+  const r = report(withAttestation(plainBundle, [onBase]));
+  const a = r.attestation.materiality.assessments[0];
+  assert.equal(a.position_value_usd, 0);
+  assert.equal(a.materiality, "non_material");
+  assert.equal(r.overall_score.score, plain.overall_score.score);
+});
+
 test("an address that can't be matched (no contract) stays undetermined", () => {
   const c = { ...failed(A1), contract: null };
   const r = report(withAttestation(plainBundle, [c]));
