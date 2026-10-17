@@ -1,6 +1,6 @@
 {
   "name": "treasury-capital-score",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "description": "TCS-6: Crypto Treasury Capital Score — a Pocket Network service backend. Cached, schema-validated treasury reports over REST.",
   "main": "server.js",

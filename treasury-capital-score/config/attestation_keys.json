@@ -2,7 +2,7 @@
   "_comment": "Public Ed25519 keys whose attestations this service accepts. Add the key printed by `python3 -m evidence keygen` on the Pi (key_id + public_key_b64url). Public keys only; never a private key.",
   "keys": [
     {
-      "key_id": "tcs6-attest-66dNxSb9jqP8UeQB",
+      "key_id": "tcs6-attest-eba74dc526fd8ea3",
       "alg": "Ed25519",
       "public_key_b64url": "uiu8FefCxjkRQVjhGmFgtgbpniEzbe3Irv4bUfC_s1U",
       "created_on": "pi muttb 2026-10-17",

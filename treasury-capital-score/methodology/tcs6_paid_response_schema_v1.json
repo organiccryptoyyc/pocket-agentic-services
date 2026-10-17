@@ -408,6 +408,8 @@
             "conflict_policy",
             "score_boundary",
             "checks",
+            "review_items",
+            "review_required",
             "evidence_manifest",
             "evidence_manifest_hash",
             "statement"
@@ -418,7 +420,8 @@
               "const": "tcs6-input-attestation"
             },
             "schema_version": {
-              "type": "string"
+              "type": "string",
+              "const": "tcs6-attestation/1.1"
             },
             "method_version": {
               "type": "string"
@@ -560,22 +563,30 @@
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "independent",
+                "independent_economic_source",
                 "partially_independent",
-                "retrieval_redundancy",
-                "control"
+                "transport_corroboration",
+                "contract_identity_control",
+                "naming_control",
+                "realizability_control"
               ],
               "properties": {
-                "independent": {
+                "independent_economic_source": {
                   "type": "string"
                 },
                 "partially_independent": {
                   "type": "string"
                 },
-                "retrieval_redundancy": {
+                "transport_corroboration": {
                   "type": "string"
                 },
-                "control": {
+                "contract_identity_control": {
+                  "type": "string"
+                },
+                "naming_control": {
+                  "type": "string"
+                },
+                "realizability_control": {
                   "type": "string"
                 }
               }
@@ -639,10 +650,12 @@
                   "independence": {
                     "type": "string",
                     "enum": [
-                      "independent",
+                      "independent_economic_source",
                       "partially_independent",
-                      "retrieval_redundancy",
-                      "control"
+                      "transport_corroboration",
+                      "contract_identity_control",
+                      "naming_control",
+                      "realizability_control"
                     ]
                   },
                   "field": {
@@ -736,6 +749,38 @@
                 }
               }
             },
+            "review_items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "conflicted_check_ids",
+                "failed_check_ids",
+                "unavailable_check_ids"
+              ],
+              "properties": {
+                "conflicted_check_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "failed_check_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "unavailable_check_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "review_required": {
+              "type": "boolean"
+            },
             "evidence_manifest": {
               "type": "array",
               "items": {
@@ -783,7 +828,8 @@
             "key_id",
             "signed_at",
             "attestation_id",
-            "value"
+            "value",
+            "value_encoding"
           ],
           "properties": {
             "alg": {
@@ -801,6 +847,10 @@
             },
             "value": {
               "type": "string"
+            },
+            "value_encoding": {
+              "type": "string",
+              "const": "base64url"
             }
           }
         }

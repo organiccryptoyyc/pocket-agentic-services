@@ -55,6 +55,19 @@ test("every tamper, replay, staleness and malformed case is labelled, never thro
   assert.match(v(e), /^invalid:unknown key/);
   e = clone(VEC.envelope); e.signature.alg = "RS256";
   assert.match(v(e), /^invalid:unsupported algorithm/);
+  e = clone(VEC.envelope); e.signature.value_encoding = "hex";
+  assert.match(v(e), /^invalid:unsupported signature encoding/);
+  // owner feedback 2026-10-17: hashes are "sha256:" + 64 lowercase hex, key ids are hex fingerprints
+  assert.match(VEC.envelope.payload_hash, /^sha256:[0-9a-f]{64}$/);
+  assert.match(VEC.envelope.payload.evidence_manifest_hash, /^sha256:[0-9a-f]{64}$/);
+  assert.match(VEC.key_id, /^tcs6-attest-[0-9a-f]{16}$/);
+  // an envelope in another schema (1.0) is labelled invalid and withheld, never passed through
+  e = clone(VEC.envelope); e.payload.schema_version = "tcs6-attestation/1.0";
+  const old = verifyEnvelope(e, bundleWith(e), KEYS, { now: NOW });
+  assert.match(old.status + ":" + old.detail, /^invalid:unsupported attestation schema/);
+  const ob = attestationBlock(bundleWith(e), old);
+  assert.equal(ob.payload, null);
+  assert.equal(ob.signature, null);
   // a valid attestation replayed onto a different bundle
   assert.match(v(VEC.envelope, {}, { ...bundleWith(VEC.envelope), collected_at: "2026-10-18T00:00:00Z" }), /^invalid:attestation is for a different bundle/);
   assert.match(v(VEC.envelope, {}, { ...bundleWith(VEC.envelope), entity_id: "other" }), /^invalid:attestation is for a different bundle/);

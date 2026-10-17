@@ -9,6 +9,10 @@
 //   invalid  anything else (detail says which); a bad attestation never blocks the report
 //   missing  the bundle carries no attestation (a verification_summary alone is not one)
 //
+// Hashes are "sha256:" + 64 lowercase hex; key ids are "tcs6-attest-" + the first 16 hex of SHA-256(public key);
+// the signature value is base64url (labelled value_encoding). Only schema SCHEMA_VERSION is passed through: an
+// envelope in any other schema is labelled invalid and withheld, so the paid response keeps its strict schema.
+//
 // The payload, hash and signature are passed through exactly as received: never reformatted, recounted or
 // trimmed, so anyone can re-verify them. Verdicts never touch scoring (attestation_layer != scoring_layer).
 "use strict";
@@ -19,13 +23,14 @@ const path = require("path");
 const { canonicalJson } = require("./canonical");
 
 const ALG = "Ed25519";
+const SCHEMA_VERSION = "tcs6-attestation/1.1";
 const ATTEST_MAX_AGE_H = 36; // the collector runs every 4 h and the pipeline every 12 h
 const SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 const KEYS_FILE = path.join(__dirname, "..", "config", "attestation_keys.json");
 
 const b64u = (s) => Buffer.from(String(s).replace(/-/g, "+").replace(/_/g, "/"), "base64");
-const sha256b64u = (text) => "sha256:" + crypto.createHash("sha256").update(text, "utf8").digest("base64url");
-const keyIdOf = (raw) => "tcs6-attest-" + crypto.createHash("sha256").update(raw).digest("base64url").slice(0, 16);
+const sha256hex = (text) => "sha256:" + crypto.createHash("sha256").update(text, "utf8").digest("hex");
+const keyIdOf = (raw) => "tcs6-attest-" + crypto.createHash("sha256").update(raw).digest("hex").slice(0, 16);
 
 // {key_id: KeyObject} from config/attestation_keys.json {"keys": [{key_id, alg, public_key_b64url}]}.
 // A key whose id does not match its public key is ignored (a typo can't impersonate another key).
@@ -52,8 +57,10 @@ function verifyEnvelope(env, bundle, keys, { lastSignedAt = null, now = new Date
     const sig = env.signature;
     const payload = env.payload;
     if (!sig || !payload || typeof payload !== "object") return { status: "invalid", detail: "malformed envelope" };
+    if (payload.schema_version !== SCHEMA_VERSION) return { status: "invalid", detail: `unsupported attestation schema ${String(payload.schema_version).slice(0, 40)}`, withhold: true };
     if (sig.alg !== ALG) return { status: "invalid", detail: "unsupported algorithm" };
-    if (sha256b64u(canonicalJson(payload)) !== env.payload_hash) return { status: "invalid", detail: "payload hash mismatch" };
+    if (sig.value_encoding !== "base64url") return { status: "invalid", detail: "unsupported signature encoding" };
+    if (sha256hex(canonicalJson(payload)) !== env.payload_hash) return { status: "invalid", detail: "payload hash mismatch" };
     if (sig.attestation_id !== payload.attestation_id) return { status: "invalid", detail: "attestation id mismatch" };
     const key = keys[sig.key_id];
     if (!key) return { status: "invalid", detail: `unknown key ${String(sig.key_id).slice(0, 40)}` };
@@ -78,7 +85,7 @@ function verifyEnvelope(env, bundle, keys, { lastSignedAt = null, now = new Date
 function attestationBlock(bundle, verdict) {
   const env = bundle && bundle.attestation;
   if (!env && !(bundle && bundle.verification_summary)) return null; // older bundles (and golden fixtures): no block
-  if (verdict.status === "missing" || !env || typeof env !== "object" || !env.payload || typeof env.payload !== "object") {
+  if (verdict.status === "missing" || verdict.withhold || !env || typeof env !== "object" || !env.payload || typeof env.payload !== "object") {
     return { verification_status: verdict.status === "missing" ? "missing" : "invalid", verification_detail: verdict.detail,
       statement: verdict.detail, payload: null, payload_hash: null, signature: null };
   }
@@ -88,4 +95,4 @@ function attestationBlock(bundle, verdict) {
     payload: env.payload, payload_hash: env.payload_hash ?? null, signature: env.signature ?? null };
 }
 
-module.exports = { verifyEnvelope, attestationBlock, loadKeys, keyIdOf, ATTEST_MAX_AGE_H };
+module.exports = { verifyEnvelope, attestationBlock, loadKeys, keyIdOf, SCHEMA_VERSION, ATTEST_MAX_AGE_H };
