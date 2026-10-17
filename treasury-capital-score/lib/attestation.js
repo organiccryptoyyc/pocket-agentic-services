@@ -10,8 +10,11 @@
 //   missing  the bundle carries no attestation (a verification_summary alone is not one)
 //
 // Hashes are "sha256:" + 64 lowercase hex; key ids are "tcs6-attest-" + the first 16 hex of SHA-256(public key);
-// the signature value is base64url (labelled value_encoding). Only schema SCHEMA_VERSION is passed through: an
+// the signature value is base64url (labelled value_encoding). Only the SCHEMA_VERSIONS are passed through: an
 // envelope in any other schema is labelled invalid and withheld, so the paid response keeps its strict schema.
+//
+// The Pi signs inputs and never scores, so the scoring-policy version is added here, outside the signed payload:
+// it is the version of lib/scoring.js that computed this report.
 //
 // The payload, hash and signature are passed through exactly as received: never reformatted, recounted or
 // trimmed, so anyone can re-verify them. Verdicts never touch scoring (attestation_layer != scoring_layer).
@@ -23,7 +26,8 @@ const path = require("path");
 const { canonicalJson } = require("./canonical");
 
 const ALG = "Ed25519";
-const SCHEMA_VERSION = "tcs6-attestation/1.1";
+const SCHEMA_VERSIONS = ["tcs6-attestation/1.1", "tcs6-attestation/1.2"];
+const { METHOD_VERSION: SCORING_POLICY_VERSION } = require("./scoring");
 const ATTEST_MAX_AGE_H = 36; // the collector runs every 4 h and the pipeline every 12 h
 const SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 const KEYS_FILE = path.join(__dirname, "..", "config", "attestation_keys.json");
@@ -57,7 +61,7 @@ function verifyEnvelope(env, bundle, keys, { lastSignedAt = null, now = new Date
     const sig = env.signature;
     const payload = env.payload;
     if (!sig || !payload || typeof payload !== "object") return { status: "invalid", detail: "malformed envelope" };
-    if (payload.schema_version !== SCHEMA_VERSION) return { status: "invalid", detail: `unsupported attestation schema ${String(payload.schema_version).slice(0, 40)}`, withhold: true };
+    if (!SCHEMA_VERSIONS.includes(payload.schema_version)) return { status: "invalid", detail: `unsupported attestation schema ${String(payload.schema_version).slice(0, 40)}`, withhold: true };
     if (sig.alg !== ALG) return { status: "invalid", detail: "unsupported algorithm" };
     if (sig.value_encoding !== "base64url") return { status: "invalid", detail: "unsupported signature encoding" };
     if (sha256hex(canonicalJson(payload)) !== env.payload_hash) return { status: "invalid", detail: "payload hash mismatch" };
@@ -87,12 +91,12 @@ function attestationBlock(bundle, verdict) {
   if (!env && !(bundle && bundle.verification_summary)) return null; // older bundles (and golden fixtures): no block
   if (verdict.status === "missing" || verdict.withhold || !env || typeof env !== "object" || !env.payload || typeof env.payload !== "object") {
     return { verification_status: verdict.status === "missing" ? "missing" : "invalid", verification_detail: verdict.detail,
-      statement: verdict.detail, payload: null, payload_hash: null, signature: null };
+      scoring_policy_version: SCORING_POLICY_VERSION, statement: verdict.detail, payload: null, payload_hash: null, signature: null };
   }
   const sig = env.signature || {};
-  const statement = `${typeof env.payload.statement === "string" ? env.payload.statement : ""} Signed using ${sig.alg} by key ${sig.key_id} at ${sig.signed_at}. Verification status: ${verdict.status} (${verdict.detail}).`;
-  return { verification_status: verdict.status, verification_detail: verdict.detail, statement,
+  const statement = `${typeof env.payload.statement === "string" ? env.payload.statement : ""} This report's score was computed under scoring policy version ${SCORING_POLICY_VERSION}, which does not yet apply a materiality rule to failed or conflicted checks. Signed using ${sig.alg} by key ${sig.key_id} at ${sig.signed_at}. Verification status: ${verdict.status} (${verdict.detail}).`;
+  return { verification_status: verdict.status, verification_detail: verdict.detail, scoring_policy_version: SCORING_POLICY_VERSION, statement,
     payload: env.payload, payload_hash: env.payload_hash ?? null, signature: env.signature ?? null };
 }
 
-module.exports = { verifyEnvelope, attestationBlock, loadKeys, keyIdOf, SCHEMA_VERSION, ATTEST_MAX_AGE_H };
+module.exports = { verifyEnvelope, attestationBlock, loadKeys, keyIdOf, SCHEMA_VERSIONS, SCORING_POLICY_VERSION, ATTEST_MAX_AGE_H };

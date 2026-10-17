@@ -367,6 +367,7 @@
       "required": [
         "verification_status",
         "verification_detail",
+        "scoring_policy_version",
         "statement",
         "payload",
         "payload_hash",
@@ -383,6 +384,9 @@
           ]
         },
         "verification_detail": {
+          "type": "string"
+        },
+        "scoring_policy_version": {
           "type": "string"
         },
         "statement": {
@@ -421,7 +425,10 @@
             },
             "schema_version": {
               "type": "string",
-              "const": "tcs6-attestation/1.1"
+              "enum": [
+                "tcs6-attestation/1.1",
+                "tcs6-attestation/1.2"
+              ]
             },
             "method_version": {
               "type": "string"
@@ -775,11 +782,221 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "conflicted_checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "check_id",
+                      "kind",
+                      "subject",
+                      "chain_id",
+                      "contract",
+                      "source",
+                      "result",
+                      "failure_reason",
+                      "failure_detail",
+                      "materiality",
+                      "review_required"
+                    ],
+                    "properties": {
+                      "check_id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "chain_id": {
+                        "type": [
+                          "integer",
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "contract": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "result": {
+                        "type": "string",
+                        "enum": [
+                          "conflicted",
+                          "failed",
+                          "unavailable"
+                        ]
+                      },
+                      "failure_reason": {
+                        "type": "string"
+                      },
+                      "failure_detail": {
+                        "type": "string"
+                      },
+                      "materiality": {
+                        "type": "string"
+                      },
+                      "review_required": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "failed_checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "check_id",
+                      "kind",
+                      "subject",
+                      "chain_id",
+                      "contract",
+                      "source",
+                      "result",
+                      "failure_reason",
+                      "failure_detail",
+                      "materiality",
+                      "review_required"
+                    ],
+                    "properties": {
+                      "check_id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "chain_id": {
+                        "type": [
+                          "integer",
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "contract": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "result": {
+                        "type": "string",
+                        "enum": [
+                          "conflicted",
+                          "failed",
+                          "unavailable"
+                        ]
+                      },
+                      "failure_reason": {
+                        "type": "string"
+                      },
+                      "failure_detail": {
+                        "type": "string"
+                      },
+                      "materiality": {
+                        "type": "string"
+                      },
+                      "review_required": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "unavailable_checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "check_id",
+                      "kind",
+                      "subject",
+                      "chain_id",
+                      "contract",
+                      "source",
+                      "result",
+                      "failure_reason",
+                      "failure_detail",
+                      "materiality",
+                      "review_required"
+                    ],
+                    "properties": {
+                      "check_id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "chain_id": {
+                        "type": [
+                          "integer",
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "contract": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "result": {
+                        "type": "string",
+                        "enum": [
+                          "conflicted",
+                          "failed",
+                          "unavailable"
+                        ]
+                      },
+                      "failure_reason": {
+                        "type": "string"
+                      },
+                      "failure_detail": {
+                        "type": "string"
+                      },
+                      "materiality": {
+                        "type": "string"
+                      },
+                      "review_required": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
                 }
               }
             },
             "review_required": {
               "type": "boolean"
+            },
+            "review_reasons": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "materiality": {
+              "type": "string"
             },
             "evidence_manifest": {
               "type": "array",

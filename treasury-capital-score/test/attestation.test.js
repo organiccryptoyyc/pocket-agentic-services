@@ -13,7 +13,7 @@ const path = require("path");
 process.env.TCS6_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "tcs6-attest-test-"));
 
 const { canonicalJson } = require("../lib/canonical");
-const { verifyEnvelope, attestationBlock, loadKeys, keyIdOf } = require("../lib/attestation");
+const { verifyEnvelope, attestationBlock, loadKeys, keyIdOf, SCORING_POLICY_VERSION } = require("../lib/attestation");
 const S = require("../lib/scoring");
 const { buildReport } = require("../lib/report");
 const { validateReport } = require("../lib/schema");
@@ -62,6 +62,13 @@ test("every tamper, replay, staleness and malformed case is labelled, never thro
   assert.match(VEC.envelope.payload.evidence_manifest_hash, /^sha256:[0-9a-f]{64}$/);
   assert.match(VEC.key_id, /^tcs6-attest-[0-9a-f]{16}$/);
   // an envelope in another schema (1.0) is labelled invalid and withheld, never passed through
+  // owner feedback round 2: structured review items with exact reasons; scoring policy named outside the signed payload
+  assert.equal(VEC.envelope.payload.schema_version, "tcs6-attestation/1.2");
+  assert.equal(VEC.envelope.payload.materiality, "undetermined");
+  assert.ok(VEC.envelope.payload.review_items.failed_checks.every((c) => c.failure_reason && c.materiality === "undetermined"));
+  const blk = attestationBlock(bundleWith(VEC.envelope), { status: "valid", detail: "ok" });
+  assert.equal(blk.scoring_policy_version, SCORING_POLICY_VERSION);
+  assert.match(blk.statement, /computed under scoring policy version tcs-6\/1\.0, which does not yet apply a materiality rule/);
   e = clone(VEC.envelope); e.payload.schema_version = "tcs6-attestation/1.0";
   const old = verifyEnvelope(e, bundleWith(e), KEYS, { now: NOW });
   assert.match(old.status + ":" + old.detail, /^invalid:unsupported attestation schema/);
