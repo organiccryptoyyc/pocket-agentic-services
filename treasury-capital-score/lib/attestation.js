@@ -14,7 +14,8 @@
 // envelope in any other schema is labelled invalid and withheld, so the paid response keeps its strict schema.
 //
 // The Pi signs inputs and never scores, so the scoring-policy version is added here, outside the signed payload:
-// it is the version of lib/scoring.js that computed this report.
+// it is the version of lib/scoring.js that computed this report. The materiality assessment (lib/materiality.js,
+// policy D18) is added here too: the signed payload keeps "materiality: undetermined" as the Pi signed it.
 //
 // The payload, hash and signature are passed through exactly as received: never reformatted, recounted or
 // trimmed, so anyone can re-verify them. Verdicts never touch scoring (attestation_layer != scoring_layer).
@@ -86,7 +87,7 @@ function verifyEnvelope(env, bundle, keys, { lastSignedAt = null, now = new Date
 }
 
 // The report's `attestation` block: the received envelope unchanged plus the verdict and the full statement.
-function attestationBlock(bundle, verdict) {
+function attestationBlock(bundle, verdict, materiality = null) {
   const env = bundle && bundle.attestation;
   if (!env && !(bundle && bundle.verification_summary)) return null; // older bundles (and golden fixtures): no block
   if (verdict.status === "missing" || verdict.withhold || !env || typeof env !== "object" || !env.payload || typeof env.payload !== "object") {
@@ -94,8 +95,11 @@ function attestationBlock(bundle, verdict) {
       scoring_policy_version: SCORING_POLICY_VERSION, statement: verdict.detail, payload: null, payload_hash: null, signature: null };
   }
   const sig = env.signature || {};
-  const statement = `${typeof env.payload.statement === "string" ? env.payload.statement : ""} This report's score was computed under scoring policy version ${SCORING_POLICY_VERSION}, which does not yet apply a materiality rule to failed or conflicted checks. Signed using ${sig.alg} by key ${sig.key_id} at ${sig.signed_at}. Verification status: ${verdict.status} (${verdict.detail}).`;
-  return { verification_status: verdict.status, verification_detail: verdict.detail, scoring_policy_version: SCORING_POLICY_VERSION, statement,
+  const { POLICY, sentence } = require("./materiality");
+  const matText = materiality ? ` ${sentence(materiality)}` : verdict.status === "valid" ? "" : ` Materiality policy ${POLICY.policy_id} is applied only to a valid attestation; not applied to this one.`;
+  const statement = `${typeof env.payload.statement === "string" ? env.payload.statement : ""} This report's score was computed under scoring policy version ${SCORING_POLICY_VERSION} with materiality policy ${POLICY.policy_id}.${matText} Signed using ${sig.alg} by key ${sig.key_id} at ${sig.signed_at}. Verification status: ${verdict.status} (${verdict.detail}).`;
+  const extra = materiality ? { materiality: { policy_id: materiality.policy_id, effect: materiality.effect, assessments: materiality.items } } : {};
+  return { verification_status: verdict.status, verification_detail: verdict.detail, scoring_policy_version: SCORING_POLICY_VERSION, ...extra, statement,
     payload: env.payload, payload_hash: env.payload_hash ?? null, signature: env.signature ?? null };
 }
 

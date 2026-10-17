@@ -1,0 +1,55 @@
+{
+  "policy_id": "tcs6-materiality/1.0",
+  "status": "active",
+  "approved": "owner 2026-10-17 (decision D18)",
+  "value_threshold_usd": 100000,
+  "treasury_share_threshold": 0.02,
+  "threshold_operator": "either",
+  "threshold_comparison": "strict_greater_than",
+  "critical_core_share_threshold": 0.25,
+  "confidence_cap": 59,
+  "obligations_penalty_points": 10,
+  "price_attestation_threshold": 0.02,
+  "price_materiality_threshold": 0.05,
+  "rules": {
+    "material": "affected value > value_threshold_usd OR affected value / counted treasury value > treasury_share_threshold",
+    "critical_core_input": "a treasury-controlled address, token, contract, oracle or position representing >= critical_core_share_threshold of counted treasury value, or any required input whose absence makes the score non-reproducible or mathematically incomplete",
+    "undetermined": "the affected value cannot be calculated because the failed check prevents valuation; never assumed immaterial",
+    "non_material": "disclosed; no score effect",
+    "material_effect": "provisional; affected value excluded or reclassified per class; confidence = min(confidence, confidence_cap)",
+    "critical_effect": "insufficient_data; score null",
+    "conflicts": "all candidate values are preserved; never resolved automatically, never the most favourable value"
+  },
+  "classes": {
+    "contract_identity_control": {
+      "active": true,
+      "non_material": "retain the score, disclose the limitation",
+      "material": "provisional; the affected position is excluded from verified value; confidence capped",
+      "critical": "insufficient_data; score null"
+    },
+    "realizability_control": {
+      "active": false,
+      "rule": "stays in gross value, excluded from liquid value; material share: provisional; affects a core solvency or runway input: insufficient_data"
+    },
+    "naming_control": {
+      "active": false,
+      "rule": "non-material when the address is independently attributed (registry, Safe configuration, governance record, transaction history); material when the name is the only link: exclude the wallet from verified value or provisional; critical: insufficient_data"
+    },
+    "price_comparison": {
+      "active": false,
+      "rule": "<= 2%: passes; > 2% and <= 5%: attestation flag only; > 5% on a material position: material price conflict, provisional; no defensible price: materiality by affected position, critical: insufficient_data, otherwise provisional with the value excluded or conservatively valued"
+    },
+    "retrieval_control": {
+      "active": false,
+      "rule": "a transport failure while another source agrees: disclosed, no score change; chain state unretrievable for a material position: material; critical: insufficient_data"
+    },
+    "disclosure_reconciliation": {
+      "active": false,
+      "rule": "reconciliation flag; unresolved difference above the thresholds: provisional; the observed value is never rewritten to match the report"
+    },
+    "obligation_visibility": {
+      "active": false,
+      "rule": "existing obligations policy: a one-time obligations_penalty_points deduction when materially incomplete; insufficient_data when missing obligations make the score non-reproducible"
+    }
+  }
+}

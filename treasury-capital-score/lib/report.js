@@ -11,6 +11,7 @@ const { verifyEnvelope, attestationBlock, loadKeys } = require("./attestation");
 
 const crypto = require("crypto");
 const S = require("./scoring");
+const M = require("./materiality");
 const { sanitize } = require("./http");
 
 const SCHEMA_VERSION = "tcs-6-paid-response/1.0";
@@ -129,12 +130,21 @@ function entityBlock(entity) {
 }
 
 function buildReport(entity, bundle, base, peerNrts, opts = {}) {
+  // Materiality policy (D18) on the failed checks of a valid signed attestation: a material position
+  // leaves verified value before scoring; the overall effect is applied after scoring.
+  const verdict = opts.attestation || verifyEnvelope(bundle && bundle.attestation, bundle, loadKeys());
+  const mat = M.assess(bundle, base, verdict);
+  if (mat && mat.excluded.size) {
+    bundle = M.withExclusions(bundle, mat.excluded);
+    base = S.computeBase(bundle);
+  }
   const dims = [S.d1(base, peerNrts), S.d2(base, bundle), S.d3(base, bundle), S.d4(base), S.d5(bundle), S.d6(base, bundle)];
   const rights = rightsFilter(bundle.sources);
   const gateList = S.gates(entity, base, bundle, rights.blocked);
   const oblVis = S.obligationVisibility(bundle, base.asOfMs);
   const penalties = [...(bundle.penalties || []), ...S.obligationPenalties(oblVis)];
-  const overallScore = S.overall(dims, gateList, penalties, oblVis.bounded);
+  // the confidence cap is applied where confidence is computed (below)
+  const overallScore = M.applyEffect(S.overall(dims, gateList, penalties, oblVis.bounded), { score: 0 }, mat, S.confidenceLabel).overallScore;
   const cov = S.dataCoverage(base, bundle);
 
   for (const d of dims) {
@@ -159,6 +169,10 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
       impact: COLLECTOR_WARNING_IMPACT[w.code] || "Values were delivered as collected; the flag asks for curator review.",
       remediation: "Curator reviews the checks the collector recorded with this evidence.",
     }));
+  const materialRisks = mat ? mat.items.filter((i) => i.policy_active_for_kind && (i.materiality === "material" || i.materiality === "critical")).map((i) => ({
+    id: `material_${i.kind}`, category: "data_quality", severity: i.materiality === "critical" ? "critical" : "high",
+    description: `${i.subject}: ${i.kind.replace(/_/g, " ")} failed (${i.failure_reason}); ${i.materiality} under ${mat.policy_id} (${i.treasury_share === null ? "share not calculable" : (i.treasury_share * 100).toFixed(2) + "% of counted treasury value"}). Effect: ${i.score_effect}.`,
+    monitoring_action: "Curator reviews the failed control; the effect clears when the check passes." })) : [];
   const penaltyRisks = penalties.map((p) => ({ id: `penalty_${p.id}`, category: "other", severity: "medium", description: `Documented penalty of ${p.points} points: ${p.reason}`, monitoring_action: "Re-evaluate at next refresh." }));
 
   const statusMap = { eligible: "ready", provisional: "provisional", insufficient_data: "insufficient_data", ineligible: "insufficient_data" };
@@ -182,18 +196,17 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
     hard_gates: gateList,
     dimensions: dims.map(stripPrivate),
     overall_score: overallScore,
-    confidence: S.confidence(base, overallScore.coverage_pct, rights.delivered, gateList.find((g) => g.id === "control_coverage").status === "pass"),
+    confidence: M.applyEffect(overallScore, S.confidence(base, overallScore.coverage_pct, rights.delivered, gateList.find((g) => g.id === "control_coverage").status === "pass"), mat, S.confidenceLabel).confidence,
     data_coverage: cov,
     source_manifest: rights.delivered.map(({ source_ref, title, publisher, url, retrieved_at, observation_time, source_tier, rights_status }) => ({ source_ref, title, publisher, url, retrieved_at, observation_time: observation_time ?? null, source_tier, rights_status })),
-    risks: [...curatedRisks, ...derivedRisks(dims, cov), ...penaltyRisks],
+    risks: [...curatedRisks, ...derivedRisks(dims, cov), ...penaltyRisks, ...materialRisks],
     data_gaps: [...derivedGaps(dims, overallScore), ...warningGaps, ...curatedGaps],
     disclaimer: DISCLAIMER,
   });
   // Signed input attestation (Verified layer): attached after cleanText so the signed payload reaches the
   // caller byte-for-byte as the Pi signed it. Absent for bundles that carry neither an attestation nor a
   // verification summary (older bundles, golden fixtures). Never read by scoring.
-  const verdict = opts.attestation || verifyEnvelope(bundle && bundle.attestation, bundle, loadKeys());
-  const attestation = attestationBlock(bundle, verdict);
+  const attestation = attestationBlock(bundle, verdict, mat);
   return attestation ? { ...report, attestation } : report;
 }
 

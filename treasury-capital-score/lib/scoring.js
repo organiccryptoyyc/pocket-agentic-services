@@ -555,7 +555,7 @@ function dataCoverage(base, bundle) {
 
 module.exports = {
   METHOD_VERSION, DIMENSIONS, HAIRCUT_RANGES, ASSET_CLASSES, STRESS_SET, MIN_PEERS, CORRELATED_CAP, LOW_CONTROL_CONFIDENCE_CAP,
-  anchorScore, bandFor, haircutPct, valueAsset, computeBase,
+  anchorScore, bandFor, confidenceLabel, haircutPct, valueAsset, computeBase,
   OBLIGATIONS_MAX_AGE_DAYS, PARTIAL_OBLIGATIONS_PENALTY, obligationVisibility, obligationPenalties,
   d1, d2, d3, d4, d5, d6, gates, overall, confidence, dataCoverage, round,
 };

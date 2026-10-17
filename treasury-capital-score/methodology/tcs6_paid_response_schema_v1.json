@@ -389,6 +389,99 @@
         "scoring_policy_version": {
           "type": "string"
         },
+        "materiality": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "policy_id",
+            "effect",
+            "assessments"
+          ],
+          "properties": {
+            "policy_id": {
+              "type": "string"
+            },
+            "effect": {
+              "type": "string",
+              "enum": [
+                "none",
+                "disclose",
+                "provisional",
+                "insufficient_data"
+              ]
+            },
+            "assessments": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "failed_check_id",
+                  "kind",
+                  "subject",
+                  "contract",
+                  "failure_reason",
+                  "position_value_usd",
+                  "treasury_value_usd",
+                  "treasury_share",
+                  "materiality",
+                  "policy_active_for_kind",
+                  "score_effect"
+                ],
+                "properties": {
+                  "failed_check_id": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "contract": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "failure_reason": {
+                    "type": "string"
+                  },
+                  "position_value_usd": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "treasury_value_usd": {
+                    "type": "number"
+                  },
+                  "treasury_share": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "materiality": {
+                    "type": "string",
+                    "enum": [
+                      "non_material",
+                      "material",
+                      "critical",
+                      "undetermined"
+                    ]
+                  },
+                  "policy_active_for_kind": {
+                    "type": "boolean"
+                  },
+                  "score_effect": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
         "statement": {
           "type": "string"
         },
