@@ -1,6 +1,6 @@
 {
   "schema": "pocket-service-card/v1",
-  "description": "TCS-6 Crypto Treasury Capital Score. Paid, derived treasury analysis for DeFi protocols and DAOs: six weighted dimensions (net realizable capital scale, liquidity runway, obligation coverage, stress resilience, replenishment, control/governance), five hard gates, realization haircuts on every asset class, and a cited source manifest. POST /v1/tcs6/score {entity_id} returns the full report; POST /v1/tcs6/entities {} lists the curated registry. Reports are recomputed by a background pipeline every 12h and served from cache, so results are deterministic between refreshes but change across them. Every response, success or error, is a single JSON object. Output is derived values and citations only, never raw vendor data. Research score, not investment advice.",
+  "description": "TCS-6 Crypto Treasury Capital Score. Paid, derived treasury analysis for DeFi protocols and DAOs: six weighted dimensions (net realizable capital scale, liquidity runway, obligation coverage, stress resilience, replenishment, control/governance), five hard gates, realization haircuts on every asset class, and a cited source manifest. POST /v1/tcs6/score {entity_id} returns the full report; POST /v1/tcs6/entities {} lists the curated registry. Reports are recomputed by a background pipeline every 12h and served from cache, so results are deterministic between refreshes but change across them. Every response, success or error, is a single JSON object. Output is derived values and citations only, never raw vendor data. Each report carries a signed input attestation (Ed25519 over an RFC 8785 payload: cross-source comparisons, validation controls, review items) with the backend's verification status and a materiality assessment under policy tcs6-materiality/1.0; verify it with the published key in config/attestation_keys.json. Research score, not investment advice.",
   "rpc_types": [
     {
       "type": "REST",
@@ -52,5 +52,5 @@
     "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
   },
   "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/treasury-capital-score/README.md",
-  "updated": "2026-10-12"
+  "updated": "2026-10-18"
 }

@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "TCS-6: Crypto Treasury Capital Score",
-    "version": "1.2.0",
-    "description": "Pocket Network service `treasury-capital-score`. All inputs travel in a JSON POST body; every response is a JSON object. Paid per relay via a staked Pocket application — there is no checkout. Reports are recomputed every 12 hours and served from cache. Methodology: methodology/tcs6_scoring_blueprint_v1.json. Research score, not investment advice."
+    "version": "1.5.1",
+    "description": "Pocket Network service `treasury-capital-score`. All inputs travel in a JSON POST body; every response is a JSON object. Paid per relay via a staked Pocket application — there is no checkout. Reports are recomputed every 12 hours and served from cache. Methodology: methodology/tcs6_scoring_blueprint_v1.json. Each report carries a signed input attestation (Ed25519 over an RFC 8785 payload) with the backend's verification status and a materiality assessment under policy tcs6-materiality/1.0 (methodology/tcs6_materiality_policy_v1.json); the public key is in config/attestation_keys.json. Research score, not investment advice."
   },
   "paths": {
     "/v1/tcs6/score": {
