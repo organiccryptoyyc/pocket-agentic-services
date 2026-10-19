@@ -11,6 +11,7 @@ const { sendJson, readJsonBody, ClientError } = require("./http");
 const { tx, kvGet, kvSet, syncCatalog } = require("./db");
 const { rescoreAll } = require("./collect");
 const { applyBatch: applyPricebank } = require("./pricebank");
+const attest = require("./attest");
 
 const BATCH = Number(process.env.PMIC_PUSH_BATCH || 2000);
 const MAX_SYNC_BYTES = 8 * 1024 * 1024;
@@ -101,6 +102,30 @@ async function push(db, { url, token, fetchImpl = fetch, statusExtra = {}, resen
   return sent;
 }
 
+// Signed series attestations (lib/attest.js) to the hub's /ingest/attestations, next to /ingest/sync.
+// Only envelopes signed since the last successful push are sent.
+async function pushAttestations(db, { url, token, fetchImpl = fetch } = {}) {
+  if (!url || !token) throw new Error("PMIC_PUSH_URL and PMIC_PUSH_TOKEN are required to push");
+  const target = url.replace(/\/ingest\/sync\/?$/, "/ingest/attestations");
+  const todo = attest.pending(db);
+  if (!todo.length) return { sent: 0 };
+  let accepted = 0;
+  const rejected = [];
+  for (let i = 0; i < todo.length; i += 50) {
+    const chunk = todo.slice(i, i + 50);
+    const res = await fetchImpl(target, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ attestations: chunk.map(([, v]) => v.envelope) }) });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`hub answered HTTP ${res.status}: ${text.slice(0, 300)}`);
+    const r = JSON.parse(text);
+    accepted += r.accepted || 0;
+    rejected.push(...(r.rejected || []));
+    const bad = new Set((r.rejected || []).map((x) => x.series_id));
+    attest.markPushed(db, chunk.map(([id]) => id).filter((id) => !bad.has(id)));
+  }
+  return { sent: todo.length, accepted, rejected: rejected.slice(0, 5) };
+}
+
 // Hub side: upsert what arrived, keep the collector's own fetch_time/revision/provenance, rescore.
 function apply(db, catalog, body, now = new Date()) {
   if (!body || !Array.isArray(body.observations) || !Array.isArray(body.events)) throw new ClientError(400, "invalid_input", "body needs observations[] and events[]");
@@ -162,7 +187,12 @@ function startIngest({ openDb, catalog }) {
         const body = await readJsonBody(req, MAX_SYNC_BYTES);
         return sendJson(res, 200, applyPricebank(db, body));
       }
-      if (req.method !== "POST" || pathname !== "/ingest/sync") return sendJson(res, 404, { error: { code: "not_found", message: "POST /ingest/sync or /ingest/pricebank only" } });
+      if (req.method === "POST" && pathname === "/ingest/attestations") {
+        if (!tokenOk(req.headers.authorization, token)) return sendJson(res, 401, { error: { code: "unauthorized", message: "bearer token required" } });
+        const body = await readJsonBody(req, MAX_SYNC_BYTES);
+        return sendJson(res, 200, attest.storeEnvelopes(db, body && body.attestations, attest.loadKeysFile()));
+      }
+      if (req.method !== "POST" || pathname !== "/ingest/sync") return sendJson(res, 404, { error: { code: "not_found", message: "POST /ingest/sync, /ingest/attestations or /ingest/pricebank only" } });
       if (!tokenOk(req.headers.authorization, token)) return sendJson(res, 401, { error: { code: "unauthorized", message: "bearer token required" } });
       const body = await readJsonBody(req, MAX_SYNC_BYTES);
       return sendJson(res, 200, apply(db, catalog, body));
@@ -174,4 +204,4 @@ function startIngest({ openDb, catalog }) {
   return server;
 }
 
-module.exports = { push, apply, startIngest, tokenOk };
+module.exports = { push, pushAttestations, apply, startIngest, tokenOk };

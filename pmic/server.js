@@ -94,6 +94,7 @@ function build() {
       })],
       ["POST /v1/alerts", route(Q.alerts)],
       ["POST /v1/prices", route((d, body) => require("./lib/pricebank").query(d, body))],
+      ["POST /v1/attestations", route((d, body) => require("./lib/attest").query(d, body))],
     ]),
   });
 }

@@ -3,6 +3,9 @@
 //   node pmic/packs/ops/package-psm.js                -> ~/Downloads/<service_id>/ for every bundle
 //   node pmic/packs/ops/package-psm.js <service_id>   -> just that one
 //   node pmic/packs/ops/package-psm.js <id|all> <parent_dir>
+//   ... --beta   a Beta-only copy: deploy id <service_id>-beta, container <service_id>-beta-backend, so Beta
+//                can run new code while MainNet stays untouched; then on the beta stack add-service
+//                <service_id> -> http://<service_id>-beta-backend:8080 (health /healthz)
 //
 // Layout: card.json + service.json (so PSM lists it), backend/ (this pack's server with its
 // bundle.json), deploy/docker-compose.yaml. The pack reads the hub at http://pmic-hub-backend:8080
@@ -16,8 +19,10 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const SECRET = path.join(ROOT, "..", ".secrets", "hub.env");
-const only = process.argv[2] && process.argv[2] !== "all" ? process.argv[2] : null;
-const PARENT = path.resolve(process.argv[3] || path.join(os.homedir(), "Downloads"));
+const BETA = process.argv.includes("--beta");
+const pos = process.argv.slice(2).filter((a) => a !== "--beta");
+const only = pos[0] && pos[0] !== "all" ? pos[0] : null;
+const PARENT = path.resolve(pos[1] || path.join(os.homedir(), "Downloads"));
 
 if (!fs.existsSync(SECRET)) {
   console.error("pmic/.secrets/hub.env is missing: run node pmic/ops/package-psm.js first (it makes the hub tokens).");
@@ -65,16 +70,18 @@ networks:
 
 const out = [];
 for (const b of chosen) {
-  const dir = path.join(PARENT, b.service_id);
+  const deployId = BETA ? `${b.service_id}-beta` : b.service_id;
+  const dir = path.join(PARENT, deployId);
   fs.rmSync(path.join(dir, "backend"), { recursive: true, force: true });
   fs.mkdirSync(path.join(dir, "backend"), { recursive: true });
   fs.mkdirSync(path.join(dir, "deploy"), { recursive: true });
   for (const f of ["server.js", "package.json", "Dockerfile"]) fs.copyFileSync(path.join(ROOT, f), path.join(dir, "backend", f));
   fs.cpSync(path.join(ROOT, "lib"), path.join(dir, "backend", "lib"), { recursive: true });
+  fs.cpSync(path.join(ROOT, "config"), path.join(dir, "backend", "config"), { recursive: true });
   fs.writeFileSync(path.join(dir, "backend", "bundle.json"), JSON.stringify(b, null, 2) + "\n");
-  fs.writeFileSync(path.join(dir, "deploy", "docker-compose.yaml"), compose(b.service_id));
+  fs.writeFileSync(path.join(dir, "deploy", "docker-compose.yaml"), compose(deployId));
   fs.copyFileSync(path.join(ROOT, "ops", b.service_id, "card.json"), path.join(dir, "card.json"));
   fs.writeFileSync(path.join(dir, "service.json"), JSON.stringify({ service_id: b.service_id, name: b.display_name, compute_units_per_relay: 100000, card: "card.json", networks: {} }, null, 2) + "\n");
-  out.push({ service_id: b.service_id, folder: dir, backend_url: `http://${b.service_id}-backend:8080` });
+  out.push({ service_id: b.service_id, deploy_id: deployId, folder: dir, backend_url: `http://${deployId}-backend:8080` });
 }
 console.log(JSON.stringify({ hub_token: "read from pmic/.secrets/hub.env (not printed)", packs: out }, null, 2));

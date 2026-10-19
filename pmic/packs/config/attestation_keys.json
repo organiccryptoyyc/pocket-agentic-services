@@ -1,0 +1,4 @@
+{
+  "_comment": "Public Ed25519 keys whose PMIC attestations the hub and the packs accept. Add the key printed by `node bin/collect.js --attest-keygen` on the Pi (key_id + public_key_b64url). Public keys only; never a private key. Separate from the TCS-6 key (owner 2026-10-18).",
+  "keys": []
+}

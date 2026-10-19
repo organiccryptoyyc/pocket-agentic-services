@@ -3,6 +3,7 @@ FROM node:22-alpine
 WORKDIR /app
 COPY package.json server.js bundle.json ./
 COPY lib ./lib
+COPY config ./config
 ENV PACK_FILE=bundle.json
 USER node
 EXPOSE 8080

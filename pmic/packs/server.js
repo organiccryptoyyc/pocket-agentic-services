@@ -59,6 +59,22 @@ async function hubOptional(route, body) {
   }
 }
 
+// Signed input attestations (Phase 3): fetched from the hub for the series an answer cites, verified
+// here, passed through unchanged. Never changes the answer; a hub without the route is "missing".
+const A = require("./lib/attestation");
+const ATTEST_KEYS = A.loadKeys();
+async function withAttestation(out) {
+  const ids = A.seriesOf(out);
+  if (!ids.length) return out;
+  let envelopes = {};
+  try {
+    envelopes = (await hub("/v1/attestations", { series_ids: ids })).attestations || {};
+  } catch {
+    envelopes = {};
+  }
+  return { ...out, attestation: A.block(ids, envelopes, ATTEST_KEYS) };
+}
+
 function wrap(obj, stale = false) {
   const { service, ...rest } = obj;
   return { service: PACK.service_id, pack_version: PACK.version, ...rest, ...(stale ? { cache: { stale: true } } : {}) };
@@ -349,11 +365,11 @@ const routes = new Map([
   ["POST /v1/brief", async (raw) => {
     const b = obj(raw);
     const v = verticalOf(b);
-    return wrap(await brief(v, { horizon: horizonOf(b), entity: entityOf(b, needsEntity(v)), countries: countriesOf(b) }));
+    return wrap(await withAttestation(await brief(v, { horizon: horizonOf(b), entity: entityOf(b, needsEntity(v)), countries: countriesOf(b) })));
   }],
   ["POST /v1/overview", async (raw) => wrap(await overview(obj(raw)))],
   ["POST /v1/signals", async (raw) => wrap(await signals(obj(raw)))],
-  ["POST /v1/signal", async (raw) => { const b = obj(raw); await inScope(b.series_id); return wrap(await hub("/v1/signal", { series_id: b.series_id })); }],
+  ["POST /v1/signal", async (raw) => { const b = obj(raw); await inScope(b.series_id); return wrap(await withAttestation(await hub("/v1/signal", { series_id: b.series_id }))); }],
   ["POST /v1/explain", async (raw) => { const b = obj(raw); await inScope(b.series_id); return wrap(await hub("/v1/explain", { series_id: b.series_id, horizon: horizonOf(b) })); }],
   ["POST /v1/catalog", async (raw) => wrap(await catalog(obj(raw)))],
 ]);

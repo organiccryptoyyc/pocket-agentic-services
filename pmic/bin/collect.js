@@ -11,6 +11,8 @@
 //   node bin/collect.js --push          push to the hub now (needs PMIC_PUSH_URL, PMIC_PUSH_TOKEN)
 //   node bin/collect.js --push --resend-events   also send every stored event again
 //   node bin/collect.js --push --resend-source echo,irs990   also send every observation of these sources again
+//   node bin/collect.js --attest-keygen create the attestation signing key once; prints the public key only
+//   node bin/collect.js --attest        sign the series attestations that are due and push them now
 //
 // Pushing also happens after every pass when PMIC_PUSH_URL is set.
 "use strict";
@@ -19,7 +21,16 @@ const db = require("../lib/db");
 const catalogLib = require("../lib/catalog");
 const { collectOnce, rescoreAll } = require("../lib/collect");
 const { maintain } = require("../lib/maintain");
-const { push } = require("../lib/sync");
+const { push, pushAttestations } = require("../lib/sync");
+const attest = require("../lib/attest");
+const { INTERNAL_ONLY } = require("../lib/verify");
+
+async function attestAndPush(d, catalog) {
+  const s = attest.signDue(d, catalog, db.DATA_DIR, { internalOnly: INTERNAL_ONLY });
+  const out = { signed: s.signed.length, ...(s.skipped ? { skipped: s.skipped } : {}) };
+  if (process.env.PMIC_PUSH_URL) out.push = await pushAttestations(d, { url: process.env.PMIC_PUSH_URL, token: process.env.PMIC_PUSH_TOKEN });
+  return out;
+}
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
@@ -42,6 +53,12 @@ async function pass(d, catalog) {
       log({ push_error: e.message });
     }
   }
+  // Signed attestations (Phase 3): never fails the pass.
+  try {
+    log({ attest: await attestAndPush(d, catalog) });
+  } catch (e) {
+    log({ attest_error: String(e.message).slice(0, 200) });
+  }
 }
 
 async function main() {
@@ -49,6 +66,8 @@ async function main() {
   const d = db.open();
   db.syncCatalog(d, catalog);
   require("../lib/raw").purgeSources(db.DATA_DIR, catalog.purged_sources);
+  if (has("--attest-keygen")) return log({ attest_key: attest.keygen(db.DATA_DIR) });
+  if (has("--attest")) return log({ attest: await attestAndPush(d, catalog) });
   if (has("--rescore")) return log({ rescored: rescoreAll(d, catalog) });
   if (has("--maintain")) return log({ maintenance: maintain(d, catalog, db.DATA_DIR, { force: true }) });
   if (has("--push")) return log({ push: await push(d, { url: process.env.PMIC_PUSH_URL, token: process.env.PMIC_PUSH_TOKEN, resendEvents: has("--resend-events"), resendSources: val("--resend-source") || [] }) });
