@@ -54,7 +54,7 @@ test("payloads: one per series, latest result per check, classes, counters, inte
   assert.deepEqual(eth.review_items.conflicted_check_ids, ["series:chainrpc:eth_usd|chainlink"]);
   assert.equal(eth.review_required, true);
   assert.match(eth.statement, /Conflicted: chainlink/);
-  assert.match(eth.statement, /performed at 2026-10-18T00:00:00Z under/, "a single point says at, not from/through");
+  assert.equal(eth.checks[0].checked_at, "2026-10-18T00:00:00Z", "no time in the run id: falls back to observed_at");
   assert.match(eth.statement, /One check was completed: 0 passed, 0 were within the wider tolerance, 1 conflicted, and 0 were unavailable\./);
   assert.match(eth.statement, /does not by itself permit the reading to be independently reconstructed/);
   assert.match(eth.statement, /the result, and the source-independence classification\./);
@@ -67,6 +67,16 @@ test("payloads: one per series, latest result per check, classes, counters, inte
   assert.equal(p.get("chainrpc:usdc_supply:eth").checks[0].independence, "transport_corroboration");
   const g = p.get("pokt:gateways").counters;
   assert.deepEqual(g, { attempted: 1, passed: 0, partial: 0, conflicted: 0, unavailable: 1, completed: 0, requiring_review: 0 });
+});
+
+test("the window uses when the checks ran, not the date of the data they compared", () => {
+  const { db } = fresh();
+  row(db, { run_id: "pmic/2026-10-13T03:23:05.123Z", field: "series:fred:CPIAUCSL", entity_id: "us", our_value: JSON.stringify({ date: "2026-09-01", value: 1 }),
+    upstream_service: "bls", upstream_value_hash: "ab".repeat(32), agreement: "agree", delta_pct: 0, tolerance_pct: 0.05, observed_at: "2026-09-01T00:00:00Z" });
+  const p = attest.buildPayloads(db, catalog).get("fred:CPIAUCSL");
+  assert.equal(p.checks[0].checked_at, "2026-10-13T03:23:05Z");
+  assert.equal(p.checks[0].observed_at, "2026-09-01T00:00:00Z");
+  assert.match(p.statement, /performed at 2026-10-13T03:23:05Z under/);
 });
 
 test("keygen once, sign, verify; every tamper and mismatch is labelled", () => {

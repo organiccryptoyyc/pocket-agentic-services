@@ -96,6 +96,12 @@ function seriesOfRow(row, feedSeries) {
   return null;
 }
 
+// The time a check ran: the run id is "pmic/<ISO time of the pass>"; older rows fall back to observed_at.
+function checkedAt(row) {
+  const m = /^pmic\/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?Z$/.exec(row.run_id || "");
+  return m ? `${m[1]}Z` : row.observed_at;
+}
+
 function checkOf(row, label) {
   const source = row.upstream_service;
   const our = row.our_value ? JSON.parse(row.our_value) : null;
@@ -118,7 +124,8 @@ function checkOf(row, label) {
     comparison_reading_disclosed: false,
     delta_pct: row.delta_pct,
     tolerance_pct: tol,
-    observed_at: row.observed_at,
+    observed_at: row.observed_at, // the date of the reading that was compared
+    checked_at: checkedAt(row), // when the check ran
     run_id: row.run_id,
   };
   return { ...check, evidence_hash: sha256hex(canonicalJson(check)) };
@@ -173,7 +180,7 @@ function buildPayloads(db, catalog, { internalOnly = new Set() } = {}) {
   for (const [sid, list] of by) {
     const s = series.get(sid);
     const checks = list.map((r) => checkOf(r, s.label || sid)).sort((a, b) => (a.check_id < b.check_id ? -1 : 1));
-    const times = checks.map((c) => c.observed_at).sort();
+    const times = checks.map((c) => c.checked_at).sort();
     const manifest = checks.map((c) => ({ check_id: c.check_id, evidence_hash: c.evidence_hash }));
     const obs = latestObs.get(sid);
     const p = {
