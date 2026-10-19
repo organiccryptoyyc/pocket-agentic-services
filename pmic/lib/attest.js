@@ -257,8 +257,7 @@ function signDue(db, catalog, dataDir, { now = new Date(), internalOnly = new Se
   for (const [sid, payload] of buildPayloads(db, catalog, { internalOnly })) {
     const st = kvGet(db, `attest:${sid}`);
     const payloadHash = sha256hex(canonicalJson(payload));
-    const fresh = st && (st.payload_hash ? st.payload_hash === payloadHash : st.manifest === payload.evidence_manifest_hash)
-      && now.getTime() - Date.parse(st.signed_at) < RESIGN_AFTER_MS;
+    const fresh = st && st.payload_hash === payloadHash && now.getTime() - Date.parse(st.signed_at) < RESIGN_AFTER_MS;
     if (fresh) continue;
     const env = sign(payload, priv, now.toISOString().replace(/\.\d{3}Z$/, "Z"));
     kvSet(db, `attest:${sid}`, { manifest: payload.evidence_manifest_hash, payload_hash: payloadHash, signed_at: env.signature.signed_at, attestation_id: payload.attestation_id, pushed: false, envelope: env });
