@@ -56,11 +56,13 @@ test("payloads: one per series, latest result per check, classes, counters, inte
   assert.match(eth.statement, /Conflicted: chainlink/);
   assert.match(eth.statement, /performed at 2026-10-18T00:00:00Z under/, "a single point says at, not from/through");
   assert.match(eth.statement, /One check was completed: 0 passed, 0 were within the wider tolerance, 1 conflicted, and 0 were unavailable\./);
-  assert.match(eth.statement, /does not by itself let it be independently reconstructed/);
+  assert.match(eth.statement, /does not by itself permit the reading to be independently reconstructed/);
+  assert.match(eth.statement, /the result, and the source-independence classification\./);
+  assert.match(eth.statement, /value, score, or brief\./);
   assert.equal(eth.checks[0].comparison_source, "chainlink");
   assert.equal(eth.checks[0].primary_source, "pmic");
   assert.equal(eth.checks[0].comparison_reading_disclosed, false);
-  assert.match(eth.statement, /does not change any PMIC value, score or brief/);
+  assert.match(eth.statement, /does not change any PMIC value, score, or brief/);
   assert.match(eth.evidence_manifest_hash, /^sha256:[0-9a-f]{64}$/);
   assert.equal(p.get("chainrpc:usdc_supply:eth").checks[0].independence, "transport_corroboration");
   const g = p.get("pokt:gateways").counters;

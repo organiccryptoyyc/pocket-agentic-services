@@ -146,11 +146,11 @@ function statement(p) {
     (conflicted.length ? ` Conflicted: ${conflicted.join("; ")}.` : "") +
     (unavailable.length ? ` Unavailable: ${unavailable.join("; ")}.` : "") +
     " Each check records the PMIC value, the comparison source's reading as a SHA-256 commitment rather than the source payload, the " +
-    "tolerance, the result and the source-independence class. Only independent_economic_source represents an independent confirmation of the " +
+    "tolerance, the result, and the source-independence classification. Only independent_economic_source represents an independent confirmation of the " +
     "figure; republication and transport checks confirm only the copied value or the data retrieval. Because the comparison reading is not " +
-    "included, its digest commits to that reading but does not by itself let it be independently reconstructed. Conflicts and unavailable " +
+    "included, its digest commits to that reading but does not by itself permit the reading to be independently reconstructed. Conflicts and unavailable " +
     "sources are preserved and never resolved automatically. " +
-    `This attestation does not change any PMIC value, score or brief. Review required: ${c.requiring_review ? "yes" : "no"}. ` +
+    `This attestation does not change any PMIC value, score, or brief. Review required: ${c.requiring_review ? "yes" : "no"}. ` +
     `Evidence manifest SHA-256: ${p.evidence_manifest_hash.slice("sha256:".length)}.`;
 }
 
@@ -248,7 +248,7 @@ function verifyEnvelope(env, seriesId, keys, now = new Date()) {
 }
 
 // ---- collector side: sign what changed, push to the hub ----------------------------------------
-// Signs a series when its evidence manifest changed or its last signature is a day old. Returns the
+// Signs a series when its payload changed (new evidence, or new wording) or its last signature is a day old. Returns the
 // envelopes to push (only those signed now); state in kv "attest:<series_id>".
 function signDue(db, catalog, dataDir, { now = new Date(), internalOnly = new Set() } = {}) {
   const priv = loadPrivate(dataDir);
@@ -256,10 +256,12 @@ function signDue(db, catalog, dataDir, { now = new Date(), internalOnly = new Se
   const signed = [];
   for (const [sid, payload] of buildPayloads(db, catalog, { internalOnly })) {
     const st = kvGet(db, `attest:${sid}`);
-    const fresh = st && st.manifest === payload.evidence_manifest_hash && now.getTime() - Date.parse(st.signed_at) < RESIGN_AFTER_MS;
+    const payloadHash = sha256hex(canonicalJson(payload));
+    const fresh = st && (st.payload_hash ? st.payload_hash === payloadHash : st.manifest === payload.evidence_manifest_hash)
+      && now.getTime() - Date.parse(st.signed_at) < RESIGN_AFTER_MS;
     if (fresh) continue;
     const env = sign(payload, priv, now.toISOString().replace(/\.\d{3}Z$/, "Z"));
-    kvSet(db, `attest:${sid}`, { manifest: payload.evidence_manifest_hash, signed_at: env.signature.signed_at, attestation_id: payload.attestation_id, pushed: false, envelope: env });
+    kvSet(db, `attest:${sid}`, { manifest: payload.evidence_manifest_hash, payload_hash: payloadHash, signed_at: env.signature.signed_at, attestation_id: payload.attestation_id, pushed: false, envelope: env });
     signed.push(sid);
   }
   return { signed };
