@@ -56,3 +56,13 @@ test("hub and pack key files stay identical", () => {
   const b = fs.readFileSync(path.join(__dirname, "..", "packs", "config", "attestation_keys.json"), "utf8");
   assert.equal(a, b);
 });
+
+test("every pack card fits the chain limits: description <= 2048 characters, card <= 4096 bytes", () => {
+  const dir = path.join(__dirname, "..", "packs", "ops");
+  for (const id of fs.readdirSync(dir).filter((d) => fs.existsSync(path.join(dir, d, "card.json")))) {
+    const raw = fs.readFileSync(path.join(dir, id, "card.json"), "utf8");
+    const card = JSON.parse(raw);
+    assert.ok(card.description.length <= 2048, `${id}: description ${card.description.length} > 2048`);
+    assert.ok(Buffer.byteLength(raw) <= 4096, `${id}: card ${Buffer.byteLength(raw)} B > 4096`);
+  }
+});
