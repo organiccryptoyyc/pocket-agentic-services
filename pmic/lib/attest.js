@@ -21,17 +21,17 @@ const { canonicalJson } = require("./canonical");
 const { kvGet, kvSet } = require("./db");
 const { ClientError } = require("./http");
 
-const SCHEMA_VERSION = "pmic-attestation/1.0";
+const SCHEMA_VERSION = "pmic-attestation/1.1";
 const METHOD_VERSION = "pmic-verify/1.5";
 const ALG = "Ed25519";
 const SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 const KEY_FILE = "attest_ed25519.pem";
 const RESIGN_AFTER_MS = 24 * 3600 * 1000; // re-sign unchanged evidence daily so readers can tell fresh from stale
 
-// Source-independence class of each second source. Only independent_source is an independent
+// Source-independence class of each comparison source. Only independent_economic_source is an independent
 // confirmation of the figure; republication and transport checks confirm the copy or the read.
 const CLASS_OF_SOURCE = {
-  emsc: "independent_source",
+  emsc: "independent_economic_source",
   chainlink: "partially_independent",
   imf: "partially_independent",
   fluview: "partially_independent",
@@ -43,7 +43,7 @@ const CLASS_OF_SOURCE = {
 };
 const classOf = (source) => CLASS_OF_SOURCE[source] || (source.startsWith("rpc:") ? "transport_corroboration" : "unclassified");
 const INDEPENDENCE = {
-  independent_source: "a different organisation measuring the same thing with its own network or method",
+  independent_economic_source: "a different organisation measuring the same thing with its own network or method",
   partially_independent: "a different source or method that may share inputs with ours (a DEX pool against an oracle that aggregates markets; two agencies' estimates; two surveillance systems); not fully independent",
   republication_check: "the original publisher's figure against the copy we serve (FRED against BLS, BEA, Treasury, EIA, the New York Fed); confirms the copy, not the figure",
   transport_corroboration: "the same chain or ledger state read through a second node or API; confirms retrieval, not economic truth",
@@ -108,12 +108,14 @@ function checkOf(row, label) {
     check_id: `${row.field}|${source}`,
     field: row.field,
     label,
-    source,
+    primary_source: "pmic",
+    comparison_source: source,
     independence: classOf(source),
     rule,
     status: STATUS_OF[row.agreement],
-    our_value: our,
-    other_value_sha256: row.upstream_value_hash ? `sha256:${row.upstream_value_hash}` : null,
+    pmic_value: our,
+    comparison_reading_sha256: row.upstream_value_hash ? `sha256:${row.upstream_value_hash}` : null,
+    comparison_reading_disclosed: false,
     delta_pct: row.delta_pct,
     tolerance_pct: tol,
     observed_at: row.observed_at,
@@ -132,18 +134,22 @@ function counters(checks) {
 
 function statement(p) {
   const c = p.counters;
-  const conflicted = p.checks.filter((x) => x.status === "conflicted").map((x) => `${x.source} (${x.check_id})`);
-  const unavailable = p.checks.filter((x) => x.status === "unavailable").map((x) => x.source);
-  const all = c.attempted === 1 ? (c.completed ? "The 1 check was" : "0 of 1 checks were")
+  const conflicted = p.checks.filter((x) => x.status === "conflicted").map((x) => `${x.comparison_source} (${x.check_id})`);
+  const unavailable = p.checks.filter((x) => x.status === "unavailable").map((x) => x.comparison_source);
+  const all = c.attempted === 1 ? (c.completed ? "One check was" : "No check was")
     : c.completed === c.attempted ? `All ${c.attempted} checks were` : `${c.completed} of ${c.attempted} checks were`;
-  return `Attestation of cross-source checks on PMIC series ${p.subject.series_id} performed from ${p.window.first} through ${p.window.last} ` +
-    `under method version ${p.method_version}. ${all} completed: ${c.passed} passed, ${c.partial} within the wider tolerance, ` +
-    `${c.conflicted} conflicted, and ${c.unavailable} unavailable.` +
+  const when = p.window.first === p.window.last ? `at ${p.window.first}` : `from ${p.window.first} through ${p.window.last} UTC`;
+  const were = (n) => (n === 1 ? "was" : "were");
+  return `Attestation of cross-source checks on the PMIC series ${p.subject.series_id} (primary reading: the PMIC value) performed ${when} ` +
+    `under method version ${p.method_version}. ${all} completed: ${c.passed} passed, ${c.partial} ${were(c.partial)} within the wider tolerance, ` +
+    `${c.conflicted} conflicted, and ${c.unavailable} ${were(c.unavailable)} unavailable.` +
     (conflicted.length ? ` Conflicted: ${conflicted.join("; ")}.` : "") +
     (unavailable.length ? ` Unavailable: ${unavailable.join("; ")}.` : "") +
-    " Each check records our value, a SHA-256 of the other source's reading (never its payload), the tolerance, the result and the " +
-    "source-independence class. Only independent_source is an independent confirmation of the figure; republication and transport checks " +
-    "confirm the copy or the read. Conflicts and unavailable sources are preserved and never resolved automatically. " +
+    " Each check records the PMIC value, the comparison source's reading as a SHA-256 commitment rather than the source payload, the " +
+    "tolerance, the result and the source-independence class. Only independent_economic_source represents an independent confirmation of the " +
+    "figure; republication and transport checks confirm only the copied value or the data retrieval. Because the comparison reading is not " +
+    "included, its digest commits to that reading but does not by itself let it be independently reconstructed. Conflicts and unavailable " +
+    "sources are preserved and never resolved automatically. " +
     `This attestation does not change any PMIC value, score or brief. Review required: ${c.requiring_review ? "yes" : "no"}. ` +
     `Evidence manifest SHA-256: ${p.evidence_manifest_hash.slice("sha256:".length)}.`;
 }

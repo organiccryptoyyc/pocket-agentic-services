@@ -17,7 +17,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
-const SCHEMA_VERSION = "pmic-attestation/1.0";
+const SCHEMA_VERSION = "pmic-attestation/1.1";
 const ALG = "Ed25519";
 const MAX_AGE_H = 72;
 const SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
