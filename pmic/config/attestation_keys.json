@@ -1,4 +1,12 @@
 {
   "_comment": "Public Ed25519 keys whose PMIC attestations the hub and the packs accept. Add the key printed by `node bin/collect.js --attest-keygen` on the Pi (key_id + public_key_b64url). Public keys only; never a private key. Separate from the TCS-6 key (owner 2026-10-18).",
-  "keys": []
+  "keys": [
+    {
+      "key_id": "pmic-attest-d3e794f5c1d7b83f",
+      "alg": "Ed25519",
+      "public_key_b64url": "NQQvm7Bb98Hxo2W6ctNCbSyNDOXHAkVzRhTuuSd_2eQ",
+      "created_on": "pi muttb 2026-10-19",
+      "use": "pmic input attestations"
+    }
+  ]
 }
