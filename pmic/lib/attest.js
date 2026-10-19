@@ -134,9 +134,10 @@ function statement(p) {
   const c = p.counters;
   const conflicted = p.checks.filter((x) => x.status === "conflicted").map((x) => `${x.source} (${x.check_id})`);
   const unavailable = p.checks.filter((x) => x.status === "unavailable").map((x) => x.source);
-  const all = c.completed === c.attempted ? `All ${c.attempted}` : `${c.completed} of ${c.attempted}`;
+  const all = c.attempted === 1 ? (c.completed ? "The 1 check was" : "0 of 1 checks were")
+    : c.completed === c.attempted ? `All ${c.attempted} checks were` : `${c.completed} of ${c.attempted} checks were`;
   return `Attestation of cross-source checks on PMIC series ${p.subject.series_id} performed from ${p.window.first} through ${p.window.last} ` +
-    `under method version ${p.method_version}. ${all} checks were completed: ${c.passed} passed, ${c.partial} within the wider tolerance, ` +
+    `under method version ${p.method_version}. ${all} completed: ${c.passed} passed, ${c.partial} within the wider tolerance, ` +
     `${c.conflicted} conflicted, and ${c.unavailable} unavailable.` +
     (conflicted.length ? ` Conflicted: ${conflicted.join("; ")}.` : "") +
     (unavailable.length ? ` Unavailable: ${unavailable.join("; ")}.` : "") +
