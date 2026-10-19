@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Public Sector Signals",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC, NHTSA, FDA food), political money (FEC, Senate lobbying), federal spending (USAspending, Treasury), natural hazards (FEMA, USGS, NWS), cyber threat (CISA KEV, NVD), respiratory illness (CDC), wildfire activity (NIFC), climate anomaly (NOAA), air travel demand (TSA), federal rulemaking (Federal Register), legislation (Congress.gov), environmental enforcement (EPA ECHO), Medicare enrollment (CMS) and nonprofit finances (IRS Form 990). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input."
   },
   "servers": [
@@ -572,6 +572,9 @@
                 }
               }
             }
+          },
+          "attestation": {
+            "$ref": "#/components/schemas/Attestation"
           }
         },
         "required": [
@@ -580,6 +583,65 @@
           "status",
           "summary"
         ]
+      },
+      "Attestation": {
+        "type": "object",
+        "description": "Signed input attestations for the series this answer cites (Verified layer). Each series has a verification status (valid, stale, invalid, or missing when no cross-check is run for it) and, unless invalid, the envelope exactly as the collector signed it: Ed25519 over an RFC 8785 payload, public key in config/attestation_keys.json. Attestation only: it never changes a score, label or value.",
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "example": "pmic-attestation/1.1"
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "series": {
+                "type": "integer"
+              },
+              "valid": {
+                "type": "integer"
+              },
+              "stale": {
+                "type": "integer"
+              },
+              "invalid": {
+                "type": "integer"
+              },
+              "missing": {
+                "type": "integer"
+              }
+            }
+          },
+          "statement": {
+            "type": "string"
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "series_id": {
+                  "type": "string"
+                },
+                "verification_status": {
+                  "type": "string",
+                  "enum": [
+                    "valid",
+                    "stale",
+                    "invalid",
+                    "missing"
+                  ]
+                },
+                "verification_detail": {
+                  "type": "string"
+                },
+                "envelope": {
+                  "description": "{payload, payload_hash, signature}: the signed attestation, unchanged; null when missing or invalid"
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
