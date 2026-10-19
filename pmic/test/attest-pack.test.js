@@ -44,6 +44,13 @@ test("the pack verifies collector envelopes and builds the block; missing and ta
   assert.equal(A.block(["chainrpc:eth_usd"], { "chainrpc:eth_usd": env }, {}, later).series[0].verification_status, "invalid", "unknown key");
 });
 
+test("country tables get an explicit aggregate block, never a silent gap", () => {
+  const b = A.aggregateBlock();
+  assert.deepEqual(b.summary, { series: 0, valid: 0, stale: 0, invalid: 0, missing: 0 });
+  assert.deepEqual(b.series, []);
+  assert.match(b.statement, /POST \/v1\/signal/);
+});
+
 test("hub and pack key files stay identical", () => {
   const a = fs.readFileSync(path.join(__dirname, "..", "config", "attestation_keys.json"), "utf8");
   const b = fs.readFileSync(path.join(__dirname, "..", "packs", "config", "attestation_keys.json"), "utf8");

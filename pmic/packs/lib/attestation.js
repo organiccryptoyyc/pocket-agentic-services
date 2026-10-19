@@ -100,4 +100,13 @@ function block(ids, envelopes, keys, now = new Date()) {
   return { schema_version: SCHEMA_VERSION, summary, statement, series };
 }
 
-module.exports = { loadKeys, verify, seriesOf, block, canonicalJson, keyIdOf, SCHEMA_VERSION, MAX_AGE_H };
+// Answers that aggregate many series by country (country tables) and do not list them individually.
+function aggregateBlock() {
+  return { schema_version: SCHEMA_VERSION, summary: { series: 0, valid: 0, stale: 0, invalid: 0, missing: 0 },
+    statement: "This answer aggregates many series by country or state and does not list them individually, so no per-series " +
+      "attestation is attached here. Each underlying series' signed attestation is returned with POST /v1/signal {series_id}. " +
+      "The attestations do not change any score, label or value.",
+    series: [] };
+}
+
+module.exports = { loadKeys, verify, seriesOf, block, aggregateBlock, canonicalJson, keyIdOf, SCHEMA_VERSION, MAX_AGE_H };
