@@ -53,7 +53,10 @@ const tag = (xml, name) => {
   return v ? v[1] : m[1].replace(/<[^>]*>/g, "").trim();
 };
 
-// Open-market purchases (P) and sales (S) in a Form 4's non-derivative table, as dollar values.
+// Open-market purchases (P) and sales (S) in a Form 4's non-derivative table, as dollar values, and the
+// issuer's CIK: a company's filing list also holds Form 4s it filed as a holder of OTHER issuers' securities
+// (Bank of America's stakes in municipal funds, found by the SEC insider data set check 2026-10-20); only
+// Form 4s whose issuer is the company itself are insider activity in it.
 function form4Values(xml) {
   if (!/<ownershipDocument[\s>]/.test(xml)) throw new SchemaError("form 4: not an ownershipDocument");
   let buy = 0;
@@ -67,7 +70,8 @@ function form4Values(xml) {
     if (code === "P") buy += shares * price;
     else if (code === "S") sell += shares * price;
   }
-  return { buy: Math.round(buy), sell: Math.round(sell) };
+  const issuer = String(tag(xml, "issuerCik") || "").replace(/\D/g, "");
+  return { buy: Math.round(buy), sell: Math.round(sell), issuer: issuer ? String(Number(issuer)) : null };
 }
 
 // Raw Form 4 XML sits next to the rendered copy: "xslF345X05/doc.xml" -> "doc.xml".
@@ -76,36 +80,44 @@ function form4XmlUrl(cik, accn, primaryDocument) {
   return /\.xml$/i.test(doc) ? filingUrl(cik, accn, doc) : null;
 }
 
-async function insiderValues(ctx, { cik, ticker, filings, series, headers, budget }) {
+// Weekly Form 4 count, purchase value and sale value from each Form 4's XML (read once, remembered).
+// Only the company's own Form 4s count (issuer = this CIK); a filing whose XML can't be read counts as
+// the company's with no open-market trade. Entries read before the issuer was recorded are read again.
+async function insiderValues(ctx, { cik, ticker, filings, series, headers, budget, countFrom }) {
   const since = series.map((s) => ctx.since(s)).sort()[0];
+  const own = String(Number(cik));
   const cache = ctx.kvGet(`form4:${ticker}`) || {};
   const form4s = filings.filter((f) => f.form === "4" && f.filingDate && f.filingDate >= since);
+  const known = (e) => e && (e.skipped || e.i !== undefined);
   for (const f of form4s) {
-    if (cache[f.accn] || budget.left <= 0) continue;
+    if (known(cache[f.accn]) || budget.left <= 0) continue;
     const url = form4XmlUrl(cik, f.accn, f.primaryDocument);
     budget.left--;
-    if (!url) { cache[f.accn] = { d: f.filingDate, b: 0, s: 0, skipped: "no xml document" }; continue; }
+    if (!url) { cache[f.accn] = { d: f.filingDate, b: 0, s: 0, i: null, skipped: "no xml document" }; continue; }
     try {
       const r = await ctx.get(`sec:form4:${ticker}`, url, { headers: { ...headers, Accept: "application/xml" } });
       const v = form4Values(r.text);
-      cache[f.accn] = { d: f.filingDate, b: v.buy, s: v.sell };
+      cache[f.accn] = { d: f.filingDate, b: v.buy, s: v.sell, i: v.issuer };
     } catch (e) {
       // A missing or malformed document counts as no open-market trade rather than blocking the week.
-      if (e.status === 404 || e instanceof SchemaError) cache[f.accn] = { d: f.filingDate, b: 0, s: 0, skipped: String(e.message).slice(0, 100) };
+      if (e.status === 404 || e instanceof SchemaError) cache[f.accn] = { d: f.filingDate, b: 0, s: 0, i: null, skipped: String(e.message).slice(0, 100) };
       else throw e;
     }
   }
   for (const [k, v] of Object.entries(cache)) if (v.d < since) delete cache[k];
   ctx.kvSet(`form4:${ticker}`, cache);
   // Weeks are complete only when every Form 4 filed in them has been read.
-  const unread = new Set(form4s.filter((f) => !cache[f.accn]).map((f) => weekStart(f.filingDate)));
+  const unread = new Set(form4s.filter((f) => !known(cache[f.accn])).map((f) => weekStart(f.filingDate)));
+  const ours = (v) => v.i === null || v.i === undefined || v.i === own;
   const obs = [];
   for (const s of series) {
+    const count = s.metric_name === "insider_form4_weekly";
     const key = s.metric_name === "insider_buy_value_weekly" ? "b" : "s";
-    const totals = new Map(completeWeeks(ctx.since(s), ctx.now).map((w) => [w, 0]));
+    const from = count && countFrom && countFrom > ctx.since(s) ? countFrom : ctx.since(s);
+    const totals = new Map(completeWeeks(from, ctx.now).map((w) => [w, 0]));
     for (const v of Object.values(cache)) {
       const w = weekStart(v.d);
-      if (totals.has(w)) totals.set(w, totals.get(w) + v[key]);
+      if (totals.has(w) && known(v) && ours(v)) totals.set(w, totals.get(w) + (count ? 1 : v[key]));
     }
     for (const [w, n] of totals) {
       if (unread.has(w)) continue;
@@ -235,33 +247,14 @@ async function collect(series, ctx) {
         const ev = eventFor(cfg, cik, entity_id, f);
         if (ev) out.events.push({ ...ev, raw_sha256: r.sha256 });
       }
-      const s4 = want.get("insider_form4_weekly");
-      if (s4) {
-        // filings.recent holds about the last 1,000 filings; weeks older than that window are unknown, not zero.
-        const oldest = filings.map((f) => f.filingDate).filter(Boolean).sort()[0] || ctx.since(s4);
-        const coveredSince = filings.length >= 1000 ? oldest : ctx.since(s4);
-        const from = coveredSince > ctx.since(s4) ? coveredSince : ctx.since(s4);
-        const counts = new Map(completeWeeks(from, ctx.now).map((w) => [w, 0]));
-        for (const f of filings) {
-          if (f.form !== "4" || !f.filingDate) continue;
-          const w = weekStart(f.filingDate);
-          if (counts.has(w)) counts.set(w, counts.get(w) + 1);
-        }
-        for (const [w, n] of counts) {
-          out.observations.push({
-            series_id: s4.series_id,
-            observation_time: w,
-            period: `week of ${w}`,
-            value: n,
-            source_url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik}&type=4&dateb=&owner=include&count=40`,
-            raw_sha256: r.sha256,
-          });
-        }
-      }
-      const valueSeries = group.filter((s) => INSIDER_METRICS.includes(s.metric_name));
+      // filings.recent holds about the last 1,000 filings; weeks older than that window are unknown, not zero.
+      const oldest = filings.map((f) => f.filingDate).filter(Boolean).sort()[0] || null;
+      const countFrom = filings.length >= 1000 ? oldest : null;
+      // Form 4 counts and purchase/sale values all come from the Form 4 XML, the company's own only.
+      const valueSeries = group.filter((s) => s.metric_name === "insider_form4_weekly" || INSIDER_METRICS.includes(s.metric_name));
       if (valueSeries.length) {
         try {
-          out.observations.push(...(await insiderValues(ctx, { cik, ticker, filings, series: valueSeries, headers, budget })));
+          out.observations.push(...(await insiderValues(ctx, { cik, ticker, filings, series: valueSeries, headers, budget, countFrom })));
         } catch (e) {
           ctx.fail(valueSeries.map((s) => s.series_id), e);
         }

@@ -84,7 +84,9 @@ test("Form 4: open-market P and S only, footnoted prices, raw XML next to the re
     <nonDerivativeTransaction><transactionCoding><transactionCode>P</transactionCode></transactionCoding><transactionAmounts><transactionShares><value>10</value></transactionShares><transactionPricePerShare><value>2</value></transactionPricePerShare></transactionAmounts></nonDerivativeTransaction>
     <nonDerivativeTransaction><transactionCoding><transactionCode>F</transactionCode></transactionCoding><transactionAmounts><transactionShares><value>99</value></transactionShares><transactionPricePerShare><value>150</value></transactionPricePerShare></transactionAmounts></nonDerivativeTransaction>
   </nonDerivativeTable></ownershipDocument>`;
-  assert.deepEqual(form4Values(xml), { buy: 20, sell: 150500 });
+  assert.deepEqual(form4Values(xml), { buy: 20, sell: 150500, issuer: null });
+  // the issuer is recorded: a company's filing list also holds Form 4s it filed as a holder of other issuers
+  assert.equal(form4Values(xml.replace("<ownershipDocument>", "<ownershipDocument><issuer><issuerCik>0000070858</issuerCik></issuer>")).issuer, "70858");
   assert.throws(() => form4Values("<html>"), /ownershipDocument/);
   assert.equal(form4XmlUrl("0000320193", "0000320193-26-000001", "xslF345X05/wk-form4.xml"), "https://www.sec.gov/Archives/edgar/data/320193/000032019326000001/wk-form4.xml");
   assert.equal(form4XmlUrl("0000320193", "0000320193-26-000001", "doc.htm"), null);
