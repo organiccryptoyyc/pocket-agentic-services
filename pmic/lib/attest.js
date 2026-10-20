@@ -40,7 +40,7 @@ const CLASS_OF_SOURCE = {
   fred: "republication_check", bls: "republication_check", bea: "republication_check", treasury: "republication_check",
   nyfed: "republication_check", fiscaldata: "republication_check", eia: "republication_check", ecb: "republication_check",
   nvd: "republication_check",
-  "sec-insider-datasets": "republication_check", "sec-fsds": "republication_check", drugsfda: "republication_check",
+  "sec-insider-datasets": "republication_check", "sec-fsds": "republication_check", drugsfda: "republication_check", faers: "republication_check",
   "pokt-lcd": "transport_corroboration",
 };
 const classOf = (source) => CLASS_OF_SOURCE[source] || (source.startsWith("rpc:") ? "transport_corroboration" : "unclassified");

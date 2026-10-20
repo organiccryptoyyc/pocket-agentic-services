@@ -23,6 +23,13 @@
 //            manufacturer names (params.firms). Different pipelines and dates, so the rule is on 4-week
 //            totals: agree within 15% (or 3 labels), partial within 30% (or 6), else disagree.
 //
+//   faers  (P4) FDA's FAERS quarterly ASCII files (DEMO, one row per case, its latest version that quarter):
+//            cases per week of initial FDA receipt (init_fda_dt), against our openFDA weekly FAERS count
+//            (openFDA's receivedate is the date the first version was received). Market series only: the
+//            company series use openFDA's harmonized manufacturer names, which FAERS does not carry. Only
+//            weeks wholly inside the file's quarter. Agree when every week is within 0.5%, partial within
+//            2%, else disagree. Newest file first, then the previous three quarters, one file per pass.
+//
 // Bulk files are fetched once each (SEC zips once per new quarter, Drugs@FDA once a day) and dropped
 // after reading; only the comparison rows are kept. SEC requests carry PMIC_SEC_USER_AGENT.
 "use strict";
@@ -292,4 +299,60 @@ async function checkOpenfdaLabels(db, catalog, ctx) {
   kvSet(db, "verified:openfda_labels", today);
 }
 
-module.exports = { checkSecInsider, checkSecFsds, checkDrugsFda, checkOpenfdaLabels, weekOf };
+// ---- P4: FAERS quarterly files against our openFDA FAERS weekly count ----------------------------
+const FAERS_LISTING = "https://fis.fda.gov/extensions/FPD-QDE-FAERS/FPD-QDE-FAERS.html";
+const FAERS_AGREE = 0.005;
+const FAERS_PARTIAL = 0.02;
+
+async function checkFaers(db, catalog, ctx) {
+  const s = catalog.series.find((x) => x.source_id === "openfda" && x.params && x.params.feed === "faers");
+  if (!s) return;
+  const headers = { "User-Agent": "pmic-collector" };
+  const done = kvGet(db, "verified:faers") || {};
+  const r = await ctx.fetchImpl(FAERS_LISTING, { headers });
+  if (!(r.status >= 200 && r.status < 300)) throw new Error(`fis.fda.gov: HTTP ${r.status}`);
+  const files = [...new Set([...r.text.matchAll(/href="([^"]*faers_ascii_\d{4}q[1-4]\.zip)"/gi)].map((m) => new URL(m[1], FAERS_LISTING).toString()))]
+    .map((u) => ({ u, q: quarterOfFile(u) })).sort((a, b) => b.q.y - a.q.y || b.q.q - a.q.q);
+  const key = (f) => `${f.q.y}q${f.q.q}`;
+  const file = files.slice(0, 4).find((f) => !done[key(f)]); // newest first, then backfill three quarters
+  if (!file) return;
+  const qStart = new Date(Date.UTC(file.q.y, (file.q.q - 1) * 3, 1));
+  const qEnd = new Date(Date.UTC(file.q.y, file.q.q * 3, 0));
+  const weeks = [];
+  for (let w = new Date(weekOf(ymd(qStart))); w.getTime() + 6 * DAY <= qEnd.getTime(); w = new Date(w.getTime() + 7 * DAY)) {
+    if (w.getTime() >= qStart.getTime()) weeks.push(ymd(w));
+  }
+  const z = await bulk(ctx, file.u, headers);
+  const demo = z.names.find((n) => /DEMO\d{2}Q[1-4]\.txt$/i.test(n));
+  if (!demo) throw new Error(`${key(file)}: no DEMO file`);
+  const theirs = new Map();
+  let idx = null;
+  await z.eachLine(demo, (line) => {
+    const c = line.replace(/\r$/, "").split("$");
+    if (!idx) { idx = Object.fromEntries(c.map((h, i) => [h.trim().toLowerCase(), i])); return; }
+    const d = c[idx.init_fda_dt];
+    if (!/^\d{8}$/.test(d || "")) return;
+    const w = weekOf(`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`);
+    theirs.set(w, (theirs.get(w) || 0) + 1);
+  });
+  if (!idx || idx.init_fda_dt === undefined) throw new Error(`${key(file)}: DEMO has no init_fda_dt`);
+  const mine = new Map(db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? AND observation_time >= ? AND observation_time <= ?")
+    .all(s.series_id, weeks[0], weeks[weeks.length - 1]).map((x) => [x.t, x.v]));
+  const compared = weeks.filter((w) => mine.has(w));
+  if (compared.length) {
+    const rel = (w) => { const b = theirs.get(w) || 0; return b ? Math.abs(mine.get(w) - b) / b : (mine.get(w) ? 1 : 0); };
+    const worst = Math.max(...compared.map(rel));
+    ctx.rows.push({ run_id: ctx.runId, field: `series:${s.series_id}`, entity_id: s.entity_id,
+      our_value: { quarter: `${file.q.y}Q${file.q.q}`, weeks: Object.fromEntries(compared.map((w) => [w, mine.get(w)])) },
+      upstream_service: "faers",
+      upstream_value: { file: file.u.split("/").pop(), weeks: Object.fromEntries(compared.map((w) => [w, theirs.get(w) || 0])) },
+      agreement: worst <= FAERS_AGREE ? "agree" : worst <= FAERS_PARTIAL ? "partial" : "disagree", delta_pct: round4(worst * 100),
+      tolerance_pct: FAERS_AGREE * 100, observed_at: `${compared[compared.length - 1]}T00:00:00Z` });
+    if (worst > FAERS_AGREE) ctx.notes.push(`faers ${key(file)}: largest weekly difference ${round4(worst * 100)}%`);
+  }
+  ctx.calls.push(["faers", { latencyMs: null }]);
+  done[key(file)] = ctx.nowIso;
+  kvSet(db, "verified:faers", done);
+}
+
+module.exports = { checkSecInsider, checkSecFsds, checkDrugsFda, checkOpenfdaLabels, checkFaers, weekOf };

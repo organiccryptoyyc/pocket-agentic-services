@@ -153,3 +153,41 @@ test("P3: openFDA label index against our DailyMed series, 4 weeks that ended 6+
   assert.ok(seen.some((u) => u.includes("effective_time:[20260810 TO 20260906]")));
   assert.ok(seen.some((u) => u.includes('openfda.manufacturer_name:"Pfizer"')));
 });
+
+test("P4: FAERS cases by initial receipt week against our openFDA count; newest quarter first, then backfill", async () => {
+  const db = fresh();
+  const sid = "openfda:adverse_event_reports_weekly";
+  obs(db, sid, "2026-03-30", 999); // crosses the quarter start: never compared
+  obs(db, sid, "2026-04-06", 3);
+  obs(db, sid, "2026-04-13", 2);
+  const head = "primaryid$caseid$caseversion$i_f_code$event_dt$mfr_dt$init_fda_dt$fda_dt$rept_cod";
+  const row = (id, init, fda) => `${id}$${id}$2$F$$$${init}$${fda}$EXP`;
+  // fda_dt (latest version) differs from init_fda_dt: only the initial receipt date counts
+  const demo = [head, row(1, "20260407", "20260601"), row(2, "20260408", "20260408"), row(3, "20260410", "20260520"),
+    row(4, "20260414", "20260414"), row(5, "20260415", "20260616"), row(6, "20260331", "20260402")].join("\r\n") + "\r\n";
+  const page = '<a href="https://fis.fda.gov/content/Exports/faers_ascii_2025Q4.zip">x</a><a href="https://fis.fda.gov/content/Exports/faers_ascii_2026q2.zip">x</a>'
+    + '<a href="https://fis.fda.gov/content/Exports/faers_ascii_2026q1.zip">x</a>';
+  const files = { "https://fis.fda.gov/extensions/FPD-QDE-FAERS/FPD-QDE-FAERS.html": page,
+    "https://fis.fda.gov/content/Exports/faers_ascii_2026q2.zip": zip({ "ASCII/DEMO26Q2.txt": demo, "Deleted/DELETE26Q2.txt": "1\n" }) };
+  const ctx = ctxWith(files);
+  await B.checkFaers(db, catalog, ctx);
+  assert.equal(ctx.rows.length, 1);
+  const r = ctx.rows[0];
+  assert.equal(r.upstream_service, "faers");
+  assert.equal(r.agreement, "agree");
+  assert.deepEqual(r.our_value.weeks, { "2026-04-06": 3, "2026-04-13": 2 });
+  assert.deepEqual(r.upstream_value.weeks, { "2026-04-06": 3, "2026-04-13": 2 });
+  assert.equal(r.observed_at, "2026-04-13T00:00:00Z");
+  // the next pass takes the previous quarter (not on the stub: a failure, the done list keeps 2026q2)
+  const ctx2 = ctxWith(files);
+  await assert.rejects(B.checkFaers(db, catalog, ctx2), /HTTP 404/);
+  // a 1% gap is partial, a 5% gap disagrees
+  for (const [ours, want] of [[101, "partial"], [105, "disagree"]]) {
+    const d2 = fresh();
+    obs(d2, sid, "2026-04-06", ours);
+    const many = [head, ...Array.from({ length: 100 }, (_, k) => row(k + 1, "20260407", "20260407"))].join("\n") + "\n";
+    const c3 = ctxWith({ ...files, "https://fis.fda.gov/content/Exports/faers_ascii_2026q2.zip": zip({ "ASCII/DEMO26Q2.txt": many }) });
+    await B.checkFaers(d2, catalog, c3);
+    assert.equal(c3.rows[0].agreement, want);
+  }
+});
