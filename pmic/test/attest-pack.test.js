@@ -51,6 +51,12 @@ test("country tables get an explicit aggregate block, never a silent gap", () =>
   assert.match(b.statement, /POST \/v1\/signal/);
 });
 
+test("briefs that cite no series get an explicit block", () => {
+  const b = A.noSeriesBlock();
+  assert.equal(b.summary.series, 0);
+  assert.match(b.statement, /does not cite individual data series/);
+});
+
 test("hub and pack key files stay identical", () => {
   const a = fs.readFileSync(path.join(__dirname, "..", "config", "attestation_keys.json"), "utf8");
   const b = fs.readFileSync(path.join(__dirname, "..", "packs", "config", "attestation_keys.json"), "utf8");

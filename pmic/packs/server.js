@@ -65,7 +65,10 @@ const A = require("./lib/attestation");
 const ATTEST_KEYS = A.loadKeys();
 async function withAttestation(out) {
   const ids = A.seriesOf(out);
-  if (!ids.length) return Array.isArray(out.country_scores) ? { ...out, attestation: A.aggregateBlock() } : out;
+  if (!ids.length) {
+    if (Array.isArray(out.country_scores)) return { ...out, attestation: A.aggregateBlock() };
+    return out.vertical ? { ...out, attestation: A.noSeriesBlock() } : out; // briefs always carry a block
+  }
   let envelopes = {};
   try {
     envelopes = (await hub("/v1/attestations", { series_ids: ids })).attestations || {};

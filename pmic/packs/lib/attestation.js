@@ -109,4 +109,13 @@ function aggregateBlock() {
     series: [] };
 }
 
-module.exports = { loadKeys, verify, seriesOf, block, aggregateBlock, canonicalJson, keyIdOf, SCHEMA_VERSION, MAX_AGE_H };
+// Answers that list events or rank peers and cite no individual series (filing risk, peer tables).
+function noSeriesBlock() {
+  return { schema_version: SCHEMA_VERSION, summary: { series: 0, valid: 0, stale: 0, invalid: 0, missing: 0 },
+    statement: "This answer lists events or ranks peers and does not cite individual data series, so no per-series attestation " +
+      "applies. Each underlying series' signed attestation is returned with POST /v1/signal {series_id}. " +
+      "The attestations do not change any score, label or value.",
+    series: [] };
+}
+
+module.exports = { loadKeys, verify, seriesOf, block, aggregateBlock, noSeriesBlock, canonicalJson, keyIdOf, SCHEMA_VERSION, MAX_AGE_H };
