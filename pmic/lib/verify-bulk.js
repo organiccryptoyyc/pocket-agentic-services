@@ -17,6 +17,12 @@
 //            NDA/BLA, against our openFDA weekly approval counts, for the last 4 complete weeks that
 //            ended at least 7 days ago (FDA fills the current week in over several days).
 //
+//   openfda-label  (P3) our label-update series (DailyMed published versions, owner option L1) against
+//            openFDA's label index counted by effective date, for the 4 complete weeks that ended at least
+//            6 weeks ago (openFDA indexes labels about 5-6 weeks late). Company series match openFDA's
+//            manufacturer names (params.firms). Different pipelines and dates, so the rule is on 4-week
+//            totals: agree within 15% (or 3 labels), partial within 30% (or 6), else disagree.
+//
 // Bulk files are fetched once each (SEC zips once per new quarter, Drugs@FDA once a day) and dropped
 // after reading; only the comparison rows are kept. SEC requests carry PMIC_SEC_USER_AGENT.
 "use strict";
@@ -241,4 +247,49 @@ async function checkDrugsFda(db, catalog, ctx) {
   kvSet(db, "verified:drugsfda", today);
 }
 
-module.exports = { checkSecInsider, checkSecFsds, checkDrugsFda, weekOf };
+// ---- P3: openFDA label index against our DailyMed label series -----------------------------------
+async function checkOpenfdaLabels(db, catalog, ctx) {
+  const series = catalog.series.filter((s) => s.source_id === "openfda" && s.params && (s.params.feed === "labels" || s.params.feed === "labels_firm"));
+  const today = ymd(ctx.now);
+  if (!series.length || kvGet(db, "verified:openfda_labels") === today) return;
+  const newest = Date.parse(`${weekOf(today)}T00:00:00Z`) - 7 * 7 * DAY; // ended at least 6 weeks ago
+  const weeks = [3, 2, 1, 0].map((n) => ymd(new Date(newest - n * 7 * DAY)));
+  const last = ymd(new Date(Date.parse(`${weeks[3]}T00:00:00Z`) + 6 * DAY));
+  const compact = (d) => d.replace(/-/g, "");
+  const ours = db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? AND observation_time >= ? AND observation_time <= ?");
+  for (const s of series) {
+    const mine = new Map(ours.all(s.series_id, weeks[0], weeks[3]).map((r) => [r.t, r.v]));
+    if (weeks.some((w) => !mine.has(w))) continue; // our series must cover all 4 weeks
+    let search = `effective_time:[${compact(weeks[0])} TO ${compact(last)}]`;
+    if (s.params.feed === "labels_firm") search += ` AND (${s.params.firms.map((f) => `openfda.manufacturer_name:"${f}"`).join(" OR ")})`;
+    const url = `https://api.fda.gov/drug/label.json?search=${encodeURIComponent(search)}&count=effective_time`;
+    const row = { run_id: ctx.runId, field: `series:${s.series_id}`, entity_id: s.entity_id, our_value: { weeks: Object.fromEntries(weeks.map((w) => [w, mine.get(w)])) },
+      upstream_service: "openfda-label", tolerance_pct: 15, observed_at: `${weeks[3]}T00:00:00Z` };
+    try {
+      const r = await ctx.fetchImpl(url, {});
+      let results = [];
+      if (r.status >= 200 && r.status < 300) results = JSON.parse(r.text).results || [];
+      else if (r.status !== 404) throw new Error(`api.fda.gov: HTTP ${r.status}`);
+      const theirs = new Map(weeks.map((w) => [w, 0]));
+      for (const x of results) {
+        const d = `${x.time.slice(0, 4)}-${x.time.slice(4, 6)}-${x.time.slice(6, 8)}`;
+        const w = weekOf(d);
+        if (theirs.has(w)) theirs.set(w, theirs.get(w) + (Number(x.count) || 0));
+      }
+      const a = weeks.reduce((x, w) => x + mine.get(w), 0);
+      const b = weeks.reduce((x, w) => x + theirs.get(w), 0);
+      const diff = Math.abs(a - b);
+      const rel = b ? diff / b : (a ? 1 : 0);
+      ctx.rows.push({ ...row, upstream_value: { weeks: Object.fromEntries(theirs) },
+        agreement: diff <= Math.max(0.15 * b, 3) ? "agree" : diff <= Math.max(0.3 * b, 6) ? "partial" : "disagree", delta_pct: round4(rel * 100) });
+      ctx.calls.push(["openfda-label", { disagreed: diff > Math.max(0.3 * b, 6), latencyMs: null }]);
+    } catch (e) {
+      ctx.rows.push({ ...row, upstream_value: null, agreement: "unavailable" });
+      ctx.calls.push(["openfda-label", { ok: false }]);
+      ctx.notes.push(`openfda-label ${s.series_id}: ${String(e.message).slice(0, 120)}`);
+    }
+  }
+  kvSet(db, "verified:openfda_labels", today);
+}
+
+module.exports = { checkSecInsider, checkSecFsds, checkDrugsFda, checkOpenfdaLabels, weekOf };

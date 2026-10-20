@@ -36,6 +36,7 @@ const CLASS_OF_SOURCE = {
   imf: "partially_independent",
   fluview: "partially_independent",
   govinfo: "partially_independent",
+  "openfda-label": "partially_independent",
   fred: "republication_check", bls: "republication_check", bea: "republication_check", treasury: "republication_check",
   nyfed: "republication_check", fiscaldata: "republication_check", eia: "republication_check", ecb: "republication_check",
   nvd: "republication_check",

@@ -54,7 +54,7 @@
     },
     {
       "source_id": "openfda",
-      "name": "openFDA (drug enforcement, drugs@FDA, FAERS)",
+      "name": "openFDA (drug enforcement, drugs@FDA, FAERS) and NLM DailyMed (label publications)",
       "homepage": "https://open.fda.gov/apis/",
       "terms_url": "https://open.fda.gov/terms/",
       "tier": 1,

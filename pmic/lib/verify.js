@@ -676,7 +676,7 @@ async function verify(db, catalog, { now = new Date(), fetchImpl = null, env = p
   await checkKeyed(db, catalog, ctx);
   await checkFluview(db, catalog, ctx);
   // Phase 3 bulk-file checks (C1, C2, P2); a failure is a note, never a failed pass.
-  for (const [name, fn] of [["sec-insider", bulkChecks.checkSecInsider], ["sec-fsds", bulkChecks.checkSecFsds], ["drugsfda", bulkChecks.checkDrugsFda]]) {
+  for (const [name, fn] of [["sec-insider", bulkChecks.checkSecInsider], ["sec-fsds", bulkChecks.checkSecFsds], ["drugsfda", bulkChecks.checkDrugsFda], ["openfda-label", bulkChecks.checkOpenfdaLabels]]) {
     try {
       await fn(db, catalog, ctx);
     } catch (e) {

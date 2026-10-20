@@ -133,3 +133,23 @@ test("P2: Drugs@FDA original approvals per week against our openFDA counts, comp
   await B.checkDrugsFda(db, catalog, ctx);
   assert.equal(ctx.rows.length, 2, "once a day");
 });
+
+test("P3: openFDA label index against our DailyMed series, 4 weeks that ended 6+ weeks ago, 4-week totals", async () => {
+  const db = fresh();
+  // NOW 2026-10-19: the newest week compared starts 2026-08-31 (7 weeks before this Monday)
+  for (const [w, v] of [["2026-08-10", 800], ["2026-08-17", 900], ["2026-08-24", 700], ["2026-08-31", 1000]]) obs(db, "openfda:label_updates_weekly", w, v);
+  for (const [w, v] of [["2026-08-10", 5], ["2026-08-17", 3], ["2026-08-24", 0], ["2026-08-31", 2]]) obs(db, "openfda:PFE:label_updates_weekly", w, v);
+  const results = (per) => JSON.stringify({ results: ["20260811", "20260818", "20260825", "20260901"].map((t) => ({ time: t, count: per })) });
+  const ctx = ctxWith({});
+  const seen = [];
+  ctx.fetchImpl = async (url) => {
+    seen.push(decodeURIComponent(url));
+    return { status: 200, text: url.includes("manufacturer_name") ? results(2) : results(820) };
+  };
+  await B.checkOpenfdaLabels(db, catalog, ctx);
+  const by = Object.fromEntries(ctx.rows.map((r) => [r.field, r]));
+  assert.equal(by["series:openfda:label_updates_weekly"].agreement, "agree", "3400 vs 3280: 3.7%");
+  assert.equal(by["series:openfda:PFE:label_updates_weekly"].agreement, "agree", "10 vs 8: within the 3-label allowance");
+  assert.ok(seen.some((u) => u.includes("effective_time:[20260810 TO 20260906]")));
+  assert.ok(seen.some((u) => u.includes('openfda.manufacturer_name:"Pfizer"')));
+});

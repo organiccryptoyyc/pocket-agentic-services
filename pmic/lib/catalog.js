@@ -88,7 +88,7 @@ function load() {
     }
     if (co.fda_firm) {
       for (const f of cfg.openfda.company_feeds) {
-        series.push({ series_id: `openfda:${co.ticker}:${f.metric_name}`, source_id: "openfda", entity_id, metric_name: f.metric_name, label: f.label.replace("{firm}", co.fda_firm), unit: "count", frequency: "weekly", category: "health", industry: "pharma", polarity: f.polarity, transform: "level", params: { feed: f.feed, firm: co.fda_firm, firms: [co.fda_firm, ...(co.fda_aliases || [])] } });
+        series.push({ series_id: `openfda:${co.ticker}:${f.metric_name}`, source_id: "openfda", entity_id, metric_name: f.metric_name, label: f.label.replace("{firm}", co.fda_firm), unit: "count", frequency: "weekly", category: "health", industry: "pharma", polarity: f.polarity, transform: "level", params: { feed: f.feed, firm: co.fda_firm, firms: [co.fda_firm, ...(co.fda_aliases || [])], labelers: co.dailymed_labelers || [co.fda_firm] } });
       }
     }
   }

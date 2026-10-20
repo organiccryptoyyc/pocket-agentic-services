@@ -219,6 +219,13 @@ function makeFetch(catalog, opts = {}) {
         return json({ cik, name: `Company ${cik}`, tickers: [], filings: { recent, files: [] } });
       }
     }
+    if (u.host === "dailymed.nlm.nih.gov") {
+      // label (SPL) set versions published on or after a date: 3 a day, fewer for a labeler filter
+      const from = Date.parse(`${u.searchParams.get("published_date")}T00:00:00Z`);
+      const days = Math.max(0, Math.floor((now.getTime() - from) / 86400000));
+      const perDay = u.searchParams.get("labeler") ? 1 : 3;
+      return json({ data: [], metadata: { total_elements: days * perDay, total_pages: days * perDay, elements_per_page: 1 } });
+    }
     if (u.host === "api.fda.gov") {
       const search = u.searchParams.get("search") || "";
       const count = u.searchParams.get("count");

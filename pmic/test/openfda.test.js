@@ -19,6 +19,10 @@ function ctxFor(catalog, lastLoaded) {
     fail: (ids, e) => { throw e; },
     async get(job, url) {
       const u = new URL(url);
+      if (u.host === "dailymed.nlm.nih.gov") {
+        const days = Math.max(0, Math.floor((now.getTime() - Date.parse(`${u.searchParams.get("published_date")}T00:00:00Z`)) / DAY));
+        return { status: 200, sha256: "x", text: JSON.stringify({ data: [], metadata: { total_elements: days * 2 } }) };
+      }
       if (u.pathname.endsWith("drugsfda.json")) {
         const date = ymd(now.getTime() - 10 * DAY).replace(/-/g, "");
         return { status: 200, sha256: "x", text: JSON.stringify({ results: [
@@ -74,7 +78,18 @@ test("company aliases: J&J's FDA searches also match Janssen", async () => {
   const get = ctx.get.bind(ctx);
   ctx.get = (job, url, ...rest) => { urls.push(decodeURIComponent(url)); return get(job, url, ...rest); };
   await openfda.collect(series, ctx);
-  for (const field of ["recalling_firm", "patient.drug.openfda.manufacturer_name", "openfda.manufacturer_name"]) {
+  for (const field of ["recalling_firm", "patient.drug.openfda.manufacturer_name"]) {
     assert.ok(urls.some((u) => u.includes(`${field}:"Johnson & Johnson" OR ${field}:"Janssen"`) || u.includes(`${field}:"Johnson+&+Johnson"+OR+${field}:"Janssen"`)), field);
   }
+  // label updates come from DailyMed by labeler: "Janssen" only, since "Johnson & Johnson" also matches SC Johnson
+  const dm = urls.filter((u) => u.includes("dailymed.nlm.nih.gov"));
+  assert.ok(dm.length && dm.every((u) => u.includes("labeler=Janssen")), "DailyMed labeler Janssen");
+});
+
+test("label updates: weekly counts from DailyMed published totals (difference of two cumulative totals)", async () => {
+  const catalog = catalogLib.load();
+  const series = catalog.series.filter((s) => s.series_id === "openfda:label_updates_weekly");
+  const out = await openfda.collect(series, ctxFor(catalog, "2026-10-03"));
+  assert.ok(out.observations.length >= 15);
+  assert.ok(out.observations.every((o) => o.value === 14 && /dailymed\.nlm\.nih\.gov/.test(o.source_url)), "2 a day = 14 a week");
 });

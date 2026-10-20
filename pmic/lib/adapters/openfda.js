@@ -8,7 +8,43 @@
 // {"error":{"code":"NOT_FOUND"}} when nothing matches; that is a valid zero, not a failure.
 "use strict";
 
-const { SchemaError, parseJson, ymd, compact, fromCompact, weeklyCounts } = require("./common");
+const { SchemaError, parseJson, ymd, compact, fromCompact, weeklyCounts, completeWeeks } = require("./common");
+
+// Label updates come from NLM's DailyMed (owner 2026-10-20, option L1): openFDA's label index runs about
+// 5-6 weeks behind the effective date, so its recent weeks read near zero. DailyMed's /spls answers the
+// number of label (SPL) set versions whose current version was published on or after a date; a week's
+// count is the difference between two of those totals. Company series filter by labeler name
+// (series params.labelers: partial match on DailyMed's labeler, e.g. "Janssen"). The first pass reads
+// up to 104 weeks; later passes only the recent weeks.
+const DAILYMED = "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json";
+const DAILYMED_MAX_WEEKS = 104;
+
+async function dailymedWeekly(ctx, s, labelers) {
+  const floor = ymd(new Date(ctx.now.getTime() - DAILYMED_MAX_WEEKS * 7 * 86400000));
+  const since = ctx.since(s) > floor ? ctx.since(s) : floor;
+  const weeks = completeWeeks(since, ctx.now);
+  if (!weeks.length) return [];
+  const bounds = [...weeks, ymd(new Date(Date.parse(`${weeks[weeks.length - 1]}T00:00:00Z`) + 7 * 86400000))];
+  const counts = new Map(weeks.map((w) => [w, 0]));
+  let sha = null;
+  let cite = null;
+  for (const labeler of labelers || [null]) {
+    const totals = new Map();
+    for (const b of bounds) {
+      const params = new URLSearchParams({ published_date: b, published_date_comparison: "gte", pagesize: "1", ...(labeler ? { labeler } : {}) });
+      const url = `${DAILYMED}?${params}`;
+      const r = await ctx.get(`dailymed:${s.series_id}`, url, { headers: { Accept: "application/json" } });
+      const body = parseJson(r.text, `dailymed ${s.series_id}`);
+      const n = Number(body && body.metadata && body.metadata.total_elements);
+      if (!Number.isFinite(n)) throw new SchemaError(`dailymed ${s.series_id}: no metadata.total_elements`);
+      totals.set(b, n);
+      sha = r.sha256;
+    }
+    for (let i = 0; i < weeks.length; i++) counts.set(weeks[i], counts.get(weeks[i]) + Math.max(0, totals.get(bounds[i]) - totals.get(bounds[i + 1])));
+    cite = `https://dailymed.nlm.nih.gov/dailymed/search.cfm?${labeler ? `labeler=${encodeURIComponent(labeler)}` : "query="}`;
+  }
+  return weeks.map((w) => ({ series_id: s.series_id, observation_time: w, period: `week of ${w}`, value: counts.get(w), source_url: cite, raw_sha256: sha }));
+}
 
 const BASE = "https://api.fda.gov/drug";
 const RECALL_SEVERITY = { "Class I": "high", "Class II": "medium", "Class III": "low" };
@@ -143,7 +179,6 @@ async function collect(series, ctx) {
     recalls: ["enforcement", (s) => range("report_date", ctx.since(s), ctx.now), "report_date"],
     recalls_class1: ["enforcement", (s) => `${range("report_date", ctx.since(s), ctx.now)} AND classification:"Class I"`, "report_date"],
     faers: ["event", (s) => range("receivedate", ctx.since(s), ctx.now), "receivedate"],
-    labels: ["label", (s) => range("effective_time", ctx.since(s), ctx.now), "effective_time"],
     food_recalls: ["food/enforcement", (s) => range("report_date", ctx.since(s), ctx.now), "report_date"],
     food_recalls_class1: ["food/enforcement", (s) => `${range("report_date", ctx.since(s), ctx.now)} AND classification:"Class I"`, "report_date"],
     device_recalls: ["device/enforcement", (s) => range("report_date", ctx.since(s), ctx.now), "report_date"],
@@ -162,11 +197,15 @@ async function collect(series, ctx) {
   const firm = {
     recalls_firm: (s) => ["enforcement", `${range("report_date", ctx.since(s), ctx.now)} AND ${anyOf("recalling_firm", s)}`, "report_date"],
     faers_firm: (s) => ["event", `${range("receivedate", ctx.since(s), ctx.now)} AND ${anyOf("patient.drug.openfda.manufacturer_name", s)}`, "receivedate"],
-    labels_firm: (s) => ["label", `${range("effective_time", ctx.since(s), ctx.now)} AND ${anyOf("openfda.manufacturer_name", s)}`, "effective_time"],
   };
   for (const s of series.filter((x) => firm[x.params.feed])) {
     const [endpoint, search, field] = firm[s.params.feed](s);
     await run([s.series_id], async () => out.observations.push(...(await countSeries(ctx, s, endpoint, search, field, key, { lagged: s.params.feed === "faers_firm" }))));
+  }
+
+  // Label updates: DailyMed (see dailymedWeekly).
+  for (const s of series.filter((x) => x.params.feed === "labels" || x.params.feed === "labels_firm")) {
+    await run([s.series_id], async () => out.observations.push(...(await dailymedWeekly(ctx, s, s.params.feed === "labels_firm" ? s.params.labelers : null))));
   }
 
   const nda = byFeed.get("approvals_nda_bla");

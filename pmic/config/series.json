@@ -392,9 +392,9 @@
       { "ticker": "JPM", "cusip": "46625H100", "cik": "0000019617", "name": "JPMorgan Chase & Co.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current", "long_term_debt", "interest_expense", "capex"], "wiki": "JPMorgan_Chase" },
       { "ticker": "BAC", "cusip": "060505104", "cik": "0000070858", "name": "Bank of America Corp.", "industry": "banking", "skip_metrics": ["operating_income", "assets_current", "liabilities_current", "interest_expense", "capex"], "wiki": "Bank_of_America" },
       { "ticker": "XOM", "cusip": "30231G102", "cik": "0000034088", "name": "Exxon Mobil Corp.", "industry": "energy", "skip_metrics": ["operating_income", "long_term_debt"], "wiki": "ExxonMobil" },
-      { "ticker": "PFE", "cusip": "717081103", "cik": "0000078003", "name": "Pfizer Inc.", "industry": "pharma", "fda_firm": "Pfizer", "ctgov_sponsors": ["Pfizer"], "skip_metrics": ["operating_income"], "wiki": "Pfizer" },
-      { "ticker": "LLY", "cusip": "532457108", "cik": "0000059478", "name": "Eli Lilly and Co.", "industry": "pharma", "fda_firm": "Eli Lilly", "ctgov_sponsors": ["Eli Lilly and Company"], "skip_metrics": ["operating_income"], "wiki": "Eli_Lilly_and_Company" },
-      { "ticker": "JNJ", "cusip": "478160104", "cik": "0000200406", "name": "Johnson & Johnson", "industry": "pharma", "fda_firm": "Johnson & Johnson", "fda_aliases": ["Janssen"], "ctgov_sponsors": ["Janssen", "Johnson & Johnson"], "skip_metrics": ["operating_income"], "wiki": "Johnson_&_Johnson" },
+      { "ticker": "PFE", "cusip": "717081103", "cik": "0000078003", "name": "Pfizer Inc.", "industry": "pharma", "fda_firm": "Pfizer", "dailymed_labelers": ["Pfizer"], "ctgov_sponsors": ["Pfizer"], "skip_metrics": ["operating_income"], "wiki": "Pfizer" },
+      { "ticker": "LLY", "cusip": "532457108", "cik": "0000059478", "name": "Eli Lilly and Co.", "industry": "pharma", "fda_firm": "Eli Lilly", "dailymed_labelers": ["Eli Lilly"], "ctgov_sponsors": ["Eli Lilly and Company"], "skip_metrics": ["operating_income"], "wiki": "Eli_Lilly_and_Company" },
+      { "ticker": "JNJ", "cusip": "478160104", "cik": "0000200406", "name": "Johnson & Johnson", "industry": "pharma", "fda_firm": "Johnson & Johnson", "fda_aliases": ["Janssen"], "dailymed_labelers": ["Janssen"], "ctgov_sponsors": ["Janssen", "Johnson & Johnson"], "skip_metrics": ["operating_income"], "wiki": "Johnson_&_Johnson" },
       { "ticker": "UNH", "cusip": "91324P102", "cik": "0000731766", "name": "UnitedHealth Group Inc.", "industry": "health_care", "wiki": "UnitedHealth_Group" },
       { "ticker": "NFLX", "cusip": "64110L106", "cik": "0001065280", "name": "Netflix Inc.", "industry": "media", "skip_metrics": ["dividends"], "wiki": "Netflix" },
       { "ticker": "DIS", "cusip": "254687106", "cik": "0001744489", "name": "The Walt Disney Co.", "industry": "media", "skip_metrics": ["dividends_q"], "wiki": "The_Walt_Disney_Company" }
@@ -474,7 +474,7 @@
       { "feed": "approvals_nda_bla", "metric_name": "approvals_nda_bla_weekly", "label": "Original NDA/BLA approvals, weekly", "polarity": 1 },
       { "feed": "approvals_anda", "metric_name": "approvals_anda_weekly", "label": "Original ANDA (generic) approvals, weekly", "polarity": 1 },
       { "feed": "faers", "metric_name": "adverse_event_reports_weekly", "label": "FAERS adverse event reports received, weekly", "polarity": -1 },
-      { "feed": "labels", "metric_name": "label_updates_weekly", "label": "Drug label (SPL) versions effective, weekly", "polarity": 0 },
+      { "feed": "labels", "metric_name": "label_updates_weekly", "label": "Drug label (SPL) versions published on DailyMed (NLM), weekly", "polarity": 0 },
       { "feed": "shortages_new", "metric_name": "drug_shortages_new_weekly", "label": "New drug shortages posted by the FDA, weekly", "polarity": -1 },
       { "feed": "shortages_discontinued", "metric_name": "drug_discontinuations_weekly", "label": "Drug discontinuations posted by the FDA (to be discontinued), weekly", "polarity": -1 },
       { "feed": "shortages_resolved", "metric_name": "drug_shortages_resolved_weekly", "label": "Drug shortages resolved (FDA, by last update; the FDA keeps few resolved records), weekly", "polarity": 0 }
@@ -484,7 +484,7 @@
       { "feed": "recalls_firm", "metric_name": "drug_recalls_weekly", "label": "Drug recalls naming {firm}, weekly", "polarity": -1 },
       { "feed": "faers_firm", "metric_name": "adverse_event_reports_weekly", "label": "FAERS adverse event reports for {firm} products, weekly", "polarity": -1 },
       { "feed": "approvals_firm", "metric_name": "approvals_weekly", "label": "Original FDA approvals (NDA, BLA, ANDA) for {firm}, weekly", "polarity": 1 },
-      { "feed": "labels_firm", "metric_name": "label_updates_weekly", "label": "Drug label (SPL) versions effective for {firm} products, weekly", "polarity": 0 }
+      { "feed": "labels_firm", "metric_name": "label_updates_weekly", "label": "Drug label (SPL) versions published on DailyMed (NLM) for {firm} products, weekly", "polarity": 0 }
     ]
   }
 }
