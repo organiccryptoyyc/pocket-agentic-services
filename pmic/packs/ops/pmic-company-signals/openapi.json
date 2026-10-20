@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Company Fundamentals and Filing Risk",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): fundamentals, filing risk (8-K items, 13D, Form 4), insider activity, balance sheet strength, a peer ranking, earnings quality, shareholder returns (buybacks and dividends), interest coverage, the investment cycle (capex), settlement fails (SEC fails-to-deliver) and institutional ownership (13F). Every input carries its SEC citation."
   },
   "servers": [
@@ -668,6 +668,9 @@
                 }
               }
             }
+          },
+          "attestation": {
+            "$ref": "#/components/schemas/Attestation"
           }
         },
         "required": [
@@ -676,6 +679,65 @@
           "status",
           "summary"
         ]
+      },
+      "Attestation": {
+        "type": "object",
+        "description": "Signed input attestations for the series this answer cites (Verified layer). Each series has a verification status (valid, stale, invalid, or missing when no cross-check is run for it) and, unless invalid, the envelope exactly as the collector signed it: Ed25519 over an RFC 8785 payload, public key in config/attestation_keys.json. Attestation only: it never changes a score, label or value.",
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "example": "pmic-attestation/1.1"
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "series": {
+                "type": "integer"
+              },
+              "valid": {
+                "type": "integer"
+              },
+              "stale": {
+                "type": "integer"
+              },
+              "invalid": {
+                "type": "integer"
+              },
+              "missing": {
+                "type": "integer"
+              }
+            }
+          },
+          "statement": {
+            "type": "string"
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "series_id": {
+                  "type": "string"
+                },
+                "verification_status": {
+                  "type": "string",
+                  "enum": [
+                    "valid",
+                    "stale",
+                    "invalid",
+                    "missing"
+                  ]
+                },
+                "verification_detail": {
+                  "type": "string"
+                },
+                "envelope": {
+                  "description": "{payload, payload_hash, signature}: the signed attestation, unchanged; null when missing or invalid"
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
