@@ -362,6 +362,10 @@ const FRED_TWIN = {
   "bls:CES0500000003": ["CES0500000003", "points", 0.005],
   "bls:WPUFD4": ["PPIFID", "pct", 0.05], // not seasonally adjusted, like WPUFD4 (PPIFIS is the adjusted one)
   "ecb:FM.B.U2.EUR.4F.KR.DFR.LEV": ["ECBDFR", "points", 0.005],
+  // Pharma drug-price inputs (P1, owner 2026-10-19): FRED's copies of the BLS indexes. CPI prescription
+  // drugs (CUSR0000SEMF01) has no FRED copy, so it stays without a cross-check.
+  "bls:CUSR0000SAM1": ["CUSR0000SAM1", "pct", 0.05],
+  "bls:PCU325412325412": ["PCU325412325412", "pct", 0.05],
 };
 const MTS_FIELD = { "fred:MTSR133FMS": ["current_month_gross_rcpt_amt", 1], "fred:MTSO133FMS": ["current_month_gross_outly_amt", 1], "fred:MTSDS133FMS": ["current_month_dfct_sur_amt", -1] };
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -655,6 +659,8 @@ async function checkFluview(db, catalog, ctx) {
   kvSet(db, "verified:fluview", cur.t);
 }
 
+const bulkChecks = require("./verify-bulk");
+
 async function verify(db, catalog, { now = new Date(), fetchImpl = null, env = process.env } = {}) {
   const ctx = { now, nowIso: now.toISOString().replace(/\.\d{3}Z$/, "Z"), runId: `pmic/${now.toISOString()}`,
     fetchImpl: fetchImpl || fetchText, env, rows: [], calls: [], notes: [] };
@@ -669,6 +675,14 @@ async function verify(db, catalog, { now = new Date(), fetchImpl = null, env = p
   await checkPropublica(db, catalog, ctx);
   await checkKeyed(db, catalog, ctx);
   await checkFluview(db, catalog, ctx);
+  // Phase 3 bulk-file checks (C1, C2, P2); a failure is a note, never a failed pass.
+  for (const [name, fn] of [["sec-insider", bulkChecks.checkSecInsider], ["sec-fsds", bulkChecks.checkSecFsds], ["drugsfda", bulkChecks.checkDrugsFda]]) {
+    try {
+      await fn(db, catalog, ctx);
+    } catch (e) {
+      ctx.notes.push(`${name}: ${String(e.message).slice(0, 160)}`);
+    }
+  }
   if (ctx.rows.length || ctx.calls.length) {
     tx(db, () => {
       addConfirmations(db, ctx.rows);
