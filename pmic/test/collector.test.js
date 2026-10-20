@@ -111,6 +111,10 @@ test("SEC: framed facts only, concept fallback, ratios, filing events with 8-K s
   const f4 = db.prepare("SELECT observation_time, metric_value FROM observations WHERE series_id = 'sec:AAPL:insider_form4_weekly' ORDER BY observation_time").all();
   assert.ok(f4.length >= 50);
   assert.ok(f4.every((r) => new Date(`${r.observation_time}T00:00:00Z`).getUTCDay() === 1));
+  // A heavy filer's older Form 4s come from the paged submissions file, so the full retention window is counted.
+  const bac = db.prepare("SELECT MIN(observation_time) t, COUNT(*) n FROM observations WHERE series_id = 'sec:BAC:insider_form4_weekly'").get();
+  assert.ok(bac.n >= 50, `BAC weeks: ${bac.n}`);
+  assert.ok(Date.parse(`${bac.t}T00:00:00Z`) < Date.now() - 300 * 86400000, `BAC earliest week ${bac.t}`);
 });
 
 test("openFDA: weekly counts, NOT_FOUND is a valid zero, recall and approval events mapped to companies", async () => {

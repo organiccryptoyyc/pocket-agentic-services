@@ -80,6 +80,19 @@ function form4XmlUrl(cik, accn, primaryDocument) {
   return /\.xml$/i.test(doc) ? filingUrl(cik, accn, doc) : null;
 }
 
+// One filing list (filings.recent, or an older paged file) as rows.
+function filingsOf(block) {
+  if (!block || !Array.isArray(block.accessionNumber)) throw new SchemaError("sec submissions: no filing list");
+  return block.accessionNumber.map((accn, i) => ({
+    accn,
+    form: block.form[i],
+    filingDate: block.filingDate[i],
+    reportDate: block.reportDate ? block.reportDate[i] : null,
+    items: block.items ? block.items[i] : null,
+    primaryDocument: block.primaryDocument ? block.primaryDocument[i] : null,
+  }));
+}
+
 // Weekly Form 4 count, purchase value and sale value from each Form 4's XML (read once, remembered).
 // Only the company's own Form 4s count (issuer = this CIK); a filing whose XML can't be read counts as
 // the company's with no open-market trade. Entries read before the issuer was recorded are read again.
@@ -233,28 +246,35 @@ async function collect(series, ctx) {
       const body = parseJson(r.text, `sec submissions ${ticker}`);
       const recent = body.filings && body.filings.recent;
       if (!recent || !Array.isArray(recent.accessionNumber)) throw new SchemaError(`sec submissions ${ticker}: no filings.recent`);
-      const filings = recent.accessionNumber.map((accn, i) => ({
-        accn,
-        form: recent.form[i],
-        filingDate: recent.filingDate[i],
-        reportDate: recent.reportDate ? recent.reportDate[i] : null,
-        items: recent.items ? recent.items[i] : null,
-        primaryDocument: recent.primaryDocument ? recent.primaryDocument[i] : null,
-      }));
+      const filings = filingsOf(recent);
       const eventSince = ctx.eventSince();
       for (const f of filings) {
         if (!cfg.event_forms.includes(f.form) || !f.filingDate || f.filingDate < eventSince) continue;
         const ev = eventFor(cfg, cik, entity_id, f);
         if (ev) out.events.push({ ...ev, raw_sha256: r.sha256 });
       }
-      // filings.recent holds about the last 1,000 filings; weeks older than that window are unknown, not zero.
-      const oldest = filings.map((f) => f.filingDate).filter(Boolean).sort()[0] || null;
-      const countFrom = filings.length >= 1000 ? oldest : null;
       // Form 4 counts and purchase/sale values all come from the Form 4 XML, the company's own only.
       const valueSeries = group.filter((s) => s.metric_name === "insider_form4_weekly" || INSIDER_METRICS.includes(s.metric_name));
       if (valueSeries.length) {
         try {
-          out.observations.push(...(await insiderValues(ctx, { cik, ticker, filings, series: valueSeries, headers, budget, countFrom })));
+          // filings.recent holds about the last 1,000 filings. A heavy filer's older Form 4s are in the paged files
+          // (newest first); read them back to the retention window. Weeks older than what was read are unknown, not zero.
+          const since = valueSeries.map((s) => ctx.since(s)).sort()[0];
+          let covered = filings.length >= 1000 ? filings.map((f) => f.filingDate).filter(Boolean).sort()[0] || null : null;
+          const form4s = filings.filter((f) => f.form === "4");
+          for (const p of (body.filings.files || [])) {
+            if (!covered || covered <= since || !p.name || !p.filingFrom) break;
+            try {
+              const pr = await ctx.get(`sec:submissions:${ticker}`, `https://data.sec.gov/submissions/${p.name}`, { headers });
+              form4s.push(...filingsOf(parseJson(pr.text, `sec submissions ${p.name}`)).filter((f) => f.form === "4"));
+              covered = p.filingFrom;
+            } catch (e) {
+              ctx.notes.push(`sec ${ticker}: older filings page ${p.name} not read (${String(e.message).slice(0, 80)})`);
+              break;
+            }
+          }
+          const countFrom = covered && covered > since ? covered : null;
+          out.observations.push(...(await insiderValues(ctx, { cik, ticker, filings: form4s, series: valueSeries, headers, budget, countFrom })));
         } catch (e) {
           ctx.fail(valueSeries.map((s) => s.series_id), e);
         }

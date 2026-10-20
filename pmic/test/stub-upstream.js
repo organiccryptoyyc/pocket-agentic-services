@@ -151,7 +151,7 @@ function makeFetch(catalog, opts = {}) {
       }
     }
     if (u.host === "data.sec.gov") {
-      const m = /CIK(\d{10})\.json$/.exec(u.pathname);
+      const m = /CIK(\d{10})(-submissions-\d{3})?\.json$/.exec(u.pathname);
       const cik = m[1];
       if (!init.headers || !init.headers["User-Agent"]) return { status: 403, ok: false, text: "Undeclared Automated Tool" };
       if (u.pathname.includes("companyfacts")) {
@@ -208,6 +208,18 @@ function makeFetch(catalog, opts = {}) {
           recent.items.push(items);
           recent.primaryDocument.push(doc);
         };
+        // Bank of America files so often that filings.recent covers only ~150 days; older Form 4s are on a paged file.
+        const heavy = cik === "0000070858";
+        if (heavy && m[2]) {
+          for (let t = now.getTime() - 151 * DAY, k = 0; t > now.getTime() - 420 * DAY; t -= 5 * DAY, k++) add(`0000070858-25-${String(k).padStart(6, "0")}`, ymd(t), "4", "", `xslF345X05/${5000 + k}.xml`);
+          return json(recent);
+        }
+        if (heavy) {
+          for (let t = now.getTime() - 3 * DAY, k = 0; t > now.getTime() - 150 * DAY; t -= 5 * DAY, k++) add(`0000070858-26-${String(k).padStart(6, "0")}`, ymd(t), "4", "", `xslF345X05/${k}.xml`);
+          for (let k = 0; recent.accessionNumber.length < 1000; k++) add(`0000070858-26-9${String(k).padStart(5, "0")}`, ymd(now.getTime() - (3 + (k % 147)) * DAY), "424B2");
+          const files = [{ name: "CIK0000070858-submissions-001.json", filingCount: 54, filingFrom: ymd(now.getTime() - 420 * DAY), filingTo: ymd(now.getTime() - 151 * DAY) }];
+          return json({ cik, name: "Bank of America", tickers: [], filings: { recent, files } });
+        }
         let n = 0;
         for (let t = now.getTime() - 3 * DAY; t > now.getTime() - 420 * DAY; t -= 5 * DAY) {
           n++;

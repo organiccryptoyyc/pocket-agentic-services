@@ -167,8 +167,11 @@ function statement(p) {
 function buildPayloads(db, catalog, { internalOnly = new Set() } = {}) {
   const series = new Map(catalog.series.map((s) => [s.series_id, s]));
   const feedSeries = new Map(catalog.series.filter((s) => s.source_id === "pokt" && s.params && s.params.feed).map((s) => [s.params.feed, s.series_id]));
-  const rows = db.prepare(`SELECT c.* FROM confirmations c JOIN (SELECT field, upstream_service, MAX(id) AS id FROM confirmations
-      GROUP BY field, upstream_service) l ON c.id = l.id ORDER BY c.field, c.upstream_service`).all();
+  // Latest data period per (field, upstream), then the newest check of it: a backfill of an older period never
+  // replaces the check of the current one.
+  const rows = db.prepare(`SELECT * FROM (SELECT c.*, ROW_NUMBER() OVER (PARTITION BY field, upstream_service
+      ORDER BY observed_at DESC, id DESC) AS rn FROM confirmations c) WHERE rn = 1 ORDER BY field, upstream_service`).all()
+    .map(({ rn, ...r }) => r);
   const by = new Map();
   for (const r of rows) {
     if (internalOnly.has(r.upstream_service)) continue;

@@ -69,6 +69,17 @@ test("payloads: one per series, latest result per check, classes, counters, inte
   assert.deepEqual(g, { attempted: 1, passed: 0, partial: 0, conflicted: 0, unavailable: 1, completed: 0, requiring_review: 0 });
 });
 
+test("a backfill of an older period does not replace the check of the latest period", () => {
+  const { db } = fresh();
+  const base = { field: "series:fred:CPIAUCSL", entity_id: "us", our_value: "{}", upstream_service: "bls", tolerance_pct: 0.05 };
+  row(db, { ...base, run_id: "pmic/2026-10-18T01:00:00.000Z", agreement: "agree", delta_pct: 0, observed_at: "2026-09-30" });
+  row(db, { ...base, run_id: "pmic/2026-10-18T02:00:00.000Z", agreement: "disagree", delta_pct: 16.67, observed_at: "2025-12-31" });
+  const p = attest.buildPayloads(db, catalog).get("fred:CPIAUCSL");
+  assert.equal(p.checks[0].status, "passed");
+  assert.equal(p.checks[0].observed_at, "2026-09-30");
+  assert.equal(p.review_required, false);
+});
+
 test("the window uses when the checks ran, not the date of the data they compared", () => {
   const { db } = fresh();
   row(db, { run_id: "pmic/2026-10-13T03:23:05.123Z", field: "series:fred:CPIAUCSL", entity_id: "us", our_value: JSON.stringify({ date: "2026-09-01", value: 1 }),
