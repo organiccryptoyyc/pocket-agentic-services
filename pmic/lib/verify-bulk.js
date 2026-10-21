@@ -412,7 +412,8 @@ async function checkAact(db, catalog, ctx) {
       let observed;
       if (metric === "active_trials") {
         const l = latest.get(s.series_id);
-        if (!l || l.t !== today) return; // compare same-day snapshots only
+        // AACT refreshes daily, so our snapshot may be from today or yesterday (UTC); older ones are skipped
+        if (!l || l.t < ymd(new Date(ctx.now.getTime() - DAY))) return;
         mine = { [l.t]: l.v };
         theirs = { [l.t]: Number(res[i][0].n) };
         observed = l.t;

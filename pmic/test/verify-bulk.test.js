@@ -192,7 +192,7 @@ test("P4: FAERS cases by initial receipt week against our openFDA count; newest 
   }
 });
 
-test("P5: AACT counts per company against our ClinicalTrials.gov series; same-day active snapshot; once a day", async () => {
+test("P5: AACT counts per company against our ClinicalTrials.gov series; active snapshot at most a day old; once a day", async () => {
   const pg = require("../lib/pg");
   const real = pg.query;
   const calls = [];
@@ -211,10 +211,10 @@ test("P5: AACT counts per company against our ClinicalTrials.gov series; same-da
     obs(db, "ctgov:PFE:trial_starts_monthly", "2026-08-01", 8);
     obs(db, "ctgov:PFE:trial_starts_monthly", "2026-09-01", 6);
     obs(db, "ctgov:PFE:trial_starts_monthly", "2026-10-01", 1); // current month: never compared
-    obs(db, "ctgov:PFE:active_trials", "2026-10-19", 255);
+    obs(db, "ctgov:PFE:active_trials", "2026-10-18", 255); // yesterday's snapshot (NOW is 2026-10-19): compared
     obs(db, "ctgov:JNJ:trial_starts_monthly", "2026-08-01", 8);
     obs(db, "ctgov:JNJ:trial_starts_monthly", "2026-09-01", 6);
-    obs(db, "ctgov:JNJ:active_trials", "2026-10-18", 222); // yesterday's snapshot: not compared
+    obs(db, "ctgov:JNJ:active_trials", "2026-10-17", 222); // two days old: not compared
     const none = ctxWith({});
     await B.checkAact(db, catalog, none);
     assert.equal(calls.length, 0, "no credentials: skipped");
