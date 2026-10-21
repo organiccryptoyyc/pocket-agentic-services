@@ -191,3 +191,54 @@ test("P4: FAERS cases by initial receipt week against our openFDA count; newest 
     assert.equal(c3.rows[0].agreement, want);
   }
 });
+
+test("P5: AACT counts per company against our ClinicalTrials.gov series; same-day active snapshot; once a day", async () => {
+  const pg = require("../lib/pg");
+  const real = pg.query;
+  const calls = [];
+  pg.query = async (cfg, sqls) => {
+    calls.push({ cfg, sqls });
+    const out = sqls.map((sql) => {
+      if (/count\(\*\) n FROM ctgov.studies st JOIN .* WHERE upper\(st.overall_status\) IN \('RECRUITING'/.test(sql) && !/GROUP BY/.test(sql)) return [{ n: /Pfizer/.test(sql) ? "255" : "212" }];
+      if (/start_date_type/.test(sql)) return [{ m: "2026-08-01", n: "8" }, { m: "2026-09-01", n: /Pfizer/.test(sql) ? "6" : "5" }];
+      return [];
+    });
+    out.certExpired = true;
+    return out;
+  };
+  try {
+    const db = fresh();
+    obs(db, "ctgov:PFE:trial_starts_monthly", "2026-08-01", 8);
+    obs(db, "ctgov:PFE:trial_starts_monthly", "2026-09-01", 6);
+    obs(db, "ctgov:PFE:trial_starts_monthly", "2026-10-01", 1); // current month: never compared
+    obs(db, "ctgov:PFE:active_trials", "2026-10-19", 255);
+    obs(db, "ctgov:JNJ:trial_starts_monthly", "2026-08-01", 8);
+    obs(db, "ctgov:JNJ:trial_starts_monthly", "2026-09-01", 6);
+    obs(db, "ctgov:JNJ:active_trials", "2026-10-18", 222); // yesterday's snapshot: not compared
+    const none = ctxWith({});
+    await B.checkAact(db, catalog, none);
+    assert.equal(calls.length, 0, "no credentials: skipped");
+    const ctx = ctxWith({});
+    ctx.env = { AACT_USER: "u", AACT_PASSWORD: "p" };
+    await B.checkAact(db, catalog, ctx);
+    assert.equal(calls[0].cfg.allowExpiredCertificate, true);
+    assert.equal(calls[0].cfg.host, "aact-db.ctti-clinicaltrials.org");
+    const by = Object.fromEntries(ctx.rows.map((r) => [r.field, r]));
+    const pfe = by["series:ctgov:PFE:trial_starts_monthly"];
+    assert.equal(pfe.agreement, "agree");
+    assert.deepEqual(Object.keys(pfe.our_value.months), ["2026-08-01", "2026-09-01"]);
+    assert.equal(pfe.our_value.comparison_transport, "aact_tls_certificate_expired_accepted");
+    assert.equal(pfe.observed_at, "2026-09-01T00:00:00Z");
+    assert.equal(by["series:ctgov:PFE:active_trials"].agreement, "agree");
+    assert.equal(by["series:ctgov:JNJ:trial_starts_monthly"].agreement, "partial", "14 vs 13: within 10%");
+    assert.equal(by["series:ctgov:JNJ:active_trials"], undefined);
+    assert.ok(ctx.rows.every((r) => r.upstream_service === "aact"));
+    const again = ctxWith({});
+    again.env = ctx.env;
+    const n = calls.length;
+    await B.checkAact(db, catalog, again);
+    assert.equal(calls.length, n, "once a day");
+  } finally {
+    pg.query = real;
+  }
+});

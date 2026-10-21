@@ -30,12 +30,21 @@
 //            weeks wholly inside the file's quarter. Agree when every week is within 0.5%, partial within
 //            2%, else disagree. Newest file first, then the previous three quarters, one file per pass.
 //
+//   aact  (P5) CTTI's AACT copy of ClinicalTrials.gov (PostgreSQL, read-only account in AACT_USER /
+//            AACT_PASSWORD), queried once a day: per company, lead-sponsor studies matching the same
+//            ctgov_sponsors names, counted like lib/adapters/ctgov.js (ACTUAL starts and completions by
+//            month, terminated/withdrawn/suspended by last-update month, today's active count), for the
+//            last 6 complete months. Agree when every value matches; partial when the totals are within
+//            10% (or 2 trials); else disagree. AACT's database certificate expired on 2025-11-20: the
+//            owner accepted that one fault (option A, 2026-10-20; see lib/pg.js), and each row records it.
+//
 // Bulk files are fetched once each (SEC zips once per new quarter, Drugs@FDA once a day) and dropped
 // after reading; only the comparison rows are kept. SEC requests carry PMIC_SEC_USER_AGENT.
 "use strict";
 
 const { unzip } = require("./xlsx");
 const { kvGet, kvSet } = require("./db");
+const pg = require("./pg");
 
 const DAY = 86400000;
 const BULK_TIMEOUT_MS = 10 * 60 * 1000;
@@ -355,4 +364,84 @@ async function checkFaers(db, catalog, ctx) {
   kvSet(db, "verified:faers", done);
 }
 
-module.exports = { checkSecInsider, checkSecFsds, checkDrugsFda, checkOpenfdaLabels, checkFaers, weekOf };
+// ---- P5: AACT (CTTI's copy of ClinicalTrials.gov) against our ClinicalTrials.gov series ------------
+const AACT = { host: "aact-db.ctti-clinicaltrials.org", port: 5432, database: "aact", allowExpiredCertificate: true };
+const AACT_MONTHS = 6;
+const AACT_PARTIAL = 0.1;
+const AACT_PARTIAL_ABS = 2;
+
+function aactSql(sponsors, firstMonth) {
+  // Sponsor names come from config/series.json (ctgov_sponsors); only quotes need escaping.
+  const like = sponsors.map((n) => `s.name ILIKE '%${String(n).replace(/'/g, "''")}%'`).join(" OR ");
+  const base = `FROM ctgov.studies st JOIN (SELECT DISTINCT s.nct_id FROM ctgov.sponsors s WHERE s.lead_or_collaborator = 'lead' AND (${like})) l ON l.nct_id = st.nct_id`;
+  const month = (col) => `to_char(date_trunc('month', st.${col}), 'YYYY-MM-DD')`;
+  return {
+    trial_starts_monthly: `SELECT ${month("start_date")} m, count(*) n ${base} WHERE upper(st.start_date_type) = 'ACTUAL' AND st.start_date >= '${firstMonth}' GROUP BY 1`,
+    trial_completions_monthly: `SELECT ${month("completion_date")} m, count(*) n ${base} WHERE upper(st.completion_date_type) = 'ACTUAL' AND st.completion_date >= '${firstMonth}' GROUP BY 1`,
+    trial_stops_monthly: `SELECT ${month("last_update_posted_date")} m, count(*) n ${base} WHERE upper(st.overall_status) IN ('TERMINATED','WITHDRAWN','SUSPENDED') AND st.last_update_posted_date >= '${firstMonth}' GROUP BY 1`,
+    active_trials: `SELECT count(*) n ${base} WHERE upper(st.overall_status) IN ('RECRUITING','NOT_YET_RECRUITING','ACTIVE_NOT_RECRUITING','ENROLLING_BY_INVITATION')`,
+  };
+}
+
+async function checkAact(db, catalog, ctx) {
+  const user = ctx.env.AACT_USER;
+  const password = ctx.env.AACT_PASSWORD;
+  const today = ymd(ctx.now);
+  if (!user || !password || kvGet(db, "verified:aact") === today) return;
+  const byEntity = new Map();
+  for (const s of catalog.series.filter((x) => x.source_id === "ctgov" && x.params && x.params.sponsors)) {
+    if (!byEntity.has(s.entity_id)) byEntity.set(s.entity_id, []);
+    byEntity.get(s.entity_id).push(s);
+  }
+  if (!byEntity.size) return;
+  const cur = new Date(Date.UTC(ctx.now.getUTCFullYear(), ctx.now.getUTCMonth(), 1));
+  const months = [];
+  for (let k = AACT_MONTHS; k >= 1; k--) months.push(ymd(new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() - k, 1))));
+  const ours = db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? AND observation_time >= ? AND observation_time <= ?");
+  const latest = db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? ORDER BY observation_time DESC LIMIT 1");
+  const t0 = Date.now();
+  for (const [, group] of byEntity) {
+    const sql = aactSql(group[0].params.sponsors, months[0]);
+    const metrics = group.map((s) => s.metric_name).filter((m) => sql[m]);
+    const res = await pg.query({ ...AACT, user, password }, metrics.map((m) => sql[m]));
+    const transport = res.certExpired ? { comparison_transport: "aact_tls_certificate_expired_accepted" } : {};
+    metrics.forEach((metric, i) => {
+      const s = group.find((x) => x.metric_name === metric);
+      let mine;
+      let theirs;
+      let observed;
+      if (metric === "active_trials") {
+        const l = latest.get(s.series_id);
+        if (!l || l.t !== today) return; // compare same-day snapshots only
+        mine = { [l.t]: l.v };
+        theirs = { [l.t]: Number(res[i][0].n) };
+        observed = l.t;
+      } else {
+        const got = new Map(ours.all(s.series_id, months[0], months[months.length - 1]).map((r) => [r.t, r.v]));
+        const compared = months.filter((m) => got.has(m));
+        if (!compared.length) return;
+        const counts = new Map(res[i].map((r) => [r.m, Number(r.n)]));
+        mine = Object.fromEntries(compared.map((m) => [m, got.get(m)]));
+        theirs = Object.fromEntries(compared.map((m) => [m, counts.get(m) || 0]));
+        observed = compared[compared.length - 1];
+      }
+      const keys = Object.keys(mine);
+      const a = keys.reduce((x, k) => x + mine[k], 0);
+      const b = keys.reduce((x, k) => x + theirs[k], 0);
+      const exact = keys.every((k) => mine[k] === theirs[k]);
+      const gap = Math.abs(a - b);
+      const rel = b ? gap / b : (a ? 1 : 0);
+      ctx.rows.push({ run_id: ctx.runId, field: `series:${s.series_id}`, entity_id: s.entity_id,
+        our_value: { ...(metric === "active_trials" ? { snapshot: mine } : { months: mine }), ...transport },
+        upstream_service: "aact", upstream_value: { months_or_snapshot: theirs },
+        agreement: exact ? "agree" : (rel <= AACT_PARTIAL || gap <= AACT_PARTIAL_ABS) ? "partial" : "disagree",
+        delta_pct: round4(rel * 100), tolerance_pct: 0, observed_at: `${observed}T00:00:00Z` });
+      if (!exact) ctx.notes.push(`aact ${s.series_id}: ours ${a} vs AACT ${b}`);
+    });
+    if (res.certExpired && !ctx.notes.some((n) => n.startsWith("aact: database certificate"))) ctx.notes.push("aact: database certificate expired (accepted, owner option A)");
+  }
+  ctx.calls.push(["aact", { latencyMs: Date.now() - t0 }]);
+  kvSet(db, "verified:aact", today);
+}
+
+module.exports = { checkSecInsider, checkSecFsds, checkDrugsFda, checkOpenfdaLabels, checkFaers, checkAact, aactSql, weekOf };

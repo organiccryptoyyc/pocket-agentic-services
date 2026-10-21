@@ -675,8 +675,8 @@ async function verify(db, catalog, { now = new Date(), fetchImpl = null, env = p
   await checkPropublica(db, catalog, ctx);
   await checkKeyed(db, catalog, ctx);
   await checkFluview(db, catalog, ctx);
-  // Phase 3 bulk-file checks (C1, C2, P2, P3, P4); a failure is a note, never a failed pass.
-  for (const [name, fn] of [["sec-insider", bulkChecks.checkSecInsider], ["sec-fsds", bulkChecks.checkSecFsds], ["drugsfda", bulkChecks.checkDrugsFda], ["openfda-label", bulkChecks.checkOpenfdaLabels], ["faers", bulkChecks.checkFaers]]) {
+  // Phase 3 bulk-file checks (C1, C2, P2, P3, P4) and the AACT query (P5); a failure is a note, never a failed pass.
+  for (const [name, fn] of [["sec-insider", bulkChecks.checkSecInsider], ["sec-fsds", bulkChecks.checkSecFsds], ["drugsfda", bulkChecks.checkDrugsFda], ["openfda-label", bulkChecks.checkOpenfdaLabels], ["faers", bulkChecks.checkFaers], ["aact", bulkChecks.checkAact]]) {
     try {
       await fn(db, catalog, ctx);
     } catch (e) {

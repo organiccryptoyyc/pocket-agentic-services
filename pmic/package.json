@@ -8,7 +8,7 @@
     "start": "node server.js",
     "collect": "node bin/collect.js",
     "collect:loop": "node bin/collect.js --loop",
-    "test": "node --test test/collector.test.js test/api.test.js test/pack.test.js test/packs.test.js test/openfda.test.js test/sync.test.js test/batch2.test.js test/batch3.test.js test/batch4.test.js test/crypto.test.js test/pricebank.test.js test/verify.test.js test/attest.test.js test/attest-pack.test.js test/verify-bulk.test.js test/migration-008.test.js"
+    "test": "node --test test/collector.test.js test/api.test.js test/pack.test.js test/packs.test.js test/openfda.test.js test/sync.test.js test/batch2.test.js test/batch3.test.js test/batch4.test.js test/crypto.test.js test/pricebank.test.js test/verify.test.js test/attest.test.js test/attest-pack.test.js test/verify-bulk.test.js test/migration-008.test.js test/pg.test.js"
   },
   "engines": {
     "node": ">=22.13"
