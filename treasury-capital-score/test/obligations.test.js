@@ -62,6 +62,8 @@ test("a gap above $100k, or an unresolved conflict, is material", () => {
   const r = run({ obligation_visibility: block({ material_conflicts: ["renewal streams queued after a failed vote"] }) });
   assert.equal(r.obligations_policy.materiality, "material");
   assert.equal(r.overall_score.score, 74);
+  const mixed = run({ obligation_visibility: block({ payables_covered: false, material_conflicts: [{ description: "disputed streams", usd: 1.4e6 }] }) });
+  assert.equal(mixed.obligations_policy.materiality, "material", "a documented material item outranks an undetermined one");
 });
 
 test("a critical gap (>= 25% of counted treasury) withholds the score", () => {

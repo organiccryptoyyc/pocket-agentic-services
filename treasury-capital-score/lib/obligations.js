@@ -18,7 +18,7 @@ const POLICY = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "methodolog
 const POLICY_ID = POLICY.policy_id;
 const DAY = 86400000;
 const RANK = { unknown: 0, partial: 1, adequate: 2 };
-const SEVERITY = { none: 0, non_material: 1, undetermined: 2, material: 2, critical: 3 };
+const SEVERITY = { none: 0, non_material: 1, undetermined: 2, material: 2.5, critical: 3 }; // a documented material item outranks an undetermined one (same effect)
 const CHECKS = [
   ["liabilities_listed", "liabilities not listed"],
   ["debt_covered", "debt not covered"],
