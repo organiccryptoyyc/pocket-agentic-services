@@ -459,6 +459,19 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "id": {
+                "type": "string"
+              },
+              "what": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number",
+                "description": "Amount in unit (e.g. token units); usd is what is counted."
+              },
+              "unit": {
+                "type": "string"
               }
             }
           }
@@ -513,14 +526,74 @@
             },
             "material_conflicts": {
               "type": "array",
-              "items": {
-                "type": "string"
-              }
+              "description": "Each entry is a string, or an object {description, usd?, source_refs?}; an entry without usd is material."
             },
             "source_refs": {
               "type": "array",
               "items": {
                 "type": "string"
+              }
+            },
+            "governance_checked_through": {
+              "type": "string",
+              "description": "YYYY-MM-DD: governance records checked through this date for anything newer than the report (D21a)."
+            },
+            "unvalued_bounds_usd": {
+              "type": "object",
+              "description": "Curated upper bound in USD per missing checklist item (key = checklist field); an item without a bound is undetermined (never immaterial)."
+            }
+          }
+        },
+        "policy_id": {
+          "type": "string",
+          "description": "tcs6-obligations/1.0 opts this bundle in to the obligations policy (D21/D21a)."
+        },
+        "disclosed": {
+          "type": "array",
+          "description": "Commitments disclosed but not deducted (tcs6-obligations/1.0): voluntary, ex gratia, conditional, contingent, disputed, unconfirmed, own-token issuance, or already spent.",
+          "items": {
+            "type": "object",
+            "required": [
+              "what",
+              "class"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "what": {
+                "type": "string"
+              },
+              "class": {
+                "type": "string",
+                "enum": [
+                  "voluntary",
+                  "ex_gratia",
+                  "conditional",
+                  "contingent",
+                  "disputed",
+                  "unconfirmed",
+                  "native_token_issuance",
+                  "spent"
+                ]
+              },
+              "amount": {
+                "type": "number"
+              },
+              "unit": {
+                "type": "string"
+              },
+              "usd": {
+                "type": "number"
+              },
+              "note": {
+                "type": "string"
+              },
+              "source_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             }
           }

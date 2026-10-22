@@ -1165,6 +1165,205 @@
           }
         }
       }
+    },
+    "obligations_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "tcs6-obligations/1.0 audit block (owner D21/D21a): present only when the evidence opted in to the policy. Carries the pre-policy score so the policy's score effect is auditable.",
+      "required": [
+        "policy_id",
+        "obligations_status",
+        "materiality",
+        "penalty_policy",
+        "pre_policy_score",
+        "pre_policy_status",
+        "score",
+        "score_effect_points",
+        "disclosed_commitments"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string",
+          "const": "tcs6-obligations/1.0"
+        },
+        "obligations_status": {
+          "type": "string",
+          "enum": [
+            "adequate",
+            "partial",
+            "unknown"
+          ]
+        },
+        "evidence_age_basis": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "period_end",
+            "publication_and_governance_check",
+            null
+          ]
+        },
+        "evidence_age_days": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "period_end": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "publication": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        },
+        "governance_checked_through": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "materiality": {
+          "type": "string",
+          "enum": [
+            "none",
+            "non_material",
+            "undetermined",
+            "material",
+            "critical"
+          ]
+        },
+        "materiality_reasons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "item",
+              "description",
+              "materiality"
+            ],
+            "properties": {
+              "item": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "upper_bound_usd": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "materiality": {
+                "type": "string",
+                "enum": [
+                  "non_material",
+                  "undetermined",
+                  "material",
+                  "critical"
+                ]
+              }
+            }
+          }
+        },
+        "penalty_policy": {
+          "type": "string"
+        },
+        "pre_policy_score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pre_policy_status": {
+          "type": "string"
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "score_effect_points": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "disclosed_commitments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "what",
+              "class"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "what": {
+                "type": "string"
+              },
+              "class": {
+                "type": "string",
+                "enum": [
+                  "voluntary",
+                  "ex_gratia",
+                  "conditional",
+                  "contingent",
+                  "disputed",
+                  "unconfirmed",
+                  "native_token_issuance",
+                  "spent"
+                ]
+              },
+              "amount": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "unit": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "usd": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "source_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {

@@ -1,0 +1,31 @@
+{
+  "policy_id": "tcs6-obligations/1.0",
+  "status": "active",
+  "approved": "owner 2026-10-21 (decisions D21 and D21a in PMIC-verified-layer-deployment.md)",
+  "applies_to": "bundles whose obligations.policy_id is tcs6-obligations/1.0 (pilot: Lido, Maker/Sky, Compound; the other protocols keep the pre-policy rule until curated under this policy)",
+  "classes": {
+    "counted": "approved, unconditional and owed from treasury assets (including the protocol's own token when paid from tokens the treasury already holds): obligations.items, deducted from treasury capital",
+    "disclosed": "voluntary, ex gratia, conditional, contingent, disputed or unconfirmed commitments, and own-token commitments settled through new issuance or non-treasury supply: obligations.disclosed, shown in the report, never deducted until approved and unconditional",
+    "cash_use": "future operating budgets for services not yet delivered: cash_uses_12m (runway), not obligations"
+  },
+  "disclosed_classes": ["voluntary", "ex_gratia", "conditional", "contingent", "disputed", "unconfirmed", "native_token_issuance", "spent"],
+  "evidence_age": {
+    "max_age_days": 90,
+    "rule": "current while the report's period end (report_date) is within max_age_days of as_of, or while it was published (publication_date) within max_age_days and governance records were checked for anything newer (governance_checked_through on or after publication_date, itself within max_age_days of as_of)"
+  },
+  "materiality": {
+    "value_threshold_usd": 100000,
+    "treasury_share_threshold": 0.02,
+    "critical_share_threshold": 0.25,
+    "rule": "each missing checklist item and each material conflict is assessed: a curated upper bound (unvalued_bounds_usd) at or under both thresholds is non_material; above either it is material; at or above critical_share_threshold of counted treasury it is critical; no bound is undetermined, which is never treated as immaterial"
+  },
+  "effect": {
+    "adequate": "no penalty",
+    "partial_non_material": "no penalty; disclosed",
+    "partial_material_or_undetermined": "obligations_penalty_points once per report",
+    "partial_critical": "insufficient_data: score withheld",
+    "unknown": "score withheld (unknown is never zero)"
+  },
+  "obligations_penalty_points": 10,
+  "audit": "every report under this policy carries obligations_policy with the pre-policy score and status, the score effect in points, the materiality reasons and the disclosed commitments"
+}

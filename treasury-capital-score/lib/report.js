@@ -12,6 +12,7 @@ const { verifyEnvelope, attestationBlock, loadKeys } = require("./attestation");
 const crypto = require("crypto");
 const S = require("./scoring");
 const M = require("./materiality");
+const O = require("./obligations");
 const { sanitize } = require("./http");
 
 const SCHEMA_VERSION = "tcs-6-paid-response/1.0";
@@ -142,10 +143,29 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
   const rights = rightsFilter(bundle.sources);
   const gateList = S.gates(entity, base, bundle, rights.blocked);
   const oblVis = S.obligationVisibility(bundle, base.asOfMs);
-  const penalties = [...(bundle.penalties || []), ...S.obligationPenalties(oblVis)];
+  let penalties = [...(bundle.penalties || []), ...S.obligationPenalties(oblVis)];
   // the confidence cap is applied where confidence is computed (below)
-  const overallScore = M.applyEffect(S.overall(dims, gateList, penalties, oblVis.bounded), { score: 0 }, mat, S.confidenceLabel).overallScore;
+  let overallScore = M.applyEffect(S.overall(dims, gateList, penalties, oblVis.bounded), { score: 0 }, mat, S.confidenceLabel).overallScore;
   const cov = S.dataCoverage(base, bundle);
+  // tcs6-obligations/1.0 (D21/D21a), only for bundles that opt in: the pre-policy result above is kept
+  // for the audit block; the policy's grade replaces the obligations gate, penalty and coverage status.
+  let obligationsPolicy = null;
+  if (O.applies(bundle)) {
+    const pre = overallScore;
+    const g = O.grade(bundle, base.asOfMs, base.grossAdjusted);
+    const gate = gateList.find((x) => x.id === "obligation_visibility");
+    const why = g.reasons.length ? ` Under ${O.POLICY_ID}: ${g.reasons.map((r) => `${r.description} (${r.materiality})`).join("; ")}.` : "";
+    gate.status = g.status === "adequate" ? "pass" : g.status === "partial" ? "fail" : "unknown_gate";
+    gate.effect = (g.status === "adequate" ? "Known debt, payables and commitments captured in current evidence."
+      : g.status === "partial" && g.materiality === "critical" ? "Obligations partly visible and the gap is critical; overall score withheld."
+      : g.status === "partial" && g.penalty.length ? `Obligations partially visible; provisional score only, ${g.penalty[0].points} points deducted because the gap is ${g.materiality}.`
+      : g.status === "partial" ? "Obligations partially visible; every gap is bounded below the materiality thresholds, so no points are deducted; provisional score only."
+      : `Obligation evidence is not current (${g.undatedReason}); overall score withheld.`) + why;
+    penalties = [...(bundle.penalties || []), ...g.penalty];
+    overallScore = M.applyEffect(S.overall(dims, gateList, penalties, g.bounded), { score: 0 }, mat, S.confidenceLabel).overallScore;
+    cov.obligation_visibility_status = g.status;
+    obligationsPolicy = O.block(g, pre, overallScore, O.disclosed(bundle));
+  }
 
   for (const d of dims) {
     d.rationale = rationale(d);
@@ -202,6 +222,7 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
     risks: [...curatedRisks, ...derivedRisks(dims, cov), ...penaltyRisks, ...materialRisks],
     data_gaps: [...derivedGaps(dims, overallScore), ...warningGaps, ...curatedGaps],
     disclaimer: DISCLAIMER,
+    ...(obligationsPolicy ? { obligations_policy: obligationsPolicy } : {}),
   });
   // Signed input attestation (Verified layer): attached after cleanText so the signed payload reaches the
   // caller byte-for-byte as the Pi signed it. Absent for bundles that carry neither an attestation nor a
