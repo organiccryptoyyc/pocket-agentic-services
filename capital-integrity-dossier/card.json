@@ -1,0 +1,57 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "Capital Integrity Dossier: a deep, section-by-section treasury report on one of the DeFi protocols scored by TCS-6 (treasury-capital-score). MULTI-CALL, DISCLOSED UP FRONT: a full dossier takes up to 7 calls (up to $0.035 at $0.005 per call). For your security and cost control, call POST /v1/dossier/plan {entity_id} first: it returns a dossier_id, the sections available for that protocol, calls_required and the estimated total before you commit, and you pay only for the calls you make. Then call POST /v1/dossier/section {dossier_id, section} once per section, in any order, and stop whenever you like; every response shows calls_used and calls_remaining. Sections: holdings_map (every position by wallet and chain, value, haircut, price source), authority_graph (Safe thresholds and signers per wallet, signers shared across wallets), obligations_register, exit_liquidity (locked and encumbered positions, loan health), reconciliation (the protocol's own reported total against what we observe), unresolved_items (every gap and what would resolve it). A dossier_id pins one TCS-6 snapshot for 24 hours, so every section describes the same moment. Each section carries the signed TCS-6 input attestation reference and charts as JSON series. POST /v1/dossier/entities {} lists the covered protocols. Every response is a single JSON object; output is derived values and citations only, never raw vendor data. Research, not investment advice. Thank you for understanding the multi-call design.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "capital-integrity-dossier container on :8080; mount at /",
+      "notes": "POST /v1/dossier/plan, /v1/dossier/section, /v1/dossier/entities; GET /v1/version, /v1/health. JSON body only. Malformed input, an unknown entity or an expired dossier_id returns 400 + JSON. A section the snapshot cannot support is a 200 with available false; plan lists it as unavailable and leaves it out of calls_required."
+    }
+  ],
+  "apis": [
+    "capital-integrity-dossier-plan",
+    "capital-integrity-dossier-section",
+    "capital-integrity-dossier-entities"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "capital-integrity-dossier-plan",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/capital-integrity-dossier/openapi.json"
+    }
+  ],
+  "access": "public",
+  "results": "variable",
+  "serving": {
+    "backend": "Node.js HTTP server (zero npm dependencies) behind a RelayMiner at http://<container>:8080. No caller auth. Reads the TCS-6 data volume read-only; never calls a chain or a vendor on the relay path.",
+    "implementations": [
+      "capital-integrity-dossier >= 1.0"
+    ],
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/version", "method": "GET" },
+        "expect": { "json_path": "$.service", "matches": "^capital-integrity-dossier$" },
+        "notes": "Identity probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/health", "method": "GET" },
+        "expect": { "json_path": "$.status", "matches": "^ok$" },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/dossier/entities", "method": "POST", "body": {} },
+        "expect": { "json_path": "$.schema_version", "matches": "^capital-integrity-dossier/1\\.0$" },
+        "notes": "Functional probe with a deterministic expected value."
+      }
+    ],
+    "notes": "Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/capital-integrity-dossier/README.md",
+  "updated": "2026-10-25"
+}

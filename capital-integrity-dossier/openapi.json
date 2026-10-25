@@ -1,0 +1,203 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Capital Integrity Dossier",
+    "version": "1.0.0",
+    "description": "Pocket Network service `capital-integrity-dossier`. A disclosed multi-call dossier on one protocol scored by TCS-6 (`treasury-capital-score`). A full dossier takes up to 7 calls (up to $0.035 at the portal's $0.005 per call): POST /v1/dossier/plan first (1 call; it states calls_required and the estimated total before you commit), then POST /v1/dossier/section once per available section, in any order. You pay only for the calls you make and can stop after any section; every response carries calls_used, calls_remaining and the remaining estimate. A dossier_id pins one TCS-6 snapshot (a report together with the exact evidence bundle it was scored from) for 24 hours. All inputs travel in a JSON POST body; every response is a JSON object. Paid per relay via a staked Pocket application; there is no checkout. Charts are JSON series for the caller to render. Research, not investment advice."
+  },
+  "paths": {
+    "/v1/dossier/plan": {
+      "post": {
+        "operationId": "plan",
+        "summary": "Start a dossier: pin the latest TCS-6 snapshot, list the sections, state the calls and price",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["entity_id"],
+                "additionalProperties": false,
+                "properties": { "entity_id": { "type": "string", "examples": ["inverse-finance"], "description": "Id from /v1/dossier/entities." } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "The plan.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Plan" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/v1/dossier/section": {
+      "post": {
+        "operationId": "section",
+        "summary": "One section of a planned dossier",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["dossier_id", "section"],
+                "additionalProperties": false,
+                "properties": {
+                  "dossier_id": { "type": "string", "pattern": "^dos_[0-9a-f]{24}$" },
+                  "section": { "$ref": "#/components/schemas/SectionName" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "The section. available false (with a reason and data null) when the pinned snapshot cannot support it.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Section" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/v1/dossier/entities": {
+      "post": {
+        "operationId": "entities",
+        "summary": "The protocols a dossier can cover",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": {
+          "200": {
+            "description": "Listing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["schema_version", "entities", "note"],
+                  "properties": {
+                    "schema_version": { "const": "capital-integrity-dossier/1.0" },
+                    "entities": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["entity_id"],
+                        "properties": {
+                          "entity_id": { "type": "string" },
+                          "name": { "type": "string" },
+                          "as_of": { "type": "string", "format": "date-time" },
+                          "overall_score": { "type": ["number", "null"] },
+                          "status": { "type": "string" }
+                        }
+                      }
+                    },
+                    "note": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/version": {
+      "get": { "operationId": "version", "responses": { "200": { "description": "{\"service\":\"capital-integrity-dossier\",\"version\":\"1.0.0\"}", "content": { "application/json": {} } } } }
+    },
+    "/v1/health": {
+      "get": { "operationId": "health", "responses": { "200": { "description": "{\"status\":\"ok\",\"entities\":22,\"last_snapshot_refresh\":\"...\"}", "content": { "application/json": {} } } } }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SectionName": { "enum": ["holdings_map", "authority_graph", "obligations_register", "exit_liquidity", "reconciliation", "unresolved_items"] },
+      "Estimate": {
+        "type": "object",
+        "required": ["price_per_call_usd", "remaining_usd", "basis"],
+        "properties": {
+          "price_per_call_usd": { "type": "number" },
+          "total_usd": { "type": "number" },
+          "remaining_usd": { "type": "number" },
+          "basis": { "type": "string" }
+        }
+      },
+      "AttestationRef": {
+        "type": "object",
+        "required": ["attestation_id", "key_id", "evidence_manifest_hash", "verification_status"],
+        "properties": {
+          "attestation_id": { "type": ["string", "null"] },
+          "key_id": { "type": ["string", "null"] },
+          "evidence_manifest_hash": { "type": ["string", "null"] },
+          "verification_status": { "type": "string" }
+        }
+      },
+      "Entity": { "type": "object", "required": ["entity_id"], "properties": { "entity_id": { "type": "string" }, "name": { "type": "string" } } },
+      "Chart": {
+        "type": "object",
+        "required": ["type", "title", "series"],
+        "properties": {
+          "type": { "const": "bar" },
+          "title": { "type": "string" },
+          "series": { "type": "array", "items": { "type": "object", "required": ["label", "value"], "properties": { "label": { "type": "string" }, "value": { "type": "number" } } } }
+        }
+      },
+      "Plan": {
+        "type": "object",
+        "required": ["schema_version", "dossier_id", "entity", "as_of", "snapshot_report_id", "valid_until", "headline", "sections", "calls_required", "calls_used", "calls_remaining", "estimate", "notice", "attestation_ref", "disclaimer"],
+        "properties": {
+          "schema_version": { "const": "capital-integrity-dossier/1.0" },
+          "dossier_id": { "type": "string", "pattern": "^dos_[0-9a-f]{24}$" },
+          "entity": { "$ref": "#/components/schemas/Entity" },
+          "as_of": { "type": "string", "format": "date-time", "description": "When the TCS-6 collector observed this snapshot." },
+          "snapshot_report_id": { "type": "string" },
+          "valid_until": { "type": "string", "format": "date-time" },
+          "headline": { "type": "object", "properties": { "overall_score": { "type": ["number", "null"] }, "status": { "type": "string" } } },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["section", "description", "available"],
+              "properties": { "section": { "$ref": "#/components/schemas/SectionName" }, "description": { "type": "string" }, "available": { "type": "boolean" }, "reason": { "type": "string" } }
+            }
+          },
+          "calls_required": { "type": "integer", "minimum": 1, "maximum": 7, "description": "This plan call plus one call per available section." },
+          "calls_used": { "const": 1 },
+          "calls_remaining": { "type": "integer", "minimum": 0 },
+          "estimate": { "$ref": "#/components/schemas/Estimate" },
+          "notice": { "type": "string", "description": "Buyer notice: the multi-call design, the number of calls and the estimated total." },
+          "next": { "type": "string" },
+          "attestation_ref": { "$ref": "#/components/schemas/AttestationRef" },
+          "disclaimer": { "type": "string" }
+        }
+      },
+      "Section": {
+        "type": "object",
+        "required": ["schema_version", "dossier_id", "entity", "section", "available", "as_of", "snapshot_report_id", "calls_used", "calls_remaining", "estimate", "attestation_ref", "data", "disclaimer"],
+        "properties": {
+          "schema_version": { "const": "capital-integrity-dossier/1.0" },
+          "dossier_id": { "type": "string" },
+          "entity": { "$ref": "#/components/schemas/Entity" },
+          "section": { "$ref": "#/components/schemas/SectionName" },
+          "available": { "type": "boolean" },
+          "reason": { "type": "string" },
+          "as_of": { "type": "string", "format": "date-time" },
+          "snapshot_report_id": { "type": "string" },
+          "calls_used": { "type": "integer", "minimum": 2, "description": "Every call made on this dossier, the plan call included." },
+          "calls_remaining": { "type": "integer", "minimum": 0, "description": "Available sections not yet returned." },
+          "estimate": { "$ref": "#/components/schemas/Estimate" },
+          "attestation_ref": { "$ref": "#/components/schemas/AttestationRef" },
+          "data": { "type": ["object", "null"], "description": "Section content; see README.md for each section's fields." },
+          "chart": { "$ref": "#/components/schemas/Chart" },
+          "note": { "type": "string" },
+          "disclaimer": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Malformed body, an unknown entity_id or section, or a dossier_id that is unknown or older than 24 hours.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["error"],
+              "properties": { "error": { "type": "object", "properties": { "code": { "enum": ["invalid_input", "unknown_entity", "unknown_dossier", "not_found"] }, "message": { "type": "string" } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

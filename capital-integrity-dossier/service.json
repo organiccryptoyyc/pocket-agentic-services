@@ -1,0 +1,7 @@
+{
+  "service_id": "capital-integrity-dossier",
+  "name": "Capital Integrity Dossier",
+  "compute_units_per_relay": 100000,
+  "card": "card.json",
+  "networks": {}
+}
