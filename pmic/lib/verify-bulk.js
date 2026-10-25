@@ -27,8 +27,10 @@
 //            cases per week of initial FDA receipt (init_fda_dt), against our openFDA weekly FAERS count
 //            (openFDA's receivedate is the date the first version was received). Market series only: the
 //            company series use openFDA's harmonized manufacturer names, which FAERS does not carry. Only
-//            weeks wholly inside the file's quarter. Agree when every week is within 0.5%, partial within
-//            2%, else disagree. Newest file first, then the previous three quarters, one file per pass.
+//            weeks wholly inside the file's quarter, counting each case once across the quarter's file
+//            and every later file (a case updated later only appears in the later file). Agree when every
+//            week is within 0.5%, partial within 2%, else disagree. Newest file first, then the previous
+//            three quarters, one per pass; all four are checked again when a newer file appears.
 //
 //   aact  (P5) CTTI's AACT copy of ClinicalTrials.gov (PostgreSQL, read-only account in AACT_USER /
 //            AACT_PASSWORD), queried once a day: per company, lead-sponsor studies matching the same
@@ -323,28 +325,43 @@ async function checkFaers(db, catalog, ctx) {
   const files = [...new Set([...r.text.matchAll(/href="([^"]*faers_ascii_\d{4}q[1-4]\.zip)"/gi)].map((m) => new URL(m[1], FAERS_LISTING).toString()))]
     .map((u) => ({ u, q: quarterOfFile(u) })).sort((a, b) => b.q.y - a.q.y || b.q.q - a.q.q);
   const key = (f) => `${f.q.y}q${f.q.q}`;
-  const file = files.slice(0, 4).find((f) => !done[key(f)]); // newest first, then backfill three quarters
+  if (!files.length) return;
+  const newest = key(files[0]);
+  // A quarter is (re)checked whenever a newer file has appeared since its last check: a case first
+  // received in that quarter whose latest version came later is only in the later file (owner
+  // 2026-10-25: comparing a quarter's own file alone ran 7-10% short on every older quarter).
+  const due = (f) => !(done[key(f)] && done[key(f)].newest === newest);
+  const file = files.slice(0, 4).find(due); // newest first, then the three quarters before it
   if (!file) return;
+  const later = files.filter((f) => f.q.y > file.q.y || (f.q.y === file.q.y && f.q.q > file.q.q)).reverse(); // oldest first
   const qStart = new Date(Date.UTC(file.q.y, (file.q.q - 1) * 3, 1));
   const qEnd = new Date(Date.UTC(file.q.y, file.q.q * 3, 0));
   const weeks = [];
   for (let w = new Date(weekOf(ymd(qStart))); w.getTime() + 6 * DAY <= qEnd.getTime(); w = new Date(w.getTime() + 7 * DAY)) {
     if (w.getTime() >= qStart.getTime()) weeks.push(ymd(w));
   }
-  const z = await bulk(ctx, file.u, headers);
-  const demo = z.names.find((n) => /DEMO\d{2}Q[1-4]\.txt$/i.test(n));
-  if (!demo) throw new Error(`${key(file)}: no DEMO file`);
+  // Cases first received in the quarter, across its own file and every later one (one per case).
+  const lo = ymd(qStart).replace(/-/g, "");
+  const hi = ymd(qEnd).replace(/-/g, "");
+  const cases = new Map(); // caseid -> init_fda_dt
+  for (const f of [file, ...later]) {
+    const z = await bulk(ctx, f.u, headers);
+    const demo = z.names.find((n) => /DEMO\d{2}Q[1-4]\.txt$/i.test(n));
+    if (!demo) throw new Error(`${key(f)}: no DEMO file`);
+    let idx = null;
+    await z.eachLine(demo, (line) => {
+      const c = line.replace(/\r$/, "").split("$");
+      if (!idx) { idx = Object.fromEntries(c.map((h, i) => [h.trim().toLowerCase(), i])); return; }
+      const d = c[idx.init_fda_dt];
+      if (/^\d{8}$/.test(d || "") && d >= lo && d <= hi) cases.set(c[idx.caseid], d);
+    });
+    if (!idx || idx.init_fda_dt === undefined || idx.caseid === undefined) throw new Error(`${key(f)}: DEMO has no init_fda_dt/caseid`);
+  }
   const theirs = new Map();
-  let idx = null;
-  await z.eachLine(demo, (line) => {
-    const c = line.replace(/\r$/, "").split("$");
-    if (!idx) { idx = Object.fromEntries(c.map((h, i) => [h.trim().toLowerCase(), i])); return; }
-    const d = c[idx.init_fda_dt];
-    if (!/^\d{8}$/.test(d || "")) return;
+  for (const d of cases.values()) {
     const w = weekOf(`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`);
     theirs.set(w, (theirs.get(w) || 0) + 1);
-  });
-  if (!idx || idx.init_fda_dt === undefined) throw new Error(`${key(file)}: DEMO has no init_fda_dt`);
+  }
   const mine = new Map(db.prepare("SELECT observation_time t, metric_value v FROM observations WHERE series_id = ? AND observation_time >= ? AND observation_time <= ?")
     .all(s.series_id, weeks[0], weeks[weeks.length - 1]).map((x) => [x.t, x.v]));
   const compared = weeks.filter((w) => mine.has(w));
@@ -354,13 +371,13 @@ async function checkFaers(db, catalog, ctx) {
     ctx.rows.push({ run_id: ctx.runId, field: `series:${s.series_id}`, entity_id: s.entity_id,
       our_value: { quarter: `${file.q.y}Q${file.q.q}`, weeks: Object.fromEntries(compared.map((w) => [w, mine.get(w)])) },
       upstream_service: "faers",
-      upstream_value: { file: file.u.split("/").pop(), weeks: Object.fromEntries(compared.map((w) => [w, theirs.get(w) || 0])) },
+      upstream_value: { files: [file, ...later].map((f) => f.u.split("/").pop()), weeks: Object.fromEntries(compared.map((w) => [w, theirs.get(w) || 0])) },
       agreement: worst <= FAERS_AGREE ? "agree" : worst <= FAERS_PARTIAL ? "partial" : "disagree", delta_pct: round4(worst * 100),
       tolerance_pct: FAERS_AGREE * 100, observed_at: `${compared[compared.length - 1]}T00:00:00Z` });
     if (worst > FAERS_AGREE) ctx.notes.push(`faers ${key(file)}: largest weekly difference ${round4(worst * 100)}%`);
   }
   ctx.calls.push(["faers", { latencyMs: null }]);
-  done[key(file)] = ctx.nowIso;
+  done[key(file)] = { at: ctx.nowIso, newest };
   kvSet(db, "verified:faers", done);
 }
 

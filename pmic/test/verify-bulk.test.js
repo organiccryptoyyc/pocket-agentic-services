@@ -192,6 +192,41 @@ test("P4: FAERS cases by initial receipt week against our openFDA count; newest 
   }
 });
 
+test("P4: an older quarter counts its cases across its own and every later FAERS file, once each; rechecked when a newer file appears", async () => {
+  const db = fresh();
+  const sid = "openfda:adverse_event_reports_weekly";
+  obs(db, sid, "2026-01-05", 3); // three cases first received that week
+  const head = "primaryid$caseid$caseversion$i_f_code$event_dt$mfr_dt$init_fda_dt$fda_dt$rept_cod";
+  const row = (id, init, fda) => `${id}0$${id}$1$I$$$${init}$${fda}$EXP`;
+  // case 1 is only in Q1; case 2 in both (counted once); case 3's latest version is only in Q2
+  const q1 = [head, row(1, "20260106", "20260106"), row(2, "20260107", "20260107")].join("\n") + "\n";
+  const q2 = [head, row(2, "20260107", "20260410"), row(3, "20260108", "20260415"), row(9, "20260407", "20260407")].join("\n") + "\n";
+  const base = "https://fis.fda.gov/content/Exports/";
+  const page = (qs) => qs.map((q) => `<a href="${base}faers_ascii_${q}.zip">x</a>`).join("");
+  const files = { "https://fis.fda.gov/extensions/FPD-QDE-FAERS/FPD-QDE-FAERS.html": page(["2026q2", "2026q1"]),
+    [`${base}faers_ascii_2026q2.zip`]: zip({ "ASCII/DEMO26Q2.txt": q2 }), [`${base}faers_ascii_2026q1.zip`]: zip({ "ASCII/DEMO26Q1.txt": q1 }) };
+  // pass 1: newest quarter (2026q2, nothing of ours inside it), pass 2: 2026q1 across both files
+  await B.checkFaers(db, catalog, ctxWith(files));
+  const c2 = ctxWith(files);
+  await B.checkFaers(db, catalog, c2);
+  assert.equal(c2.rows.length, 1);
+  assert.equal(c2.rows[0].our_value.quarter, "2026Q1");
+  assert.deepEqual(c2.rows[0].upstream_value.files, ["faers_ascii_2026q1.zip", "faers_ascii_2026q2.zip"]);
+  assert.deepEqual(c2.rows[0].upstream_value.weeks, { "2026-01-05": 3 });
+  assert.equal(c2.rows[0].agreement, "agree");
+  // nothing due until a newer file appears; then 2026q3 first, and the older quarters again after it
+  const c3 = ctxWith(files);
+  await B.checkFaers(db, catalog, c3);
+  assert.equal(c3.rows.length, 0);
+  const files3 = { ...files, "https://fis.fda.gov/extensions/FPD-QDE-FAERS/FPD-QDE-FAERS.html": page(["2026q3", "2026q2", "2026q1"]),
+    [`${base}faers_ascii_2026q3.zip`]: zip({ "ASCII/DEMO26Q3.txt": head + "\n" }) };
+  await B.checkFaers(db, catalog, ctxWith(files3)); // 2026q3
+  await B.checkFaers(db, catalog, ctxWith(files3)); // 2026q2 again
+  const c4 = ctxWith(files3);
+  await B.checkFaers(db, catalog, c4); // 2026q1 again, now across three files
+  assert.deepEqual(c4.rows[0].upstream_value.files, ["faers_ascii_2026q1.zip", "faers_ascii_2026q2.zip", "faers_ascii_2026q3.zip"]);
+});
+
 test("P5: AACT counts per company against our ClinicalTrials.gov series; active snapshot at most a day old; once a day", async () => {
   const pg = require("../lib/pg");
   const real = pg.query;
