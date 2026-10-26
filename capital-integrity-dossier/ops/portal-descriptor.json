@@ -1,0 +1,146 @@
+{
+  "serviceId": "capital-integrity-dossier",
+  "displayName": "Capital Integrity Dossier",
+  "description": "A deep, section-by-section treasury dossier on the DeFi protocols scored by TCS-6 (treasury-capital-score): where every dollar sits wallet by wallet, who can move it (Safe thresholds and shared signers), what is owed, what could be sold now, how the protocol's own reported total reconciles with what is observed on chain, and every gap we could not verify. Multi-call and disclosed up front: a full dossier takes up to 7 calls (up to $0.035 at $0.005 per call). Call POST /v1/dossier/plan {entity_id} first: it states the sections, the number of calls and the estimated total before you commit, and includes a buyer notice. Then POST /v1/dossier/section {dossier_id, section} once per section, in any order, and stop whenever you like; every response shows calls_used and calls_remaining. A dossier_id pins one snapshot for 24 hours. Every response is one JSON object with the signed TCS-6 attestation reference; charts are JSON series. Research, not investment advice. Pay per request in USDC; no account, no API key.",
+  "category": "finance",
+  "protocols": [
+    "rest"
+  ],
+  "inputSchema": {
+    "type": "object",
+    "description": "POST /v1/dossier/plan takes {entity_id}; POST /v1/dossier/section takes {dossier_id, section}; POST /v1/dossier/entities takes {}.",
+    "properties": {
+      "entity_id": {
+        "type": "string",
+        "description": "plan: protocol id from POST /v1/dossier/entities, e.g. inverse-finance, aave, compound."
+      },
+      "dossier_id": {
+        "type": "string",
+        "pattern": "^dos_[0-9a-f]{24}$",
+        "description": "section: the id returned by plan (valid 24 hours)."
+      },
+      "section": {
+        "type": "string",
+        "enum": ["holdings_map", "authority_graph", "obligations_register", "exit_liquidity", "reconciliation", "unresolved_items"],
+        "description": "section: one of the sections plan lists as available."
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "description": "plan and section share the envelope below; plan adds sections, calls_required, estimate.total_usd, notice and headline, a section adds section, available and data (plus chart where one applies). Errors return {error: {code, message}} with HTTP 400 (invalid_input, unknown_entity, unknown_dossier). Published schema: https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/capital-integrity-dossier/openapi.json",
+    "properties": {
+      "schema_version": { "type": "string", "enum": ["capital-integrity-dossier/1.0"] },
+      "dossier_id": { "type": "string" },
+      "entity": {
+        "type": "object",
+        "properties": { "entity_id": { "type": "string" }, "name": { "type": "string" } }
+      },
+      "as_of": { "type": "string", "description": "ISO 8601 time the TCS-6 collector observed this snapshot." },
+      "snapshot_report_id": { "type": "string" },
+      "valid_until": { "type": "string", "description": "plan only: when the dossier_id expires (24 hours)." },
+      "headline": {
+        "type": "object",
+        "description": "plan only.",
+        "properties": {
+          "gross_adjusted_treasury_usd": { "type": ["number", "null"] },
+          "obligations_usd": { "type": ["number", "null"] },
+          "net_realizable_treasury_usd": { "type": ["number", "null"] },
+          "overall_score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+          "status": { "type": "string" }
+        }
+      },
+      "sections": {
+        "type": "array",
+        "description": "plan only.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "section": { "type": "string" },
+            "description": { "type": "string" },
+            "available": { "type": "boolean" },
+            "reason": { "type": "string" }
+          }
+        }
+      },
+      "calls_required": { "type": "integer", "minimum": 1, "maximum": 7, "description": "plan only: the plan call plus one per available section." },
+      "calls_used": { "type": "integer", "minimum": 1 },
+      "calls_remaining": { "type": "integer", "minimum": 0 },
+      "estimate": {
+        "type": "object",
+        "properties": {
+          "price_per_call_usd": { "type": "number" },
+          "total_usd": { "type": "number" },
+          "remaining_usd": { "type": "number" },
+          "basis": { "type": "string" }
+        }
+      },
+      "notice": { "type": "string", "description": "plan only: buyer notice stating the multi-call design, the number of calls and the estimated total." },
+      "section": { "type": "string", "description": "section only." },
+      "available": { "type": "boolean", "description": "section only: false (with reason, data null) when the snapshot cannot support it." },
+      "reason": { "type": "string" },
+      "data": { "type": ["object", "null"], "description": "section only: the section content (see README for each section's fields)." },
+      "chart": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "title": { "type": "string" },
+          "series": {
+            "type": "array",
+            "items": { "type": "object", "properties": { "label": { "type": "string" }, "value": { "type": "number" } } }
+          }
+        }
+      },
+      "attestation_ref": {
+        "type": "object",
+        "description": "Reference to the signed TCS-6 input attestation of the snapshot.",
+        "properties": {
+          "attestation_id": { "type": ["string", "null"] },
+          "key_id": { "type": ["string", "null"] },
+          "evidence_manifest_hash": { "type": ["string", "null"] },
+          "verification_status": { "type": "string" }
+        }
+      },
+      "note": { "type": "string" },
+      "disclaimer": { "type": "string" }
+    },
+    "required": ["schema_version", "dossier_id", "entity", "as_of", "calls_used", "calls_remaining", "estimate", "disclaimer"]
+  },
+  "methods": {
+    "GET /v1/health": "read",
+    "GET /v1/version": "read",
+    "POST /v1/dossier/plan": "read",
+    "POST /v1/dossier/section": "read",
+    "POST /v1/dossier/entities": "read"
+  },
+  "example": {
+    "method": "POST",
+    "path": "/v1/dossier/plan",
+    "request": {
+      "entity_id": "inverse-finance"
+    },
+    "responseSummary": {
+      "schema_version": "capital-integrity-dossier/1.0",
+      "dossier_id": "dos_926a17488a6946dc9898d66a",
+      "calls_required": 7,
+      "calls_remaining": 6,
+      "estimate": { "price_per_call_usd": 0.005, "total_usd": 0.035, "remaining_usd": 0.03 },
+      "notice": "Heads-up for your security and cost control: this dossier is a disclosed multi-call product. A full dossier takes 7 calls (the plan call plus one call per section), about $0.035 at $0.005 per call. You pay only for the calls you make and can stop after any section; each response shows how many calls remain. Thank you for understanding.",
+      "note": "Abridged; captured on Pocket Beta TestNet 2026-10-26. Next call: POST /v1/dossier/section {\"dossier_id\":\"dos_926a17488a6946dc9898d66a\",\"section\":\"authority_graph\"} -> \"3 signer(s) sit on 12 of 12 Safes.\""
+    }
+  },
+  "pocket": {
+    "network": "mainnet",
+    "serviceId": "capital-integrity-dossier",
+    "computeUnitsPerRelay": 100000,
+    "supplierOperator": "pokt1a0e9xlhmrpsw44upzmxqj7ct6eh7enqr7tzysx",
+    "supplierEndpoint": "https://agentic.organiccryptoyyc.com",
+    "owner": "pokt16cqt2tjzec6gsxdncl0v6k2aa7awya0wghevlw",
+    "registrationTx": "67458FE223E8E68FF13AB0D747737CF16B74387EE0E487A509C2512BE4A5B86A",
+    "healthChecks": [
+      "GET /v1/version contains \"capital-integrity-dossier\"",
+      "GET /v1/health contains \"status\":\"ok\"",
+      "POST /v1/dossier/entities {} contains \"schema_version\":\"capital-integrity-dossier/1.0\""
+    ]
+  }
+}

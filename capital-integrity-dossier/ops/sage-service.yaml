@@ -1,0 +1,31 @@
+# SAGE gateway configuration for capital-integrity-dossier. Send to the Pocket partner channel
+# with the listing request. Gateways do NOT read the service card; without this entry SAGE
+# refuses REST requests for the service and it is not discoverable on agent.pocket.network.
+# type generic is SAGE's name for passthrough (PSM 0.1.30+ writes it this way).
+gateway_config:
+  services:
+    - id: capital-integrity-dossier
+      type: generic
+      rpc_types: ["rest"]
+      timeout_config:
+        relay_timeout: 15s        # every call is a local file read; 15s is generous
+  active_health_checks:
+    local:
+      - service_id: capital-integrity-dossier
+        enabled: true
+        checks:
+          - name: version
+            type: rest
+            method: GET
+            path: /v1/version
+            expected_status_code: 200
+            reputation_signal: critical_error
+            timeout: 5s
+          - name: health
+            type: rest
+            method: GET
+            path: /v1/health
+            expected_status_code: 200
+            reputation_signal: major_error
+            timeout: 5s
+        # No sync_check / sync_allowance: not a blockchain service.

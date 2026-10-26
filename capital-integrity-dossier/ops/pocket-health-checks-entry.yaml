@@ -1,0 +1,32 @@
+- service_id: capital-integrity-dossier
+  # Capital Integrity Dossier: an agentic REST service (not a blockchain), so no sync_check or
+  # sync_allowance. Identity, readiness, and one deterministic functional check, matching the
+  # service card's serving.healthcheck.
+  check_interval: 30s
+  enabled: true
+  checks:
+    - name: version
+      type: rest
+      method: GET
+      path: /v1/version
+      expected_status_code: 200
+      expected_response_contains: '"capital-integrity-dossier"'
+      timeout: 5s
+      reputation_signal: critical_error
+    - name: health
+      type: rest
+      method: GET
+      path: /v1/health
+      expected_status_code: 200
+      expected_response_contains: '"status":"ok"'
+      timeout: 5s
+      reputation_signal: major_error
+    - name: entities
+      type: rest
+      method: POST
+      path: /v1/dossier/entities
+      body: '{}'
+      expected_status_code: 200
+      expected_response_contains: '"schema_version":"capital-integrity-dossier/1.0"'
+      timeout: 5s
+      reputation_signal: major_error
