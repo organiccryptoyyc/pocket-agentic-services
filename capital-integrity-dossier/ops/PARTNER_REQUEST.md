@@ -1,7 +1,6 @@
 # Capital Integrity Dossier: listing request for portal@pokt.foundation
 
-Send from the owner's own account **after** the MainNet relay test has a settled claim (the "Verified on MainNet"
-line below is filled in then). Attach `sage-service.yaml` and `portal-descriptor.json` (both in this folder).
+Send from the owner's own account (MainNet relay settled and audit PASS on 2026-10-26). Attach `sage-service.yaml` and `portal-descriptor.json` (both in this folder).
 Optional: open a PR to `pocket-network-resources/pocket-health-checks.yaml` with `pocket-health-checks-entry.yaml`,
 the same way as TCS-6 (PR #8), and add its link.
 
@@ -38,7 +37,7 @@ count and the estimate. Every response is a single JSON object (charts are JSON 
 the reference to the signed TCS-6 input attestation of the snapshot it was built from.
 
 **Verified:** Beta TestNet 2026-10-26: a full 7-call dossier relayed through pocket-ap (all 200, about 2.5 s each),
-claimed, and the proof accepted on chain. MainNet: _<fill in after the MainNet relay: date, calls, settled claim>_.
+claimed, and the proof accepted on chain. MainNet 2026-10-26: a 6-call dossier relayed through pocket-ap (all 200, about 3.7 s each), claim settled 16:00Z (6 relays), and the acceptance audit passes A1-A9.
 
 **Attached:**
 1. `sage-service.yaml`: SAGE gateway config (`type: generic`, `rpc_types: ["rest"]`, 15 s relay timeout, version and health checks).
