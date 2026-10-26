@@ -169,15 +169,47 @@ function authorityGraph(report, bundle) {
   };
 }
 
+// How the overall score is reached: the weighted dimension score, each deduction, the final score.
+// TCS-6's obligations_policy.score_effect_points compares the policy with the earlier flat rule (both
+// deduct 10 points for a partial gap, so it often reads 0); buyers need the deduction itself.
+function scoreWalk(report, bundle) {
+  const score = (report.overall_score || {}).score;
+  const dims = (report.dimensions || []).filter((d) => Number.isFinite(d.score));
+  const coverage = dims.reduce((s, d) => s + d.weight_pct, 0);
+  if (!Number.isFinite(score) || !coverage) return null;
+  const weighted = dims.reduce((s, d) => s + d.weight_pct * d.score, 0) / coverage;
+  const deductions = (bundle.penalties || []).filter((p) => Number.isFinite(p.points)).map((p) => ({ id: p.id || null, points: p.points, reason: p.reason || null }));
+  const gate = (report.hard_gates || []).find((g) => g.id === "obligation_visibility");
+  const m = gate && /(\d+) points deducted/.exec(gate.effect || "");
+  if (m) deductions.push({ id: "obligation_visibility", points: Number(m[1]), reason: gate.effect.split(" Under ")[0] });
+  const total = deductions.reduce((s, d) => s + d.points, 0);
+  const reconciles = Math.round(Math.min(100, Math.max(0, weighted - total))) === score;
+  return {
+    weighted_dimension_score: Math.round(weighted * 10) / 10,
+    coverage_pct: coverage,
+    deductions,
+    points_deducted: total,
+    final_score: score,
+    reconciles,
+    ...(reconciles ? {} : { note: "A further adjustment (for example the input-attestation materiality policy) also applies; see the TCS-6 report." }),
+  };
+}
+
 function obligationsRegister(report, bundle) {
   const op = report.obligations_policy || {};
+  const walk = scoreWalk(report, bundle);
+  const oblPoints = walk ? walk.deductions.filter((d) => d.id === "obligation_visibility").reduce((s, d) => s + d.points, 0) : null;
   return {
     data: {
       items: ((bundle.obligations || {}).items || []).map((i) => ({ ...i })),
       obligations_total_usd: round2((report.headline || {}).obligations_usd),
       disclosed_commitments: op.disclosed_commitments || [],
       visibility: { status: op.obligations_status || (report.data_coverage || {}).obligation_visibility_status || null, materiality: op.materiality || null,
-        checklist: op.materiality_reasons || [], penalty_policy: op.penalty_policy || null, score_effect_points: op.score_effect_points ?? null },
+        checklist: op.materiality_reasons || [], penalty_policy: op.penalty_policy || null,
+        points_deducted_from_score: oblPoints,
+        ...(op.policy_id ? { change_vs_previous_rule_points: op.score_effect_points ?? null,
+          change_vs_previous_rule_note: `How the overall score differs under ${op.policy_id} from the earlier flat obligations rule; not the deduction itself (see points_deducted_from_score).` } : {}) },
+      score_walk: walk,
     },
   };
 }

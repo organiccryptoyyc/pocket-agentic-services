@@ -53,12 +53,13 @@ function report(b, over = {}) {
     headline: { gross_adjusted_treasury_usd: 1234567.891, obligations_usd: 250000 },
     overall_score: { score: 55, status: "provisional" },
     attestation: { verification_status: "valid", verification_detail: "signature verified with key tcs6-attest-test", payload: { attestation_id: "att-1", evidence_manifest_hash: "sha256:00", review_required: false, review_items: [] } },
-    obligations_policy: { obligations_status: "partial", materiality: "material", materiality_reasons: ["streams not covered"], penalty_policy: "tcs6-obligations/1.0", score_effect_points: -10, disclosed_commitments: [] },
+    obligations_policy: { policy_id: "tcs6-obligations/1.0", obligations_status: "partial", materiality: "material", materiality_reasons: ["streams not covered"], penalty_policy: "10 points once (gap material)", score_effect_points: 0, disclosed_commitments: [] },
     data_gaps: [{ field: "D5", reason: "no flows", remediation: "curate" }],
-    hard_gates: [{ id: "entity_identity", status: "pass", effect: "x" }, { id: "obligations", status: "partial", effect: "y" }],
+    hard_gates: [{ id: "entity_identity", status: "pass", effect: "x" }, { id: "obligation_visibility", status: "fail", effect: "Obligations partially visible; provisional score only, 10 points deducted because the gap is material. Under tcs6-obligations/1.0: streams not covered (material)." }],
     capital_perimeter: { known_perimeter_gaps: ["foundation wallets not in scope"] },
     risks: [{ id: "liquidation_risk", description: "loan close to liquidation" }, { id: "governance", description: "low turnout" }],
-    dimensions: [{ id: "D2", primary_metrics: [{ name: "tier_0_to_1_hqla_usd", value: 1000000 }, { name: "liquidity_runway_months", value: 12 }] }],
+    dimensions: [{ id: "D1", weight_pct: 50, score: 80, primary_metrics: [] }, { id: "D2", weight_pct: 50, score: 50, primary_metrics: [{ name: "tier_0_to_1_hqla_usd", value: 1000000 }, { name: "liquidity_runway_months", value: 12 }] },
+      { id: "D5", weight_pct: 15, score: null, primary_metrics: [] }],
     disclaimer: "Research, not investment advice.",
     ...over,
   };
@@ -153,7 +154,10 @@ test("obligations, exit liquidity, reconciliation and unresolved items carry the
   const get = (n) => D.section({ dossier_id: p.dossier_id, section: n }).data;
   const o = get("obligations_register");
   assert.strictEqual(o.items[0].id, "LOAN");
-  assert.strictEqual(o.visibility.score_effect_points, -10);
+  assert.strictEqual(o.visibility.points_deducted_from_score, 10);
+  assert.strictEqual(o.visibility.change_vs_previous_rule_points, 0);
+  assert.match(o.visibility.change_vs_previous_rule_note, /not the deduction itself/);
+  assert.deepStrictEqual({ w: o.score_walk.weighted_dimension_score, d: o.score_walk.points_deducted, f: o.score_walk.final_score, ok: o.score_walk.reconciles }, { w: 65, d: 10, f: 55, ok: true });
   const e = get("exit_liquidity");
   assert.deepStrictEqual(e.restricted_positions.map((x) => x.symbol), ["TOK"]);
   assert.strictEqual(e.tier_0_1_liquid_usd, 1000000);
@@ -163,7 +167,7 @@ test("obligations, exit liquidity, reconciliation and unresolved items carry the
   assert.strictEqual(r.reconciliation_pct, 96);
   assert.strictEqual(r.sources[0].source_ref, "OWN");
   const u = get("unresolved_items");
-  assert.deepStrictEqual(u.failed_gates.map((g) => g.id), ["obligations"]);
+  assert.deepStrictEqual(u.failed_gates.map((g) => g.id), ["obligation_visibility"]);
   assert.deepStrictEqual(u.perimeter_gaps, ["foundation wallets not in scope"]);
 });
 
