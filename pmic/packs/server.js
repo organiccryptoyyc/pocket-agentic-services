@@ -194,6 +194,7 @@ async function brief(v, { horizon, entity, countries }) {
         .filter((e) => String(e.event_time) >= now)
         .sort((a, b) => String(a.event_time).localeCompare(String(b.event_time))).slice(0, 20);
     }
+    if ((v.extras || []).includes("fed_consensus")) out.fed_consensus = V.fedConsensus(out, members, out.upcoming_events);
     return out;
   }
   if (v.kind === "entity_composite") {

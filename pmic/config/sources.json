@@ -425,6 +425,18 @@
       "notes": "Public domain, no key. Scheduled release dates from the BLS and BEA calendar feeds, kept as events; the number of major releases in the next 30 days is a daily snapshot."
     },
     {
+      "source_id": "polymarket",
+      "name": "Polymarket Gamma API (prediction markets): Fed rate decisions",
+      "homepage": "https://docs.polymarket.com",
+      "terms_url": "https://polymarket.com/tos",
+      "tier": 2,
+      "reliability_score": 80,
+      "cadence_minutes": 360,
+      "key_env": null,
+      "required_key": false,
+      "notes": "Public API, no key. Fed Decision markets under tag fed-rates: next-meeting odds of a cut, hold and hike and the implied change (bp) as daily snapshots; every open meeting as an event with its latest odds. Same upstream as prediction-market-intel. Market odds, not a forecast; no affiliation with Polymarket."
+    },
+    {
       "source_id": "oecd",
       "name": "OECD Data Explorer (SDMX API)",
       "homepage": "https://data-explorer.oecd.org/",

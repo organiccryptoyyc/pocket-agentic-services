@@ -38,6 +38,23 @@ function ftdText(ym, half, now) {
 
 function batch4(u, init, now, json) {
   const t = now.getTime();
+  if (u.host === "gamma-api.polymarket.com" && u.pathname === "/events") {
+    // Fed Decision events under tag fed-rates, as seen live on 2026-10-27: one Yes/No market per
+    // outcome, outcomes and prices as JSON-encoded strings. One meeting already past is ignored.
+    // Future meetings count from the real clock (the pack keeps upcoming meetings by real time),
+    // the past one from the earlier of the two clocks, so both the collector and the pack agree.
+    const ev = (slug, title, days, prices) => ({
+      slug, title, endDate: new Date((days < 0 ? Math.min(t, Date.now()) : Math.max(t, Date.now())) + days * DAY).toISOString().replace(".000Z", "Z"), volume24hr: 7210625.55,
+      markets: [["50+ bps decrease", prices[0]], ["25 bps decrease", prices[1]], ["No change", prices[2]], ["25 bps increase", prices[3]], ["50+ bps increase", prices[4]]]
+        .map(([g, p]) => ({ groupItemTitle: g, question: `Fed ${g}?`, outcomes: '["Yes", "No"]', outcomePrices: JSON.stringify([String(p), String(Math.round((1 - p) * 10000) / 10000)]), closed: false })),
+    });
+    return json([
+      ev("fed-decision-in-september-1", "Fed Decision in September?", -30, [0, 0, 1, 0, 0]),
+      ev("fed-decision-in-december-2", "Fed Decision in December?", 44, [0.0095, 0.0065, 0.215, 0.75, 0.0265]),
+      ev("fed-decision-in-october-1", "Fed Decision in October?", 2, [0.0005, 0.0005, 0.9365, 0.065, 0.0035]),
+      { slug: "how-many-fed-rate-cuts-in-2026", title: "How many Fed rate cuts in 2026?", endDate: new Date(Math.max(t, Date.now()) + 60 * DAY).toISOString(), markets: [] },
+    ]);
+  }
   if (u.host === "data.pocket.network") {
     const q = JSON.parse(init.body).query;
     const data = {};

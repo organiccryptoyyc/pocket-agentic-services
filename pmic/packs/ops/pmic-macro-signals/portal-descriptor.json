@@ -1,7 +1,7 @@
 {
   "serviceId": "pmic-macro-signals",
   "displayName": "PMIC Macro and Markets Signals",
-  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
+  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator. The fed-consensus brief sets Polymarket's odds for the next FOMC meeting beside the bond market (2-year yield vs fed funds) and the inflation and jobs data, and says whether they agree. POST /v1/brief with a small JSON body for one scored, cited brief; POST /v1/overview for all of them at once. Results vary as public data updates (5-minute cache). Research signal, not investment advice. Pay per request in USDC; no account, no API key.",
   "category": "finance",
   "protocols": [
     "rest"
@@ -17,6 +17,7 @@
           "inflation",
           "labor",
           "rates",
+          "fed-consensus",
           "credit-stress",
           "commodities",
           "global-compare",
@@ -230,6 +231,199 @@
                 }
               }
             }
+          }
+        }
+      },
+      "fed_consensus": {
+        "type": "object",
+        "description": "fed-consensus brief only: three independent views of the Fed's next move side by side.",
+        "properties": {
+          "prediction_market": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "meeting": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "market_closes_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "p_cut": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "p_hold": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "p_hike": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "implied_change_bp": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Probability-weighted change in basis points (50+ counted as 50)."
+              },
+              "most_likely": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "volume_24h_usd": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "observed_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "stale": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "lean": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "cut",
+                  "hold",
+                  "hike",
+                  null
+                ],
+                "description": "cut, hold or hike; null when that view has no reading."
+              }
+            }
+          },
+          "bond_market": {
+            "type": "object",
+            "properties": {
+              "policy_rate_pct": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "treasury_2y_pct": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "spread_2y_minus_policy_bp": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "lean": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "cut",
+                  "hold",
+                  "hike",
+                  null
+                ],
+                "description": "cut, hold or hike; null when that view has no reading."
+              },
+              "horizon": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "score": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "lean": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "cut",
+                  "hold",
+                  "hike",
+                  null
+                ],
+                "description": "cut, hold or hike; null when that view has no reading."
+              }
+            }
+          },
+          "prediction_vs_bond": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "aligned",
+              "mixed",
+              "diverging",
+              null
+            ]
+          },
+          "agreement": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "aligned",
+              "mixed",
+              "diverging",
+              null
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
           }
         }
       }

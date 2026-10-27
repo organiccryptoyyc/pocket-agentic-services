@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Macro and Markets Signals",
-    "version": "0.6.0",
-    "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator."
+    "version": "0.7.0",
+    "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator. The fed-consensus brief sets Polymarket's odds for the next FOMC meeting beside the bond market (2-year yield vs fed funds) and the inflation and jobs data, and says whether they agree."
   },
   "servers": [
     {
@@ -67,6 +67,7 @@
                       "inflation",
                       "labor",
                       "rates",
+                      "fed-consensus",
                       "credit-stress",
                       "commodities",
                       "global-compare",
@@ -641,6 +642,68 @@
           },
           "attestation": {
             "$ref": "#/components/schemas/Attestation"
+          },
+          "fed_consensus": {
+            "type": "object",
+            "description": "fed-consensus brief only: three independent views of the Fed's next move side by side.",
+            "properties": {
+              "prediction_market": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string"
+                  },
+                  "meeting": {},
+                  "market_closes_at": {},
+                  "p_cut": {},
+                  "p_hold": {},
+                  "p_hike": {},
+                  "implied_change_bp": {
+                    "description": "Probability-weighted change in basis points (50+ counted as 50)."
+                  },
+                  "most_likely": {},
+                  "volume_24h_usd": {},
+                  "observed_at": {},
+                  "stale": {},
+                  "url": {},
+                  "lean": {
+                    "description": "cut, hold or hike; null when that view has no reading."
+                  }
+                }
+              },
+              "bond_market": {
+                "type": "object",
+                "properties": {
+                  "policy_rate_pct": {},
+                  "treasury_2y_pct": {},
+                  "spread_2y_minus_policy_bp": {},
+                  "lean": {
+                    "description": "cut, hold or hike; null when that view has no reading."
+                  },
+                  "horizon": {
+                    "type": "string"
+                  }
+                }
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "score": {},
+                  "label": {},
+                  "lean": {
+                    "description": "cut, hold or hike; null when that view has no reading."
+                  }
+                }
+              },
+              "prediction_vs_bond": {},
+              "agreement": {},
+              "summary": {
+                "type": "string"
+              },
+              "method": {
+                "type": "string"
+              }
+            }
           }
         },
         "required": [

@@ -54,6 +54,7 @@ const ADAPTERS = {
   sec13f: require("./adapters/sec13f"),
   chainrpc: require("./adapters/chainrpc"),
   cftc: require("./adapters/cftc"),
+  polymarket: require("./adapters/polymarket"),
 };
 
 const DAY = 86400000;

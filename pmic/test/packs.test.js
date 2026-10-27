@@ -77,7 +77,7 @@ test("probes: version, health and the PSM healthz path", async () => {
 
 test("macro bundle: every vertical is a scored, cited brief", async () => {
   const list = (await call("pmic-macro-signals", "POST", "/v1/verticals", {})).json;
-  assert.equal(list.count, 26);
+  assert.equal(list.count, 27);
   for (const id of ["housing", "consumer", "country-risk", "health-systems", "education", "yield-curve", "bank-health", "global-rates-fx"]) assert.ok(list.verticals.some((v) => v.id === id), `batch 2 vertical ${id}`);
   for (const v of list.verticals) {
     const r = await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: v.id });
@@ -115,7 +115,7 @@ test("macro bundle: every vertical is a scored, cited brief", async () => {
 
 test("macro overview and inflation calculator", async () => {
   const o = (await call("pmic-macro-signals", "POST", "/v1/overview", {})).json;
-  assert.equal(o.count, 26);
+  assert.equal(o.count, 27);
   assert.ok(o.briefs.every((b) => b.status === "ok"));
   const range = (await call("pmic-macro-signals", "POST", "/v1/inflation/adjust", { amount: 100, from: "1990-01" }));
   assert.equal(range.status, 400);
@@ -125,6 +125,43 @@ test("macro overview and inflation calculator", async () => {
   assert.equal(r.status, 200);
   assert.equal(r.json.to, m[2]);
   assert.ok(r.json.adjusted > 0 && r.json.citation_url.includes("CPIAUCSL"));
+});
+
+test("fed consensus: prediction market, bond market and data side by side (plan 3.2)", async () => {
+  const r = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "fed-consensus" })).json;
+  checkBrief(r, "pmic-macro-signals");
+  const f = r.fed_consensus;
+  // The stub's next meeting is October (hold 93.7%, small hike odds), so the market leans to no change.
+  assert.equal(f.prediction_market.meeting, "Fed Decision in October?");
+  assert.equal(f.prediction_market.most_likely, "No change");
+  assert.equal(f.prediction_market.lean, "hold");
+  assert.ok(Math.abs(f.prediction_market.p_cut + f.prediction_market.p_hold + f.prediction_market.p_hike - 1) < 0.001);
+  assert.equal(f.prediction_market.stale, Date.now() - Date.parse(f.prediction_market.observed_at) > 48 * 3600000, "stale follows the 48 h rule (the test hub collected on 2026-10-04)");
+  assert.ok(/^https:\/\/polymarket\.com\/event\//.test(f.prediction_market.url));
+  assert.ok(Number.isFinite(f.bond_market.policy_rate_pct) && Number.isFinite(f.bond_market.treasury_2y_pct));
+  assert.equal(f.bond_market.spread_2y_minus_policy_bp, Math.round((f.bond_market.treasury_2y_pct - f.bond_market.policy_rate_pct) * 100));
+  assert.ok(["cut", "hold", "hike"].includes(f.bond_market.lean));
+  assert.equal(f.data.score, r.score);
+  assert.ok(["aligned", "mixed", "diverging"].includes(f.agreement));
+  assert.ok(f.summary.startsWith("Prediction market: Fed Decision in October? priced for no change"));
+  assert.deepEqual(r.upcoming_events.map((e) => e.detail.title), ["Fed Decision in October?", "Fed Decision in December?"], "soonest first, past meeting gone");
+  assert.deepEqual(r.inputs.map((m) => m.series_id).sort(), ["fred:CPILFESL", "fred:PAYEMS", "fred:UNRATE"], "the score reads the data only");
+});
+
+test("fed consensus leans and agreement, from the numbers alone", () => {
+  const V = require("../packs/lib/verticals");
+  const m = (id, v) => ({ series_id: id, value: { current: v } });
+  const ev = (implied, observed) => [{ event_type: "fed_decision_market", detail: { title: "Fed Decision in March?", implied_change_bp: implied, p_cut: 0.6, p_hold: 0.4, p_hike: 0, outcomes: [{ outcome: "25 bps decrease", p: 0.6 }, { outcome: "No change", p: 0.4 }], observed_at: observed, url: "https://polymarket.com/event/x" } }];
+  const now = Date.parse("2027-03-01T00:00:00Z");
+  const cutBoth = V.fedConsensus({ score: 65, label: "data lean toward cuts" }, [m("fred:DFF", 4.33), m("fred:DGS2", 3.9)], ev(-15, "2027-02-28T12:00:00Z"), now);
+  assert.deepEqual([cutBoth.prediction_market.lean, cutBoth.bond_market.lean, cutBoth.data.lean, cutBoth.agreement], ["cut", "cut", "cut", "aligned"]);
+  assert.equal(cutBoth.bond_market.spread_2y_minus_policy_bp, -43);
+  const split = V.fedConsensus({ score: 30, label: "data lean toward hikes" }, [m("fred:DFF", 4.33), m("fred:DGS2", 3.9)], ev(-15, "2027-02-20T00:00:00Z"), now);
+  assert.equal(split.agreement, "diverging");
+  assert.equal(split.prediction_vs_bond, "aligned");
+  assert.equal(split.prediction_market.stale, true, "odds older than 48 h");
+  const thin = V.fedConsensus({ score: null, label: null }, [m("polymarket:implied_change_bp", 2)], [], now);
+  assert.deepEqual([thin.prediction_market.lean, thin.bond_market.lean, thin.data.lean, thin.agreement], ["hold", null, null, null], "falls back to the snapshot series; no guesses");
 });
 
 test("company bundle: fundamentals and filing risk need a covered entity", async () => {

@@ -351,4 +351,67 @@ function valueOf(s) {
   return typeof v === "number" ? v : Number(v);
 }
 
-module.exports = { VERSION, scoreMember, combine, filingRisk, countryTable, peerTable, labelFor, trendWord, fromPercentile };
+// Fed consensus check (plan 3.2): three independent views of the Fed's next move side by side.
+// prediction market: the soonest open us-fomc market event (Polymarket odds, normalized), falling
+//   back to the daily snapshot series; lean from the implied change (|bp| >= 10 leans).
+// bond market: 2-year Treasury yield minus the effective fed funds rate; |spread| >= 25 bp leans.
+// data: the brief's own score (60+ leans to cuts, 40 or less to hikes).
+const FED_PM_LEAN_BP = 10;
+const FED_BOND_LEAN_BP = 25;
+const FED_STALE_HOURS = 48;
+const LEAN_WORD = { cut: "a cut", hold: "no change", hike: "a hike" };
+
+function leanOf(x, band) {
+  if (x === null || x === undefined || !Number.isFinite(x)) return null;
+  return x <= -band ? "cut" : x >= band ? "hike" : "hold";
+}
+
+function fedConsensus(brief, members, upcoming, now = Date.now()) {
+  const cur = (id) => {
+    const m = members.find((x) => x.series_id === id);
+    return m && m.value && Number.isFinite(Number(m.value.current)) ? Number(m.value.current) : null;
+  };
+  const ev = (upcoming || []).find((e) => e.event_type === "fed_decision_market" && e.detail);
+  const d = ev ? ev.detail : null;
+  const implied = d ? d.implied_change_bp : cur("polymarket:implied_change_bp");
+  const observed = d ? d.observed_at || null : null;
+  const prediction = {
+    source: "Polymarket",
+    meeting: d ? d.title : null,
+    market_closes_at: d ? d.closes_at : null,
+    p_cut: d ? d.p_cut : cur("polymarket:p_cut"),
+    p_hold: d ? d.p_hold : cur("polymarket:p_hold"),
+    p_hike: d ? d.p_hike : cur("polymarket:p_hike"),
+    implied_change_bp: implied,
+    most_likely: d && Array.isArray(d.outcomes) && d.outcomes.length ? d.outcomes.reduce((a, b) => (b.p > a.p ? b : a)).outcome : null,
+    volume_24h_usd: d ? d.volume_24h_usd : null,
+    observed_at: observed,
+    stale: observed ? now - Date.parse(observed) > FED_STALE_HOURS * 3600000 : null,
+    url: d ? d.url : null,
+    lean: leanOf(implied, FED_PM_LEAN_BP),
+  };
+  const dff = cur("fred:DFF");
+  const y2 = cur("fred:DGS2");
+  const spread = dff !== null && y2 !== null ? Math.round((y2 - dff) * 100) : null;
+  const bond = { policy_rate_pct: dff, treasury_2y_pct: y2, spread_2y_minus_policy_bp: spread, lean: leanOf(spread, FED_BOND_LEAN_BP), horizon: "about two years" };
+  const data = { score: brief.score, label: brief.label, lean: brief.score === null ? null : brief.score >= 60 ? "cut" : brief.score <= 40 ? "hike" : "hold" };
+  const leans = [prediction.lean, bond.lean, data.lean].filter(Boolean);
+  const agree = (a, b) => (!a || !b ? null : a === b ? "aligned" : (a === "cut" && b === "hike") || (a === "hike" && b === "cut") ? "diverging" : "mixed");
+  const overall = leans.length < 2 ? null : leans.every((l) => l === leans[0]) ? "aligned" : leans.includes("cut") && leans.includes("hike") ? "diverging" : "mixed";
+  const parts = [];
+  if (prediction.lean) parts.push(`Prediction market: ${prediction.meeting || "next meeting"} priced for ${LEAN_WORD[prediction.lean]} (implied ${implied > 0 ? "+" : ""}${implied} bp${prediction.p_hold !== null ? `; hold ${Math.round(prediction.p_hold * 100)}%` : ""}).`);
+  if (bond.lean) parts.push(`Bond market: 2-year at ${y2}% vs policy ${dff}% (${spread > 0 ? "+" : ""}${spread} bp), leaning to ${LEAN_WORD[bond.lean]} over about two years.`);
+  if (data.lean) parts.push(`Data: ${data.label} (score ${data.score}).`);
+  if (overall) parts.push(overall === "aligned" ? "All available views agree." : overall === "diverging" ? "The views point in opposite directions: read the drivers." : "The views partly agree.");
+  return {
+    prediction_market: prediction,
+    bond_market: bond,
+    data,
+    prediction_vs_bond: agree(prediction.lean, bond.lean),
+    agreement: overall,
+    summary: parts.join(" "),
+    method: `Leans: prediction market from the implied change (|bp| >= ${FED_PM_LEAN_BP}), bond market from the 2-year minus fed funds spread (|bp| >= ${FED_BOND_LEAN_BP}), data from this brief's score (60+ cuts, 40 or less hikes). Odds older than ${FED_STALE_HOURS} h are marked stale.`,
+  };
+}
+
+module.exports = { VERSION, scoreMember, combine, filingRisk, countryTable, peerTable, labelFor, trendWord, fromPercentile, fedConsensus };

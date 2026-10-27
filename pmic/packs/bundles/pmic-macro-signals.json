@@ -2,9 +2,9 @@
   "_comment": "One file per on-chain service. Related verticals are bundled into one service so they share one registration fee and one container. Member scores: when a member's own polarity matches (or no 'direction' is set) the hub's composite_score is used; when 'direction' differs from the hub's polarity (for example a neutral price series read as cost pressure), the pack scores it from the percentile in that direction. Neutral members without a direction are reported under 'watch', not averaged.",
   "service_id": "pmic-macro-signals",
   "display_name": "PMIC Macro and Markets Signals",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "category": "finance",
-  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator.",
+  "description": "Scored US and global macro briefs from official public data (FRED, BLS, BEA, EIA, Census, TreasuryDirect, ECB, FDIC, CFPB, World Bank, IMF, OECD), an economic release calendar (BLS, BEA), plus Pocket Network health. Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input. Includes a CPI inflation calculator. The fed-consensus brief sets Polymarket's odds for the next FOMC meeting beside the bond market (2-year yield vs fed funds) and the inflation and jobs data, and says whether they agree.",
   "default_horizon": "90d",
   "cache_seconds": 300,
   "hub_scope": [
@@ -22,7 +22,8 @@
     {"source_id": "pokt"},
     {"source_id": "imf"},
     {"source_id": "oecd"},
-    {"source_id": "releases"}
+    {"source_id": "releases"},
+    {"source_id": "polymarket"}
   ],
   "verticals": [
     {
@@ -89,6 +90,28 @@
         {"series_id": "fred:DGS2", "direction": -1},
         {"series_id": "fred:DGS10", "direction": -1},
         {"series_id": "fred:T10Y2Y", "weight": 2}
+      ]
+    },
+    {
+      "id": "fed-consensus",
+      "title": "Fed consensus check",
+      "question": "Do prediction markets, the bond market and the economic data agree on the Fed's next move?",
+      "kind": "composite",
+      "note": "The score reads the data only: higher means the inflation and jobs data lean toward rate cuts (core inflation low and unemployment high against their own recent history, payroll growth weak), lower means they lean toward hikes. fed_consensus puts three independent views side by side: the prediction market (Polymarket odds for the next FOMC meeting, normalized; implied change in bp), the bond market (2-year Treasury yield minus the effective fed funds rate: a 2-year well below the policy rate prices cuts over the next two years) and this data lean, and says whether they agree. Market odds are not a forecast; the 2-year spread covers a longer horizon than one meeting.",
+      "labels": {"high": "data lean toward cuts", "mid": "balanced", "low": "data lean toward hikes"},
+      "trend_words": {"up": "shifting toward cuts", "down": "shifting toward hikes"},
+      "extras": ["fed_consensus"],
+      "upcoming_entities": ["us-fomc"],
+      "members": [
+        {"series_id": "fred:CPILFESL", "direction": -1, "weight": 2},
+        {"series_id": "fred:UNRATE", "direction": 1, "weight": 2},
+        {"series_id": "fred:PAYEMS", "direction": -1},
+        {"series_id": "fred:DFF", "direction": 0},
+        {"series_id": "fred:DGS2", "direction": 0},
+        {"series_id": "polymarket:implied_change_bp", "direction": 0},
+        {"series_id": "polymarket:p_cut", "direction": 0},
+        {"series_id": "polymarket:p_hold", "direction": 0},
+        {"series_id": "polymarket:p_hike", "direction": 0}
       ]
     },
     {

@@ -195,3 +195,31 @@ test("tsa: a week whose days are not all published yet is left out", async () =>
   assert.equal(w[w.length - 1].t, "2026-09-21", "the week of 9/28 is missing Oct 2-4");
   assert.ok(w.every((o) => o.v > 1.5e7), "no short weeks");
 });
+
+test("polymarket: next Fed meeting odds as daily snapshots, every open meeting as an event, past meetings ignored", async () => {
+  const { db, summary } = await run(["polymarket"]);
+  for (const s of summary.sources) assert.equal(s.failed.length, 0, `${s.source_id}: ${JSON.stringify(s.failed[0])}`);
+  const v = (id) => obs(db, id)[0].v;
+  // October (2 days out) is next, not December (sorted by close), not the September meeting already past.
+  assert.equal(obs(db, "polymarket:p_hold").length, 1, "a daily snapshot");
+  assert.ok(Math.abs(v("polymarket:p_cut") + v("polymarket:p_hold") + v("polymarket:p_hike") - 1) < 0.001, "normalized to 1");
+  assert.ok(v("polymarket:p_hold") > 0.93 && v("polymarket:p_hike") > 0.06);
+  assert.ok(v("polymarket:implied_change_bp") > 1 && v("polymarket:implied_change_bp") < 3, "0.065 x 25 + 0.0035 x 50, normalized");
+  const evs = db.prepare("SELECT title, event_time, detail_json FROM events WHERE event_type = 'fed_decision_market' ORDER BY event_time").all();
+  assert.deepEqual(evs.map((e) => e.title.slice(12, 37)), ["Fed Decision in October? ", "Fed Decision in December?"]);
+  const dec = JSON.parse(evs[1].detail_json);
+  assert.equal(dec.outcomes.length, 5);
+  assert.ok(dec.p_hike > 0.77 && dec.implied_change_bp > 19, "December leans to a hike");
+});
+
+test("polymarket: outcome titles map to basis points; unknown titles are skipped, not guessed", () => {
+  const { bpsOf, meetingOf } = require("../lib/adapters/polymarket");
+  assert.deepEqual(["50+ bps decrease", "25 bps decrease", "No change", "25 bps increase", "50+ bps increase", "75 bps decrease"].map(bpsOf), [-50, -25, 0, 25, 50, null]);
+  const m = (g, p) => ({ groupItemTitle: g, outcomes: '["Yes","No"]', outcomePrices: JSON.stringify([String(p), String(1 - p)]) });
+  const one = meetingOf({ slug: "fed-decision-in-march-x", title: "Fed Decision in March?", endDate: "2027-03-18T04:00:00Z",
+    markets: [m("25 bps decrease", 0.5), m("No change", 0.4), m("25 bps increase", 0.1), m("Something else", 0.2)] });
+  assert.deepEqual(one.unknown_outcomes, ["Something else"]);
+  assert.equal(one.implied_change_bp, -10);
+  assert.equal(meetingOf({ slug: "how-many-fed-rate-cuts-in-2026", markets: [] }), null, "only fed-decision-in-* events");
+  assert.equal(meetingOf({ slug: "fed-decision-in-x", markets: [m("No change", 1)] }), null, "fewer than 3 outcomes is not a meeting");
+});
