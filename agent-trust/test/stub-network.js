@@ -53,6 +53,10 @@ global.fetch = async function stubFetch(url, init) {
     return jsonResponse({ total: 0, results: [] });
   }
   if (u.hostname.endsWith(".blockscout.com")) {
+    // Addresses starting 0x5: the explorer is down (HTML 500), so eth must fall back to RPC.
+    if (u.pathname.toLowerCase().includes("/addresses/0x5")) {
+      return { ok: false, status: 500, text: async () => "<html>Internal Server Error</html>" };
+    }
     if (u.pathname.endsWith("/counters")) {
       return jsonResponse({ transactions_count: "78353", token_transfers_count: "403365" });
     }
@@ -61,6 +65,21 @@ global.fetch = async function stubFetch(url, init) {
       is_contract: true, is_verified: true, is_scam: false, reputation: "ok",
       public_tags: [], ens_domain_name: "vitalik.eth", coin_balance: "6712597953701629485",
     });
+  }
+  if (u.hostname.endsWith(".api.pocket.network")) {
+    // JSON-RPC fixtures keyed by the address's first hex digit after 0x:
+    // 1 and 5 active EOA, 2 EIP-7702 delegated EOA, 3 contract, 0 no activity, 4 RPC error.
+    const { method, params } = JSON.parse(init.body);
+    const kind = params[0].slice(2, 3);
+    if (kind === "4") return jsonResponse({ jsonrpc: "2.0", id: 1, error: { code: -32000, message: "stub: upstream error" } });
+    const fixtures = {
+      "1": { eth_getCode: "0x", eth_getTransactionCount: "0x46", eth_getBalance: "0xde0b6b3a7640000" },
+      "2": { eth_getCode: "0xef01005a7fc11397e9a8ad41bf10bf13f22b0a63f96f6d", eth_getTransactionCount: "0x5", eth_getBalance: "0x0" },
+      "3": { eth_getCode: "0x6080604052", eth_getTransactionCount: "0x1", eth_getBalance: "0x0" },
+      "0": { eth_getCode: "0x", eth_getTransactionCount: "0x0", eth_getBalance: "0x0" },
+    };
+    fixtures["5"] = fixtures["1"];
+    return jsonResponse({ jsonrpc: "2.0", id: 1, result: fixtures[kind][method] });
   }
   if (realFetch) return realFetch(url, init);
   throw new Error(`stub-network: no fixture for ${url}`);

@@ -183,21 +183,34 @@ async function screeningSearch(query) {
   };
 }
 
-// --- EVM address reputation via public Blockscout instances ------------------
+// --- EVM address reputation --------------------------------------------------
+// eth: the public Blockscout instance (full explorer signals). base, arbitrum,
+// polygon: their public Blockscout instances now sit behind a bot check and no
+// free explorer API covers them, so those chains read basic on-chain facts
+// (code, nonce, balance) from Pocket Network's public RPC instead. eth falls
+// back to the same RPC when its explorer does not answer.
 
 const BLOCKSCOUT_HOSTS = {
   eth: "eth.blockscout.com",
-  base: "base.blockscout.com",
-  arbitrum: "arbitrum.blockscout.com",
-  polygon: "polygon.blockscout.com",
 };
+
+const POCKET_RPC_HOSTS = {
+  eth: "eth.api.pocket.network",
+  base: "base.api.pocket.network",
+  arbitrum: "arb-one.api.pocket.network",
+  polygon: "poly.api.pocket.network",
+};
+
+const SUPPORTED_CHAINS = Object.keys(POCKET_RPC_HOSTS);
 
 const EVM_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 
-async function blockscoutAddress(chain, address) {
-  const host = BLOCKSCOUT_HOSTS[chain];
-  if (!host) {
-    const e = new UpstreamError(`unsupported chain '${chain}'; supported: ${Object.keys(BLOCKSCOUT_HOSTS).join(", ")}`);
+// EIP-7702: an EOA that delegates to contract code carries 0xef0100 || 20-byte address.
+const EIP7702_PREFIX = "0xef0100";
+
+function validateChainAndAddress(chain, address) {
+  if (!SUPPORTED_CHAINS.includes(chain)) {
+    const e = new UpstreamError(`unsupported chain '${chain}'; supported: ${SUPPORTED_CHAINS.join(", ")}`);
     e.isClientError = true;
     throw e;
   }
@@ -206,9 +219,60 @@ async function blockscoutAddress(chain, address) {
     e.isClientError = true;
     throw e;
   }
+}
+
+async function rpcCall(host, method, params) {
+  const res = await withRetry(() => fetchJSON(`https://${host}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  }));
+  if (!res.ok || res.body.error || typeof res.body.result !== "string") {
+    const detail = res.body.error ? JSON.stringify(res.body.error).slice(0, 200) : `HTTP ${res.status}`;
+    throw new UpstreamError(`Pocket RPC (${host}) ${method} failed: ${detail}`);
+  }
+  return res.body.result;
+}
+
+async function rpcAddress(chain, address) {
+  validateChainAndAddress(chain, address);
+  const host = POCKET_RPC_HOSTS[chain];
+  const [code, nonceHex, balanceHex] = await Promise.all([
+    rpcCall(host, "eth_getCode", [address, "latest"]),
+    rpcCall(host, "eth_getTransactionCount", [address, "latest"]),
+    rpcCall(host, "eth_getBalance", [address, "latest"]),
+  ]);
+  const codeLc = code.toLowerCase();
+  const isDelegated = codeLc.startsWith(EIP7702_PREFIX) && codeLc.length === EIP7702_PREFIX.length + 40;
+  const isContract = codeLc !== "0x" && !isDelegated;
+  const nonce = Number(BigInt(nonceHex));
+  const balanceWei = BigInt(balanceHex).toString();
+  if (!isContract && !isDelegated && nonce === 0 && balanceWei === "0") return { found: false, chain, address };
+  return {
+    found: true,
+    chain,
+    address,
+    source_host: host,
+    is_contract: isContract,
+    is_delegated: isDelegated,
+    delegate_address: isDelegated ? "0x" + codeLc.slice(EIP7702_PREFIX.length) : null,
+    nonce,
+    coin_balance_wei: balanceWei,
+  };
+}
+
+async function blockscoutAddress(chain, address) {
+  validateChainAndAddress(chain, address);
+  const host = BLOCKSCOUT_HOSTS[chain];
+  if (!host) {
+    const e = new UpstreamError(`chain '${chain}' is not served by Blockscout here`);
+    e.isClientError = true;
+    throw e;
+  }
+  // One attempt only: a slow explorer falls back to Pocket RPC instead of retrying.
   const [addrRes, countersRes] = await Promise.all([
-    withRetry(() => fetchJSON(`https://${host}/api/v2/addresses/${address}`)),
-    withRetry(() => fetchJSON(`https://${host}/api/v2/addresses/${address}/counters`)),
+    withRetry(() => fetchJSON(`https://${host}/api/v2/addresses/${address}`), 1),
+    withRetry(() => fetchJSON(`https://${host}/api/v2/addresses/${address}/counters`), 1),
   ]);
   if (!addrRes.ok) {
     if (addrRes.status === 404) return { found: false, chain, address };
@@ -241,6 +305,9 @@ module.exports = {
   tlsCertInfo,
   screeningSearch,
   blockscoutAddress,
+  rpcAddress,
   BLOCKSCOUT_HOSTS,
+  POCKET_RPC_HOSTS,
+  SUPPORTED_CHAINS,
   EVM_ADDRESS_RE,
 };

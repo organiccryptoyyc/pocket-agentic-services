@@ -67,6 +67,46 @@ async function main() {
   const badChain = await req("/v1/reputation", { chain: "dogecoin", address: "x" });
   assert.strictEqual(badChain.status, 422);
 
+  const ethRep = await req("/v1/reputation", { chain: "eth", address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" });
+  assert.strictEqual(ethRep.status, 200);
+  assert.strictEqual(ethRep.body.coverage, "full");
+  assert.strictEqual(ethRep.body.is_verified, true);
+
+  const eoa = await req("/v1/reputation", { chain: "base", address: "0x1" + "a".repeat(39) });
+  assert.strictEqual(eoa.status, 200);
+  assert.strictEqual(eoa.body.coverage, "basic");
+  assert.strictEqual(eoa.body.outgoing_transactions_count, 70);
+  assert.strictEqual(eoa.body.is_contract, false);
+  assert.strictEqual(eoa.body.is_verified, null);
+  assert.strictEqual(eoa.body.coin_balance_wei, "1000000000000000000");
+  assert.ok(eoa.body.reputation_score > 0 && eoa.body.reputation_score <= 35);
+
+  const delegated = await req("/v1/reputation", { chain: "arbitrum", address: "0x2" + "b".repeat(39) });
+  assert.strictEqual(delegated.status, 200);
+  assert.strictEqual(delegated.body.is_delegated, true);
+  assert.strictEqual(delegated.body.is_contract, false);
+  assert.strictEqual(delegated.body.delegate_address, "0x5a7fc11397e9a8ad41bf10bf13f22b0a63f96f6d");
+
+  const contract = await req("/v1/reputation", { chain: "polygon", address: "0x3" + "c".repeat(39) });
+  assert.strictEqual(contract.status, 200);
+  assert.strictEqual(contract.body.is_contract, true);
+  assert.strictEqual(contract.body.is_delegated, false);
+
+  const empty = await req("/v1/reputation", { chain: "base", address: "0x0" + "d".repeat(39) });
+  assert.strictEqual(empty.status, 404);
+
+  const rpcDown = await req("/v1/reputation", { chain: "base", address: "0x4" + "e".repeat(39) });
+  assert.ok(rpcDown.status >= 400 && rpcDown.status < 500, "RPC failure must be a 4xx, never a 5xx");
+
+  const ethFallback = await req("/v1/reputation", { chain: "eth", address: "0x5" + "f".repeat(39) });
+  assert.strictEqual(ethFallback.status, 200);
+  assert.strictEqual(ethFallback.body.coverage, "basic");
+  assert.strictEqual(ethFallback.body.outgoing_transactions_count, 70);
+  assert.ok(ethFallback.body.reasons.some((x) => x.includes("did not answer")));
+
+  const badAddr = await req("/v1/reputation", { chain: "base", address: "0x123" });
+  assert.strictEqual(badAddr.status, 422);
+
   console.log("smoke: all assertions passed");
   process.exit(0);
 }

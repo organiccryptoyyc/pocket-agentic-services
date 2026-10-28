@@ -18,7 +18,7 @@ const checks = require("./lib/checks");
 const { cached } = require("./lib/net");
 
 const SERVICE = "agent-trust";
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const VERSION_PATH = "/v1/version";
 const HEALTH_PATH = "/v1/health";
 
@@ -204,18 +204,59 @@ async function handleSanctionsCheck(body) {
   return withMeta(value, { stale, ageMs });
 }
 
-// --- /v1/reputation: EVM address, via public Blockscout instances -----------
+// --- /v1/reputation: EVM address (eth via Blockscout, others via Pocket RPC) --
+
+function txActivityPoints(count) {
+  return count != null ? Math.min(35, Math.log10(1 + count) * 8) : 0;
+}
+
+// On-chain facts only: base / arbitrum / polygon always (no free explorer API),
+// eth when its explorer does not answer. Explorer-only signals are null and the
+// score can reach at most 35.
+async function rpcReputation(chain, address, explorerError = null) {
+  let r;
+  try {
+    r = await checks.rpcAddress(chain, address);
+  } catch (e) {
+    throw toClientError(e);
+  }
+  if (!r.found) throw new ClientError(404, "not_found", `no on-chain activity found for '${address}' on '${chain}'`);
+  const reasons = [];
+  const txPts = txActivityPoints(r.nonce);
+  if (txPts > 0) reasons.push(`${r.nonce} outgoing transaction${r.nonce === 1 ? "" : "s"} (account nonce) (+${txPts.toFixed(1)})`);
+  if (r.is_delegated) reasons.push(`EIP-7702 delegated account (wallet code delegated to ${r.delegate_address}); not a standalone contract (+0)`);
+  reasons.push(explorerError
+    ? `the ${chain} block explorer did not answer (${explorerError}); fell back to on-chain data only, so explorer signals (reputation flag, verified source, scam flag, public tags, ENS) are missing and this is a basic score (max 35)`
+    : `explorer signals (reputation flag, verified source, scam flag, public tags, ENS) are not available on ${chain} in this version (read from on-chain data only), so this is a basic score (max 35)`);
+  return {
+    chain, address,
+    reputation_score: Math.max(0, Math.min(100, Math.round(txPts * 10) / 10)),
+    reputation_score_scale: "0-100, higher is more trustworthy",
+    coverage: "basic",
+    score_max_possible: 35,
+    is_contract: r.is_contract, is_delegated: r.is_delegated, delegate_address: r.delegate_address,
+    is_verified: null, is_scam: null,
+    transactions_count: null, outgoing_transactions_count: r.nonce, token_transfers_count: null,
+    coin_balance_wei: r.coin_balance_wei,
+    public_tags: null, ens_name: null,
+    reasons,
+    note: `On-chain facts (code, nonce, balance) read from Pocket Network's public RPC (${r.source_host}). ` +
+      "Not a proprietary reputation database; a low score here means little activity, not a confirmed risk.",
+  };
+}
 
 async function handleReputation(body) {
   const chain = requireNonEmptyString(body, "chain").toLowerCase();
   const address = requireNonEmptyString(body, "address");
   const cacheKey = `reputation:${chain}:${address.toLowerCase()}`;
   const { value, stale, ageMs } = await cached(cacheKey, 300_000, async () => {
+    if (!checks.BLOCKSCOUT_HOSTS[chain]) return rpcReputation(chain, address);
     let r;
     try {
       r = await checks.blockscoutAddress(chain, address);
     } catch (e) {
-      throw toClientError(e);
+      if (e.isClientError) throw toClientError(e);
+      return rpcReputation(chain, address, e.message);
     }
     if (!r.found) throw new ClientError(404, "not_found", `no on-chain activity found for '${address}' on '${chain}'`);
     let score = 0;
@@ -224,7 +265,7 @@ async function handleReputation(body) {
     else {
       if (r.reputation === "ok") { score += 30; reasons.push("explorer reputation flag is 'ok' (+30)"); }
       if (r.is_verified) { score += 15; reasons.push("contract source is verified (+15)"); }
-      const txPts = r.transactions_count != null ? Math.min(35, Math.log10(1 + r.transactions_count) * 8) : 0;
+      const txPts = txActivityPoints(r.transactions_count);
       score += txPts;
       if (txPts > 0) reasons.push(`${r.transactions_count} transactions observed (+${txPts.toFixed(1)})`);
       if (r.public_tags.length > 0) { score += 10; reasons.push(`has public tag(s): ${r.public_tags.join(", ")} (+10)`); }
@@ -234,12 +275,14 @@ async function handleReputation(body) {
       chain, address,
       reputation_score: Math.max(0, Math.min(100, Math.round(score * 10) / 10)),
       reputation_score_scale: "0-100, higher is more trustworthy",
+      coverage: "full",
+      score_max_possible: 100,
       is_contract: r.is_contract, is_verified: r.is_verified, is_scam: r.is_scam,
       transactions_count: r.transactions_count, token_transfers_count: r.token_transfers_count,
       public_tags: r.public_tags, ens_name: r.ens_name,
       reasons,
-      note: "EVM chains only in this version (" + Object.keys(checks.BLOCKSCOUT_HOSTS).join(", ") + "); " +
-        "sourced from the chain's public Blockscout instance, not a proprietary reputation database.",
+      note: "Supported chains: " + checks.SUPPORTED_CHAINS.join(", ") + ". " +
+        "This one is sourced from the chain's public Blockscout instance, not a proprietary reputation database.",
     };
   });
   return withMeta(value, { stale, ageMs });

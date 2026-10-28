@@ -40,7 +40,7 @@ packages, adapted from the `pocket-service-builder` toolkit's own
 | `/v1/brand-verify` | A live TLS handshake to the domain (Node's built-in `tls` module) + RDAP | No |
 | `/v1/seller-trust` | Composite of the above two, for a resource-server URL | No |
 | `/v1/sanctions-check` | [U.S. Consolidated Screening List](https://www.trade.gov/consolidated-screening-list) (International Trade Administration, `data.trade.gov`) — aggregates OFAC's SDN list and 10+ other U.S. restricted-party lists | **Yes** — free signup at https://developer.trade.gov |
-| `/v1/reputation` | Public [Blockscout](https://www.blockscout.com) explorer instances for `eth`, `base`, `arbitrum`, `polygon` | No |
+| `/v1/reputation` | `eth`: the public [Blockscout](https://www.blockscout.com) explorer, falling back to Pocket Network's public RPC when it does not answer. `base`, `arbitrum`, `polygon`: Pocket Network's public RPC (`*.api.pocket.network`; their explorers' free APIs no longer cover these chains), returned with `coverage: "basic"` | No |
 
 ## Operator setup: the sanctions-check API key
 
@@ -109,6 +109,7 @@ npm start                                       # POCKET_NETWORK n/a here; needs
 See `../docs/registration-runbook.md` — service id `agent-trust`,
 confirmed conflict-free against both Pocket networks' live catalogs on
 2026-09-19. Because this backend needs broad outbound access (any domain a
-caller names, plus `rdap.org`, `data.trade.gov`, and the Blockscout hosts)
+caller names, plus `rdap.org`, `data.trade.gov`, `eth.blockscout.com`, and the
+`*.api.pocket.network` RPC hosts)
 rather than a fixed allowlist, review your hosting environment's egress
 policy before staking.
