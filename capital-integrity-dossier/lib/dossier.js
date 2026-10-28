@@ -214,8 +214,51 @@ function obligationsRegister(report, bundle) {
   };
 }
 
+// The collector's exit checks, as signed in the TCS-6 attestation (kind realizability_control): for lending
+// receipts and vault shares worth at least $100k it reads, at a pinned block, how much of the position the
+// protocol would release right now (Aave / Compound v3: the pool's cash; cTokens: getCash; ERC-4626:
+// maxRedeem) against what we count. The latest result per position is used, so a check can predate the bundle.
+const EXIT_RESULT = { passed: "the full position could be withdrawn now", unavailable: "could not be read: a data gap, not a pass" };
+
+function exitChecks(bundle) {
+  const checks = (((bundle.attestation || {}).payload || {}).checks || []).filter((c) => /^exit\.available:/.test(c.field || ""));
+  const roles = new Map(((bundle.governance || {}).wallet_controls || []).map((c) => [`${c.chain}:${c.address.toLowerCase()}`, c.role]));
+  const collected = Date.parse(bundle.collected_at);
+  const positions = checks.map((c) => {
+    const [, chain, token, holder] = c.field.split(":");
+    const ratio = c.status === "unavailable" ? null : ((c.measure || {}).exitable_ratio ?? null);
+    const value = (c.our_value || {}).usd ?? null;
+    const exitable = ratio !== null && value !== null ? round2(value * ratio) : null;
+    const ageH = Math.round((collected - Date.parse(c.observed_at)) / 3600000);
+    return {
+      label: c.label, chain, token, holder, holder_role: roles.get(`${chain}:${holder}`) || null, method: c.source, status: c.status,
+      result: EXIT_RESULT[c.status] || (ratio !== null ? `${round2(ratio * 100)}% could be withdrawn now` : c.status),
+      exitable_ratio: ratio, value_at_check_usd: round2(value), exitable_now_usd: exitable, shortfall_usd: exitable === null ? null : round2(value - exitable),
+      chain_id: c.chain_id ?? null, block_number: c.block_number ?? null, block_hash: c.block_hash || null, observed_at: c.observed_at,
+      ...(ageH > 24 ? { observed_hours_before_snapshot: ageH } : {}),
+      evidence_hash: c.evidence_hash || null,
+    };
+  }).sort((a, b) => (b.value_at_check_usd || 0) - (a.value_at_check_usd || 0));
+  const sum = (xs, k) => round2(xs.reduce((s, p) => s + (p[k] || 0), 0));
+  const measured = positions.filter((p) => p.exitable_ratio !== null);
+  const count = (st) => positions.filter((p) => p.status === st).length;
+  return {
+    summary: {
+      checked: positions.length, passed: count("passed"), failed: count("failed"), unavailable: count("unavailable"),
+      value_checked_usd: sum(positions, "value_at_check_usd"), exitable_now_usd: sum(measured, "exitable_now_usd"), shortfall_usd: sum(measured, "shortfall_usd"),
+      not_measured_usd: sum(positions.filter((p) => p.exitable_ratio === null), "value_at_check_usd"),
+      older_than_24h: positions.filter((p) => p.observed_hours_before_snapshot).length,
+    },
+    positions,
+    rule: "passed if the full position could be withdrawn now (shortfall 0.1% or less); failed keeps the measured share; unavailable is a data gap",
+    scope: "lending receipts and vault shares worth at least $100,000 (Aave, Compound v3, Compound v2-style cTokens, ERC-4626 vaults); other positions are not checked",
+    method: "Read on chain by the TCS-6 collector at the block shown: Aave and Compound v3 compare the pool's available cash with the position, cTokens use getCash, ERC-4626 vaults use maxRedeem for the holder. Withdrawn means redeemed from the protocol itself; selling the position on a market is not measured here. A read at one block, not a guarantee: liquidity moves, and pool cash is shared with every other lender. No transaction is simulated.",
+  };
+}
+
 function exitLiquidity(report, bundle) {
   const rows = rowsOf(bundle);
+  const checks = exitChecks(bundle);
   const restricted = rows.filter((r) => r.flags.some((f) => f === "lockup" || f === "redemption_limits" || f === "unlock_pending" || f === "legal_restriction"));
   const free = rows.filter((r) => !restricted.includes(r));
   const d2 = (report.dimensions || []).find((d) => d.id === "D2") || { primary_metrics: [] };
@@ -227,8 +270,14 @@ function exitLiquidity(report, bundle) {
       tier_0_1_liquid_usd: metric("tier_0_to_1_hqla_usd"),
       runway_months: metric("liquidity_runway_months"),
       loan_and_liquidity_risks: (report.risks || []).filter((x) => /liquidat|exit|depeg|lock/i.test(`${x.id} ${x.description}`)),
-      method: "v1: lending/vault liquidity reads, lock end dates and loan health, all read on chain by the collector; full eth_call exit simulations are not included.",
+      exit_checks: checks,
+      method: "v1.1: lock-up and redemption flags, lock end dates and loan health, plus the collector's signed exit checks (exit_checks), all read on chain by the collector; full eth_call exit simulations are not included.",
     },
+    ...(checks.positions.length ? { chart: { type: "bar", title: "Checked positions: could be withdrawn now vs not (USD)", series: [
+      { label: "could be withdrawn now", value: checks.summary.exitable_now_usd },
+      { label: "shortfall", value: checks.summary.shortfall_usd },
+      { label: "not measured", value: checks.summary.not_measured_usd },
+    ] } } : {}),
   };
 }
 

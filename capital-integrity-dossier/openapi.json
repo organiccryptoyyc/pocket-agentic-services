@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Capital Integrity Dossier",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Pocket Network service `capital-integrity-dossier`. A disclosed multi-call dossier on one protocol scored by TCS-6 (`treasury-capital-score`). A full dossier takes up to 7 calls (up to $0.035 at the portal's $0.005 per call): POST /v1/dossier/plan first (1 call; it states calls_required and the estimated total before you commit), then POST /v1/dossier/section once per available section, in any order. You pay only for the calls you make and can stop after any section; every response carries calls_used, calls_remaining and the remaining estimate. A dossier_id pins one TCS-6 snapshot (a report together with the exact evidence bundle it was scored from) for 24 hours. All inputs travel in a JSON POST body; every response is a JSON object. Paid per relay via a staked Pocket application; there is no checkout. Charts are JSON series for the caller to render. Research, not investment advice."
   },
   "paths": {
@@ -94,7 +94,7 @@
       }
     },
     "/v1/version": {
-      "get": { "operationId": "version", "responses": { "200": { "description": "{\"service\":\"capital-integrity-dossier\",\"version\":\"1.0.0\"}", "content": { "application/json": {} } } } }
+      "get": { "operationId": "version", "responses": { "200": { "description": "{\"service\":\"capital-integrity-dossier\",\"version\":\"1.1.0\"}", "content": { "application/json": {} } } } }
     },
     "/v1/health": {
       "get": { "operationId": "health", "responses": { "200": { "description": "{\"status\":\"ok\",\"entities\":22,\"last_snapshot_refresh\":\"...\"}", "content": { "application/json": {} } } } }

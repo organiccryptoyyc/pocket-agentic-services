@@ -171,6 +171,31 @@ test("obligations, exit liquidity, reconciliation and unresolved items carry the
   assert.deepStrictEqual(u.perimeter_gaps, ["foundation wallets not in scope"]);
 });
 
+test("exit_liquidity shows the collector's signed exit checks: measured share, shortfall, block, and gaps kept as gaps", () => {
+  const TOK = A(9);
+  const chk = (holder, status, usd, ratio, observed = AS_OF) => ({
+    field: `exit.available:ethereum:${TOK}:${holder}`, label: "aEthUSDC at treasury_safe", kind: "realizability_control", source: "sim:aave",
+    chain_id: 1, block_number: 100, block_hash: "0xabc", observed_at: observed, status, our_value: { qty: usd, usd },
+    measure: ratio === null ? null : { exitable_ratio: ratio }, evidence_hash: status === "unavailable" ? null : "sha256:11",
+  });
+  const checks = [chk(SAFE1, "passed", 200000, 1), chk(SAFE2, "failed", 400000, 0.25), chk(A(4), "unavailable", 300000, null, "2026-10-22T12:00:00Z"),
+    { field: `control.proxy_slots:ethereum:${SAFE1}`, status: "passed" }];
+  const p = D.plan({ entity_id: fresh({ attestation: { payload: { checks } } }) });
+  const s = D.section({ dossier_id: p.dossier_id, section: "exit_liquidity" });
+  const e = s.data.exit_checks;
+  assert.deepStrictEqual(e.summary, { checked: 3, passed: 1, failed: 1, unavailable: 1, value_checked_usd: 900000, exitable_now_usd: 300000, shortfall_usd: 300000, not_measured_usd: 300000, older_than_24h: 1 });
+  assert.deepStrictEqual(e.positions.map((x) => [x.status, x.exitable_now_usd]), [["failed", 100000], ["unavailable", null], ["passed", 200000]]);
+  assert.strictEqual(e.positions[0].result, "25% could be withdrawn now");
+  assert.strictEqual(e.positions[0].holder_role, "ops_safe");
+  assert.strictEqual(e.positions[1].observed_hours_before_snapshot, 72);
+  assert.match(e.positions[1].result, /data gap/);
+  assert.strictEqual(e.positions[2].block_number, 100);
+  assert.deepStrictEqual(s.chart.series.map((x) => x.value), [300000, 300000, 300000]);
+  const none = D.section({ dossier_id: D.plan({ entity_id: fresh() }).dossier_id, section: "exit_liquidity" });
+  assert.strictEqual(none.data.exit_checks.summary.checked, 0);
+  assert.ok(!none.chart);
+});
+
 test("sections the snapshot cannot support are marked unavailable up front and left out of calls_required", () => {
   const g = bundle().governance;
   delete g.wallet_controls;
