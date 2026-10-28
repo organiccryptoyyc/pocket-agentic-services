@@ -162,7 +162,9 @@ async function screeningSearch(query) {
     e.notConfigured = true;
     throw e;
   }
-  const url = `https://data.trade.gov/consolidated_screening_list/v1/search?q=${encodeURIComponent(query)}`;
+  // The live API rejects the old generic `q` (HTTP 400: one of name, sources,
+  // countries, address, full_address is required), so search by name.
+  const url = `https://data.trade.gov/consolidated_screening_list/v1/search?name=${encodeURIComponent(query)}`;
   const res = await withRetry(() => fetchJSON(url, { headers: { "Subscription-Key": key, "Ocp-Apim-Subscription-Key": key } }));
   if (!res.ok) {
     throw new UpstreamError(`Consolidated Screening List query failed: HTTP ${res.status} ${JSON.stringify(res.body).slice(0, 200)}`);

@@ -45,7 +45,8 @@ global.fetch = async function stubFetch(url, init) {
   if (u.hostname === "data.trade.gov") {
     const key = init?.headers?.["Subscription-Key"] || init?.headers?.["Ocp-Apim-Subscription-Key"];
     if (!key) return jsonResponse({ statusCode: 401, message: "Access denied due to missing subscription key." }, 401);
-    const q = u.searchParams.get("q") || "";
+    const q = u.searchParams.get("name") || "";
+    if (!q) return jsonResponse({ statusCode: 400, message: "One of the following parameters is required: name, sources, countries, address, full_address." }, 400);
     if (q.toLowerCase().includes("sanctioned-test-entity")) {
       return jsonResponse({ total: 1, results: [{ name: "Sanctioned Test Entity", type: "Entity", programs: ["SDN"], source: "Specially Designated Nationals (SDN) - Treasury Department" }] });
     }

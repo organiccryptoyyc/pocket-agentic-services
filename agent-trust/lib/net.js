@@ -20,7 +20,8 @@ async function fetchJSON(url, init, timeoutMs = FETCH_TIMEOUT_MS) {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { ...init, signal: controller.signal, headers: { Accept: "application/json", ...(init && init.headers) } });
+    // rdap.org answers 403 to Node's default "node" User-Agent, so name ourselves.
+    const res = await fetch(url, { ...init, signal: controller.signal, headers: { Accept: "application/json", "User-Agent": "agent-trust/1.0 (+https://github.com/organiccryptoyyc/pocket-agentic-services)", ...(init && init.headers) } });
     const text = await res.text();
     let body;
     try {
