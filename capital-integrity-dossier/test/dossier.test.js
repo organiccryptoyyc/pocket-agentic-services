@@ -202,7 +202,7 @@ test("v2: each exit position carries its withdrawal simulation; a position not r
   const checks = [
     { field: f("available", SAFE1), label: "v at treasury_safe", source: "sim:erc4626", status: "passed", observed_at: AS_OF, our_value: { usd: 500000 }, measure: { exitable_ratio: 1 } },
     { field: f("simulated", SAFE1), source: "sim:erc4626:eth_call", status: "failed", observed_at: AS_OF, block_number: 7, block_hash: "0x07",
-      measure: { recoverable_ratio: 0, method: "redeem(uint256,address,address)", revert_reason: "reverted: vault paused" }, evidence_hash: "sha256:22" },
+      measure: { recoverable_ratio: null, method: "redeem(uint256,address,address)", tested_amount: "full position", revert_reason: "reverted: vault paused" }, evidence_hash: "sha256:22" },
     { field: f("available", SAFE2), label: "v at ops_safe", source: "sim:erc4626", status: "not_applicable", observed_at: AS_OF, our_value: null,
       measure: { reason: "not re-checked this run: the position is worth less than $100,000 this run ($2,000)" } },
   ];
@@ -211,7 +211,7 @@ test("v2: each exit position carries its withdrawal simulation; a position not r
   const a = e.positions.find((x) => x.holder === SAFE1);
   assert.deepStrictEqual([a.status, a.withdrawal_simulation.status, a.withdrawal_simulation.revert_reason, a.withdrawal_simulation.block_number],
     ["passed", "failed", "reverted: vault paused", 7]);
-  assert.match(a.withdrawal_simulation.result, /^the withdrawal reverts: reverted: vault paused$/);
+  assert.match(a.withdrawal_simulation.result, /^a withdrawal of the full position reverts: reverted: vault paused \(smaller amounts not tested/);
   const n = e.positions.find((x) => x.holder === SAFE2);
   assert.deepStrictEqual([n.status, n.exitable_ratio, n.withdrawal_simulation], ["not_applicable", null, null]);
   assert.match(n.result, /not re-checked this run: the position is worth less than \$100,000/);

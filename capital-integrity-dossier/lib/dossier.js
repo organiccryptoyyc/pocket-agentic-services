@@ -229,7 +229,7 @@ function simulationOf(c) {
   return {
     status: c.status,
     result: c.status === "passed" ? "a withdrawal of the full position succeeds from the holder's address"
-      : c.status === "failed" ? (m.revert_reason ? `the withdrawal reverts: ${m.revert_reason}` : `the withdrawal returns ${round2((ratio || 0) * 100)}% of the expected amount`)
+      : c.status === "failed" ? (m.revert_reason ? `a withdrawal of the full position reverts: ${m.revert_reason} (smaller amounts not tested; see the liquidity check)` : `the withdrawal returns ${round2((ratio || 0) * 100)}% of the expected amount`)
       : c.status === "not_applicable" ? reasonOf(c) : EXIT_RESULT.unavailable,
     recoverable_ratio: ratio, method: m.method || null, ...(m.revert_reason ? { revert_reason: m.revert_reason } : {}),
     block_number: c.block_number ?? null, block_hash: c.block_hash || null, observed_at: c.observed_at, evidence_hash: c.evidence_hash || null,
