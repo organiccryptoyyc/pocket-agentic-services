@@ -98,7 +98,8 @@ function attestationBlock(bundle, verdict, materiality = null) {
   const { POLICY, sentence } = require("./materiality");
   const matText = materiality ? ` ${sentence(materiality)}` : verdict.status === "valid" ? "" : ` Materiality policy ${POLICY.policy_id} is applied only to a valid attestation; not applied to this one.`;
   const statement = `${typeof env.payload.statement === "string" ? env.payload.statement : ""} This report's score was computed under scoring policy version ${SCORING_POLICY_VERSION} with materiality policy ${POLICY.policy_id}.${matText} Signed using ${sig.alg} by key ${sig.key_id} at ${sig.signed_at}. Verification status: ${verdict.status} (${verdict.detail}).`;
-  const extra = materiality ? { materiality: { policy_id: materiality.policy_id, effect: materiality.effect, assessments: materiality.items } } : {};
+  const conflict = materiality && materiality.items.some((i) => i.kind === "classification_conflict");
+  const extra = materiality ? { materiality: { policy_id: materiality.policy_id, effect: materiality.effect, ...(conflict ? { review_required: true } : {}), assessments: materiality.items } } : {};
   return { verification_status: verdict.status, verification_detail: verdict.detail, scoring_policy_version: SCORING_POLICY_VERSION, ...extra, statement,
     payload: env.payload, payload_hash: env.payload_hash ?? null, signature: env.signature ?? null };
 }

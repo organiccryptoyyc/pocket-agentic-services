@@ -1,4 +1,5 @@
-// Materiality policy tcs6-materiality/1.0 (owner decision D18, methodology/tcs6_materiality_policy_v1.json).
+// Materiality policy tcs6-materiality/1.1 (owner decision D18; 1.1 adds classification_conflict, owner 2026-10-29;
+// methodology/tcs6_materiality_policy_v1.json).
 //
 // The Pi signs which checks failed and never decides materiality ("undetermined" in the signed payload).
 // This side applies the versioned policy to the failed checks of a *valid* attestation, using the report's
@@ -14,6 +15,10 @@
 // Only classes marked active are applied (contract identity first); the others are listed as not active.
 // Effects: material -> provisional, the affected positions leave verified value, confidence capped;
 // critical -> insufficient_data with a null score. Nothing here changes a signed value.
+//
+// classification_conflict (1.1): a curated-restricted position whose signed exit check passes in full. Material ->
+// conservative exclusion (it leaves verified and liquid value), provisional, confidence capped, review required, no
+// penalty points; critical is treated as material (the conservative treatment keeps the score reproducible).
 "use strict";
 
 const POLICY = require("../methodology/tcs6_materiality_policy_v1.json");
@@ -38,27 +43,107 @@ function affectedRows(base, contract, chain) {
   });
 }
 
-// -> null when there is no valid attestation with review items; otherwise the assessment.
+function materialityOf(value, treasury, policy) {
+  if (value === null || !(treasury > 0)) return "undetermined";
+  const share = value / treasury;
+  return share >= policy.critical_core_share_threshold ? "critical"
+    : value > policy.value_threshold_usd || share > policy.treasury_share_threshold ? "material" : "non_material";
+}
+
+const usdText = (v) => `$${Math.round(v).toLocaleString("en-US")}`;
+
+// Classification conflicts (1.1): a position the curated data restricts while a signed exit check
+// (exit.available / exit.simulated, status passed) says the full position can be withdrawn now. Not a
+// failed check: two different questions (withdrawable on chain? available treasury capital?), so both
+// answers are kept and the conservative one is scored.
+function conflicts(bundle, base, payload, policy) {
+  const cls = policy.classes.classification_conflict;
+  if (!cls || !cls.active || !Array.isArray(payload.checks)) return [];
+  const restrictive = new Set(cls.restrictive_flags || []);
+  const byAsset = new Map();
+  for (const c of payload.checks) {
+    const m = /^exit\.(available|simulated):(.+)$/.exec(c.field || "");
+    if (!m || c.status !== "passed") continue;
+    const id = m[2].toLowerCase();
+    if (!byAsset.has(id)) byAsset.set(id, []);
+    byAsset.get(id).push(c);
+  }
+  const out = [];
+  for (const r of base.rows) {
+    const id = String(r.h.asset_id || "").toLowerCase();
+    const flags = (r.h.haircut_flags || []).filter((f) => restrictive.has(f));
+    if (!flags.length || !byAsset.has(id)) continue;
+    out.push({ row: r, flags, checks: byAsset.get(id) });
+  }
+  return out;
+}
+
+function conflictItem(cf, treasury, policy) {
+  const { row, flags, checks } = cf;
+  const value = row.fair;
+  const materiality = materialityOf(value, treasury, policy);
+  const conservative = materiality !== "non_material";
+  const symbol = row.h.symbol || "position";
+  const statement = `The ${symbol} position has an observed on-chain value of approximately ${usdText(value)}. The chain-level exit check `
+    + `indicates that the recorded position is currently withdrawable. Curated protocol data classifies the position as restricted `
+    + `(${flags.join(", ")})${row.h.note ? `: ${String(row.h.note).replace(/\.\s*$/, "")}` : ""}. These findings are ${conservative ? "materially " : ""}inconsistent for `
+    + `treasury-eligibility purposes. ${conservative
+      ? "The position is therefore excluded from verified and liquid treasury value pending classification resolution. The conservative score is retained, the report is marked provisional, and the conflict is preserved for review."
+      : "The position is below the materiality thresholds: the conflict is disclosed and preserved for review, with no score effect."}`;
+  return {
+    failed_check_id: checks.map((c) => c.check_id).sort()[0],
+    check_ids: checks.map((c) => c.check_id).sort(),
+    kind: "classification_conflict",
+    subject: `${symbol} at ${String(row.h.address || "").toLowerCase()}`,
+    contract: (String(row.h.asset_id || "").split(":")[1] || "").toLowerCase() || null,
+    failure_reason: "classification_conflict",
+    position_value_usd: Math.round(value * 100) / 100,
+    treasury_value_usd: Math.round(treasury * 100) / 100,
+    treasury_share: !(treasury > 0) ? null : Math.round((value / treasury) * 1e6) / 1e6,
+    materiality,
+    policy_active_for_kind: true,
+    score_effect: conservative ? `provisional; position excluded from verified and liquid value (conservative exclusion); confidence capped at ${policy.confidence_cap}; no penalty points`
+      : "none (disclosed; review required)",
+    asset_id: row.h.asset_id,
+    gross_observed_value_usd: Math.round(value * 100) / 100,
+    verified_treasury_value_usd: conservative ? 0 : Math.round(row.adjusted * 100) / 100,
+    liquid_value_usd: conservative ? 0 : Math.round(row.adjusted * 100) / 100,
+    onchain_withdrawal_check: "passed",
+    curated_classification: flags,
+    classification_status: "conflicted",
+    score_treatment: conservative ? "conservative_exclusion" : "disclosed",
+    review_required: true,
+    confidence: conservative ? "capped" : "unchanged",
+    resolution_event: row.h.note ? `the decision named in the curated note: ${String(row.h.note).replace(/\.\s*$/, "")}` : "a curator or governance decision on the position's classification",
+    statement,
+  };
+}
+
+// -> null when there is no valid attestation with review items or classification conflicts; otherwise the assessment.
 function assess(bundle, base, verdict, policy = POLICY) {
   if (!verdict || verdict.status !== "valid") return null;
   const payload = bundle && bundle.attestation && bundle.attestation.payload;
   const ri = payload && payload.review_items;
-  if (!ri || !Array.isArray(ri.failed_checks)) return null;
+  const found = payload ? conflicts(bundle, base, payload, policy) : [];
+  if ((!ri || !Array.isArray(ri.failed_checks)) && !found.length) return null;
   const treasury = base.grossVerified;
   const items = [];
   const excluded = new Set();
   let effect = "none";
-  for (const fc of [...ri.failed_checks, ...(ri.conflicted_checks || [])]) {
+  for (const cf of found) {
+    const item = conflictItem(cf, treasury, policy);
+    if (item.score_treatment === "conservative_exclusion") {
+      excluded.add(cf.row.h.asset_id);
+      effect = RANK.provisional > RANK[effect] ? "provisional" : effect;
+    } else if (RANK.disclose > RANK[effect]) effect = "disclose";
+    items.push(item);
+  }
+  for (const fc of [...((ri && ri.failed_checks) || []), ...((ri && ri.conflicted_checks) || [])]) {
     const cls = policy.classes[fc.kind];
     const active = !!(cls && cls.active);
     const rows = affectedRows(base, fc.contract, chainOf(fc.check_id));
     const value = rows === null ? null : rows.reduce((s, r) => s + r.fair, 0);
-    let materiality = "undetermined";
-    if (value !== null && treasury > 0) {
-      const share = value / treasury;
-      materiality = share >= policy.critical_core_share_threshold ? "critical"
-        : value > policy.value_threshold_usd || share > policy.treasury_share_threshold ? "material" : "non_material";
-    }
+    const materiality = materialityOf(value, treasury, policy);
     const itemEffect = !active ? "none" : materiality === "critical" ? "insufficient_data" : materiality === "material" ? "provisional" : "disclose";
     if (active && materiality === "material") for (const r of rows) excluded.add(r.h.asset_id);
     if (RANK[itemEffect] > RANK[effect]) effect = itemEffect;

@@ -1,7 +1,7 @@
 {
-  "policy_id": "tcs6-materiality/1.0",
+  "policy_id": "tcs6-materiality/1.1",
   "status": "active",
-  "approved": "owner 2026-10-17 (decision D18)",
+  "approved": "owner 2026-10-17 (decision D18); 1.1 adds classification_conflict, owner 2026-10-29",
   "value_threshold_usd": 100000,
   "treasury_share_threshold": 0.02,
   "threshold_operator": "either",
@@ -46,6 +46,16 @@
     "disclosure_reconciliation": {
       "active": false,
       "rule": "reconciliation flag; unresolved difference above the thresholds: provisional; the observed value is never rewritten to match the report"
+    },
+    "classification_conflict": {
+      "active": true,
+      "restrictive_flags": ["redemption_limits", "pending_classification", "lockup"],
+      "not_a_trigger": "legal_restriction: a legal or governance earmark (e.g. a legal-defense reserve) is not enforced on chain, so a passing exit check does not contradict it",
+      "rule": "a position the curated data restricts (one of restrictive_flags) while a signed on-chain exit check (exit.available or exit.simulated) passes in full. Two different questions: can it be withdrawn on chain today (yes) and is it available treasury capital under the protocol's policy (unresolved). Never resolved automatically and never described as worthless or non-withdrawable: the observed value and the passed check are reported",
+      "material": "conservative exclusion: the position leaves verified and liquid value (it was already restricted), provisional, review required, confidence capped; no extra penalty points",
+      "critical": "as material: the conservative treatment keeps the score reproducible",
+      "non_material": "disclosed with review required; no score effect",
+      "resolution": "ordinary treasury capital confirmed: update the curated classification, the position counts subject to its exit result; restricted confirmed: the curated classification stays and the conflict is recorded as resolved; ambiguous: the conflict stays open"
     },
     "obligation_visibility": {
       "active": false,

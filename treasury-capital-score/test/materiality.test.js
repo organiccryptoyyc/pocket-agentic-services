@@ -1,4 +1,4 @@
-// Materiality policy tcs6-materiality/1.0 (D18): contract-identity failures from a valid attestation.
+// Materiality policy tcs6-materiality/1.1 (D18): contract-identity failures and classification conflicts from a valid attestation.
 "use strict";
 
 const { test } = require("node:test");
@@ -41,10 +41,10 @@ const plain = report(plainBundle, { status: "missing", detail: "-" });
 
 test("policy file carries the approved numbers", () => {
   const p = M.POLICY;
-  assert.equal(p.policy_id, "tcs6-materiality/1.0");
+  assert.equal(p.policy_id, "tcs6-materiality/1.1");
   assert.deepEqual([p.value_threshold_usd, p.treasury_share_threshold, p.critical_core_share_threshold, p.confidence_cap, p.obligations_penalty_points, p.price_attestation_threshold, p.price_materiality_threshold],
     [100000, 0.02, 0.25, 59, 10, 0.02, 0.05]);
-  assert.deepEqual(Object.entries(p.classes).filter(([, c]) => c.active).map(([k]) => k), ["contract_identity_control"]);
+  assert.deepEqual(Object.entries(p.classes).filter(([, c]) => c.active).map(([k]) => k), ["contract_identity_control", "classification_conflict"]);
 });
 
 test("non-material: a failed contract with no counted value is disclosed, score unchanged", () => {
@@ -56,7 +56,7 @@ test("non-material: a failed contract with no counted value is disclosed, score 
   assert.equal(r.overall_score.score, plain.overall_score.score);
   assert.equal(r.overall_score.status, plain.overall_score.status);
   assert.deepEqual(r.confidence, plain.confidence);
-  assert.match(r.attestation.statement, /Materiality under policy tcs6-materiality\/1\.0: test_contract source contract_identity_control \(\$0 of \$[\d,]+, 0\.00%\): non_material; no score effect \(disclosed\)\./);
+  assert.match(r.attestation.statement, /Materiality under policy tcs6-materiality\/1\.1: test_contract source contract_identity_control \(\$0 of \$[\d,]+, 0\.00%\): non_material; no score effect \(disclosed\)\./);
   assert.ok(validateReport(r).ok, validateReport(r).errors.join("\n"));
 });
 
@@ -124,4 +124,66 @@ test("an address that can't be matched (no contract) stays undetermined", () => 
   const r = report(withAttestation(plainBundle, [c]));
   assert.equal(r.attestation.materiality.assessments[0].materiality, "undetermined");
   assert.equal(r.overall_score.score, plain.overall_score.score);
+});
+
+// ---- 1.1: classification conflicts (owner 2026-10-29, the yETH-Recovery case) ----------------------------
+const VAULT = "0x00000000000000000000000000000000000000aa";
+const HOLDER = "0x00000000000000000000000000000000000000bb";
+function restricted(qty, flags = ["redemption_limits", "pending_classification"]) {
+  return { asset_id: `ethereum:${VAULT}:${HOLDER}`, symbol: "yRECOVERY", chain: "ethereum", address: HOLDER, asset_class: "liquid_alt",
+    control: "verified", quantity: qty, holdings_observed_at: plainBundle.holdings[0].holdings_observed_at,
+    prices: [{ source_ref: plainBundle.holdings[0].prices[0].source_ref, usd: 1, observed_at: plainBundle.holdings[0].prices[0].observed_at }],
+    haircut_flags: flags, note: "Recovery vault shares; pending the governance decision YIP-90." };
+}
+function withExitCheck(bundle, status = "passed", prefix = "exit.available") {
+  const env = JSON.parse(JSON.stringify(VEC.envelope));
+  const field = `${prefix}:ethereum:${VAULT}:${HOLDER}`;
+  const tmpl = env.payload.checks.find((c) => c.kind === "realizability_control");
+  env.payload.checks = [...env.payload.checks, { ...tmpl, check_id: `realizability_control|${field}|sim:erc4626`, field, status,
+    measure: { exitable_ratio: 1 }, other_value: { exitable_ratio: 1 } }];
+  env.payload.review_items = { conflicted_check_ids: [], conflicted_checks: [], failed_check_ids: [], failed_checks: [], unavailable_check_ids: [], unavailable_checks: [] };
+  return { ...bundle, attestation: env };
+}
+const withPosition = (qty, flags) => ({ ...plainBundle, holdings: [...plainBundle.holdings, restricted(qty, flags)] });
+
+test("classification conflict, material: conservative exclusion, provisional, confidence capped, no penalty points", () => {
+  const before = report(withPosition(3800000), { status: "missing", detail: "-" });
+  const r = report(withExitCheck(withPosition(3800000)));
+  const m = r.attestation.materiality;
+  const a = m.assessments.find((x) => x.kind === "classification_conflict");
+  assert.equal(m.effect, "provisional");
+  assert.equal(m.review_required, true);
+  assert.deepEqual([a.materiality, a.gross_observed_value_usd, a.verified_treasury_value_usd, a.liquid_value_usd], ["material", 3800000, 0, 0]);
+  assert.deepEqual([a.onchain_withdrawal_check, a.classification_status, a.score_treatment, a.review_required, a.confidence],
+    ["passed", "conflicted", "conservative_exclusion", true, "capped"]);
+  assert.deepEqual(a.curated_classification, ["redemption_limits", "pending_classification"]);
+  assert.match(a.statement, /observed on-chain value of approximately \$3,800,000\. The chain-level exit check indicates that the recorded position is currently withdrawable\./);
+  assert.match(a.statement, /excluded from verified and liquid treasury value pending classification resolution\. The conservative score is retained, the report is marked provisional/);
+  assert.match(a.resolution_event, /YIP-90/);
+  assert.equal(r.overall_score.status, "provisional");
+  assert.ok(r.confidence.score <= 59);
+  assert.equal(r.overall_score.score, before.overall_score.score, "the position was already restricted: the score is retained");
+  assert.ok(!(r.risks || []).some((x) => /^penalty_/.test(x.id) && !(before.risks || []).some((y) => y.id === x.id)), "no new penalty");
+  assert.ok(r.risks.some((x) => x.id === "classification_conflict" && /YIP-90/.test(x.monitoring_action)));
+  assert.ok(validateReport(r).ok, validateReport(r).errors.join("\n"));
+});
+
+test("classification conflict, non-material: disclosed with review required, no score or confidence effect", () => {
+  const before = report(withPosition(50000), { status: "missing", detail: "-" });
+  const r = report(withExitCheck(withPosition(50000)));
+  const a = r.attestation.materiality.assessments.find((x) => x.kind === "classification_conflict");
+  assert.deepEqual([a.materiality, a.score_treatment, a.review_required], ["non_material", "disclosed", true]);
+  assert.equal(r.attestation.materiality.effect, "disclose");
+  assert.equal(r.overall_score.score, before.overall_score.score);
+  assert.deepEqual(r.confidence, before.confidence);
+});
+
+test("no conflict when the exit check did not pass, the position is not restricted (a legal earmark is not a trigger), or the attestation is not valid", () => {
+  for (const [b, v] of [[withExitCheck(withPosition(3800000), "failed"), VALID], [withExitCheck(withPosition(3800000, ["thin_depth"])), VALID], [withExitCheck(withPosition(3800000, ["legal_restriction"])), VALID],
+    [withExitCheck(withPosition(3800000)), { status: "invalid", detail: "-" }]]) {
+    const m = report(b, v).attestation && report(b, v).attestation.materiality;
+    assert.ok(!m || !m.assessments.some((x) => x.kind === "classification_conflict"));
+  }
+  const sim = report(withExitCheck(withPosition(3800000), "passed", "exit.simulated")).attestation.materiality;
+  assert.ok(sim.assessments.some((x) => x.kind === "classification_conflict"), "a passed withdrawal simulation (v2a) counts too");
 });

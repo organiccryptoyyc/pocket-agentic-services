@@ -1,6 +1,6 @@
 {
   "name": "capital-integrity-dossier",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Capital Integrity Dossier: a disclosed multi-call, section-by-section treasury dossier on TCS-6 protocols. A Pocket Network service backend.",
   "main": "server.js",

@@ -189,7 +189,11 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
       impact: COLLECTOR_WARNING_IMPACT[w.code] || "Values were delivered as collected; the flag asks for curator review.",
       remediation: "Curator reviews the checks the collector recorded with this evidence.",
     }));
-  const materialRisks = mat ? mat.items.filter((i) => i.policy_active_for_kind && (i.materiality === "material" || i.materiality === "critical")).map((i) => ({
+  const conflictRisks = mat ? mat.items.filter((i) => i.kind === "classification_conflict").map((i) => ({
+    id: "classification_conflict", category: "data_quality", severity: i.score_treatment === "conservative_exclusion" ? "high" : "medium",
+    description: `${i.statement} (${i.materiality} under ${mat.policy_id}; effect: ${i.score_effect}.)`,
+    monitoring_action: `Resolve the classification: ${i.resolution_event}. Until then the conflict stays open and both the observed value and the conservative treatment are reported.` })) : [];
+  const materialRisks = mat ? mat.items.filter((i) => i.kind !== "classification_conflict" && i.policy_active_for_kind && (i.materiality === "material" || i.materiality === "critical")).map((i) => ({
     id: `material_${i.kind}`, category: "data_quality", severity: i.materiality === "critical" ? "critical" : "high",
     description: `${i.subject}: ${i.kind.replace(/_/g, " ")} failed (${i.failure_reason}); ${i.materiality} under ${mat.policy_id} (${i.treasury_share === null ? "share not calculable" : (i.treasury_share * 100).toFixed(2) + "% of counted treasury value"}). Effect: ${i.score_effect}.`,
     monitoring_action: "Curator reviews the failed control; the effect clears when the check passes." })) : [];
@@ -219,7 +223,7 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
     confidence: M.applyEffect(overallScore, S.confidence(base, overallScore.coverage_pct, rights.delivered, gateList.find((g) => g.id === "control_coverage").status === "pass"), mat, S.confidenceLabel).confidence,
     data_coverage: cov,
     source_manifest: rights.delivered.map(({ source_ref, title, publisher, url, retrieved_at, observation_time, source_tier, rights_status }) => ({ source_ref, title, publisher, url, retrieved_at, observation_time: observation_time ?? null, source_tier, rights_status })),
-    risks: [...curatedRisks, ...derivedRisks(dims, cov), ...penaltyRisks, ...materialRisks],
+    risks: [...curatedRisks, ...derivedRisks(dims, cov), ...penaltyRisks, ...materialRisks, ...conflictRisks],
     data_gaps: [...derivedGaps(dims, overallScore), ...warningGaps, ...curatedGaps],
     disclaimer: DISCLAIMER,
     ...(obligationsPolicy ? { obligations_policy: obligationsPolicy } : {}),

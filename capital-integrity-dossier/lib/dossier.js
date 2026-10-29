@@ -218,10 +218,28 @@ function obligationsRegister(report, bundle) {
 // receipts and vault shares worth at least $100k it reads, at a pinned block, how much of the position the
 // protocol would release right now (Aave / Compound v3: the pool's cash; cTokens: getCash; ERC-4626:
 // maxRedeem) against what we count. The latest result per position is used, so a check can predate the bundle.
+// v2: the withdrawal itself (exit.simulated: eth_call from the holder at the pinned block) rides with each position.
 const EXIT_RESULT = { passed: "the full position could be withdrawn now", unavailable: "could not be read: a data gap, not a pass" };
+const reasonOf = (c) => ((c.measure || {}).reason) || "not re-checked this run";
+
+function simulationOf(c) {
+  if (!c) return null;
+  const m = c.measure || {};
+  const ratio = c.status === "passed" || c.status === "failed" ? (m.recoverable_ratio ?? null) : null;
+  return {
+    status: c.status,
+    result: c.status === "passed" ? "a withdrawal of the full position succeeds from the holder's address"
+      : c.status === "failed" ? (m.revert_reason ? `the withdrawal reverts: ${m.revert_reason}` : `the withdrawal returns ${round2((ratio || 0) * 100)}% of the expected amount`)
+      : c.status === "not_applicable" ? reasonOf(c) : EXIT_RESULT.unavailable,
+    recoverable_ratio: ratio, method: m.method || null, ...(m.revert_reason ? { revert_reason: m.revert_reason } : {}),
+    block_number: c.block_number ?? null, block_hash: c.block_hash || null, observed_at: c.observed_at, evidence_hash: c.evidence_hash || null,
+  };
+}
 
 function exitChecks(bundle) {
-  const checks = (((bundle.attestation || {}).payload || {}).checks || []).filter((c) => /^exit\.available:/.test(c.field || ""));
+  const all = ((bundle.attestation || {}).payload || {}).checks || [];
+  const checks = all.filter((c) => /^exit\.available:/.test(c.field || ""));
+  const sims = new Map(all.filter((c) => /^exit\.simulated:/.test(c.field || "")).map((c) => [c.field.slice("exit.simulated:".length), c]));
   const roles = new Map(((bundle.governance || {}).wallet_controls || []).map((c) => [`${c.chain}:${c.address.toLowerCase()}`, c.role]));
   const collected = Date.parse(bundle.collected_at);
   const positions = checks.map((c) => {
@@ -232,11 +250,12 @@ function exitChecks(bundle) {
     const ageH = Math.round((collected - Date.parse(c.observed_at)) / 3600000);
     return {
       label: c.label, chain, token, holder, holder_role: roles.get(`${chain}:${holder}`) || null, method: c.source, status: c.status,
-      result: EXIT_RESULT[c.status] || (ratio !== null ? `${round2(ratio * 100)}% could be withdrawn now` : c.status),
+      result: c.status === "not_applicable" ? reasonOf(c) : EXIT_RESULT[c.status] || (ratio !== null ? `${round2(ratio * 100)}% could be withdrawn now` : c.status),
       exitable_ratio: ratio, value_at_check_usd: round2(value), exitable_now_usd: exitable, shortfall_usd: exitable === null ? null : round2(value - exitable),
       chain_id: c.chain_id ?? null, block_number: c.block_number ?? null, block_hash: c.block_hash || null, observed_at: c.observed_at,
       ...(ageH > 24 ? { observed_hours_before_snapshot: ageH } : {}),
       evidence_hash: c.evidence_hash || null,
+      withdrawal_simulation: simulationOf(sims.get(c.field.slice("exit.available:".length))),
     };
   }).sort((a, b) => (b.value_at_check_usd || 0) - (a.value_at_check_usd || 0));
   const sum = (xs, k) => round2(xs.reduce((s, p) => s + (p[k] || 0), 0));
@@ -244,21 +263,41 @@ function exitChecks(bundle) {
   const count = (st) => positions.filter((p) => p.status === st).length;
   return {
     summary: {
-      checked: positions.length, passed: count("passed"), failed: count("failed"), unavailable: count("unavailable"),
+      checked: positions.length, passed: count("passed"), failed: count("failed"), unavailable: count("unavailable"), not_rechecked: count("not_applicable"),
+      simulated: positions.filter((p) => p.withdrawal_simulation && ["passed", "failed"].includes(p.withdrawal_simulation.status)).length,
+      simulation_failed: positions.filter((p) => p.withdrawal_simulation && p.withdrawal_simulation.status === "failed").length,
       value_checked_usd: sum(positions, "value_at_check_usd"), exitable_now_usd: sum(measured, "exitable_now_usd"), shortfall_usd: sum(measured, "shortfall_usd"),
       not_measured_usd: sum(positions.filter((p) => p.exitable_ratio === null), "value_at_check_usd"),
       older_than_24h: positions.filter((p) => p.observed_hours_before_snapshot).length,
     },
     positions,
-    rule: "passed if the full position could be withdrawn now (shortfall 0.1% or less); failed keeps the measured share; unavailable is a data gap",
+    rule: "passed if the full position could be withdrawn now (shortfall 0.1% or less); failed keeps the measured share; unavailable is a data gap; not_applicable means the position was not re-checked this run (reason given), never an old result shown as current",
     scope: "lending receipts and vault shares worth at least $100,000 (Aave, Compound v3, Compound v2-style cTokens, ERC-4626 vaults); other positions are not checked",
-    method: "Read on chain by the TCS-6 collector at the block shown: Aave and Compound v3 compare the pool's available cash with the position, cTokens use getCash, ERC-4626 vaults use maxRedeem for the holder. Withdrawn means redeemed from the protocol itself; selling the position on a market is not measured here. A read at one block, not a guarantee: liquidity moves, and pool cash is shared with every other lender. No transaction is simulated.",
+    method: "Read on chain by the TCS-6 collector at the block shown: Aave and Compound v3 compare the pool's available cash with the position, cTokens use getCash, ERC-4626 vaults use maxRedeem for the holder. withdrawal_simulation runs the withdrawal itself with eth_call from the holder's own address at a pinned block (ERC-4626 redeem, Aave Pool.withdraw, Compound v3 withdraw, cToken redeem): no transaction is sent and no gas is paid; it shows what would come out or the exact revert reason. Withdrawn means redeemed from the protocol itself; selling the position on a market is not measured here. A result holds at its block only, not a guarantee: liquidity moves, and pool cash is shared with every other lender.",
   };
+}
+
+// TCS-6 materiality 1.1 classification conflicts, shown as four separate layers (owner 2026-10-29): what the chain
+// shows, whether the withdrawal works, what selling would fetch, and how the protocol classifies the position.
+function classificationConflicts(report) {
+  const m = (report.attestation || {}).materiality || {};
+  return (m.assessments || []).filter((a) => a.kind === "classification_conflict").map((a) => ({
+    subject: a.subject, asset_id: a.asset_id || null, materiality: a.materiality,
+    layers: {
+      onchain_observability: { observed_value_usd: a.gross_observed_value_usd ?? a.position_value_usd },
+      technical_withdrawal: { check: a.onchain_withdrawal_check || "passed", check_ids: a.check_ids || [a.failed_check_id] },
+      economic_liquidity: { status: "not_measured", note: "market sale depth and price impact are not measured yet (planned)" },
+      governance_classification: { status: a.classification_status || "conflicted", curated: a.curated_classification || [], resolution_event: a.resolution_event || null },
+    },
+    score_treatment: a.score_treatment, verified_treasury_value_usd: a.verified_treasury_value_usd ?? null, liquid_value_usd: a.liquid_value_usd ?? null,
+    score_effect: a.score_effect, review_required: a.review_required !== false, statement: a.statement || null,
+  }));
 }
 
 function exitLiquidity(report, bundle) {
   const rows = rowsOf(bundle);
   const checks = exitChecks(bundle);
+  const conflicts = classificationConflicts(report);
   const restricted = rows.filter((r) => r.flags.some((f) => f === "lockup" || f === "redemption_limits" || f === "unlock_pending" || f === "legal_restriction"));
   const free = rows.filter((r) => !restricted.includes(r));
   const d2 = (report.dimensions || []).find((d) => d.id === "D2") || { primary_metrics: [] };
@@ -271,7 +310,8 @@ function exitLiquidity(report, bundle) {
       runway_months: metric("liquidity_runway_months"),
       loan_and_liquidity_risks: (report.risks || []).filter((x) => /liquidat|exit|depeg|lock/i.test(`${x.id} ${x.description}`)),
       exit_checks: checks,
-      method: "v1.1: lock-up and redemption flags, lock end dates and loan health, plus the collector's signed exit checks (exit_checks), all read on chain by the collector; full eth_call exit simulations are not included.",
+      classification_conflicts: conflicts,
+      method: "v2: lock-up and redemption flags, lock end dates and loan health, the collector's signed exit checks (exit_checks) with the withdrawal simulated from the holder's address where available, and classification conflicts (positions the curated data restricts while the chain shows them withdrawable), each split into on-chain observability, technical withdrawal, economic liquidity and governance classification.",
     },
     ...(checks.positions.length ? { chart: { type: "bar", title: "Checked positions: could be withdrawn now vs not (USD)", series: [
       { label: "could be withdrawn now", value: checks.summary.exitable_now_usd },
@@ -305,6 +345,8 @@ function unresolvedItems(report) {
       review_items: p.review_items || null,
       failed_gates: (report.hard_gates || []).filter((g) => g.status !== "pass").map((g) => ({ id: g.id, status: g.status, effect: g.effect })),
       perimeter_gaps: (report.capital_perimeter || {}).known_perimeter_gaps || [],
+      classification_conflicts: classificationConflicts(report).map((c) => ({ subject: c.subject, materiality: c.materiality, score_effect: c.score_effect,
+        resolves_with: c.layers.governance_classification.resolution_event })),
     },
   };
 }

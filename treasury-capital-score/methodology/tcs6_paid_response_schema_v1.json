@@ -476,9 +476,73 @@
                   },
                   "score_effect": {
                     "type": "string"
+                  },
+                  "check_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "classification_conflict: every signed exit check that passed for the position"
+                  },
+                  "asset_id": {
+                    "type": "string"
+                  },
+                  "gross_observed_value_usd": {
+                    "type": "number"
+                  },
+                  "verified_treasury_value_usd": {
+                    "type": "number"
+                  },
+                  "liquid_value_usd": {
+                    "type": "number"
+                  },
+                  "onchain_withdrawal_check": {
+                    "type": "string",
+                    "enum": [
+                      "passed"
+                    ]
+                  },
+                  "curated_classification": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "classification_status": {
+                    "type": "string",
+                    "enum": [
+                      "conflicted"
+                    ]
+                  },
+                  "score_treatment": {
+                    "type": "string",
+                    "enum": [
+                      "conservative_exclusion",
+                      "disclosed"
+                    ]
+                  },
+                  "review_required": {
+                    "type": "boolean"
+                  },
+                  "confidence": {
+                    "type": "string",
+                    "enum": [
+                      "capped",
+                      "unchanged"
+                    ]
+                  },
+                  "resolution_event": {
+                    "type": "string"
+                  },
+                  "statement": {
+                    "type": "string"
                   }
                 }
               }
+            },
+            "review_required": {
+              "type": "boolean",
+              "description": "present (true) when the report carries a classification conflict (tcs6-materiality/1.1)"
             }
           }
         },

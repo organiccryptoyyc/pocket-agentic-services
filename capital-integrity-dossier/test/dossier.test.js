@@ -183,7 +183,7 @@ test("exit_liquidity shows the collector's signed exit checks: measured share, s
   const p = D.plan({ entity_id: fresh({ attestation: { payload: { checks } } }) });
   const s = D.section({ dossier_id: p.dossier_id, section: "exit_liquidity" });
   const e = s.data.exit_checks;
-  assert.deepStrictEqual(e.summary, { checked: 3, passed: 1, failed: 1, unavailable: 1, value_checked_usd: 900000, exitable_now_usd: 300000, shortfall_usd: 300000, not_measured_usd: 300000, older_than_24h: 1 });
+  assert.deepStrictEqual(e.summary, { checked: 3, passed: 1, failed: 1, unavailable: 1, not_rechecked: 0, simulated: 0, simulation_failed: 0, value_checked_usd: 900000, exitable_now_usd: 300000, shortfall_usd: 300000, not_measured_usd: 300000, older_than_24h: 1 });
   assert.deepStrictEqual(e.positions.map((x) => [x.status, x.exitable_now_usd]), [["failed", 100000], ["unavailable", null], ["passed", 200000]]);
   assert.strictEqual(e.positions[0].result, "25% could be withdrawn now");
   assert.strictEqual(e.positions[0].holder_role, "ops_safe");
@@ -194,6 +194,47 @@ test("exit_liquidity shows the collector's signed exit checks: measured share, s
   const none = D.section({ dossier_id: D.plan({ entity_id: fresh() }).dossier_id, section: "exit_liquidity" });
   assert.strictEqual(none.data.exit_checks.summary.checked, 0);
   assert.ok(!none.chart);
+});
+
+test("v2: each exit position carries its withdrawal simulation; a position not re-checked says why, never shows an old result", () => {
+  const TOK = A(9);
+  const f = (kind, holder) => `exit.${kind}:ethereum:${TOK}:${holder}`;
+  const checks = [
+    { field: f("available", SAFE1), label: "v at treasury_safe", source: "sim:erc4626", status: "passed", observed_at: AS_OF, our_value: { usd: 500000 }, measure: { exitable_ratio: 1 } },
+    { field: f("simulated", SAFE1), source: "sim:erc4626:eth_call", status: "failed", observed_at: AS_OF, block_number: 7, block_hash: "0x07",
+      measure: { recoverable_ratio: 0, method: "redeem(uint256,address,address)", revert_reason: "reverted: vault paused" }, evidence_hash: "sha256:22" },
+    { field: f("available", SAFE2), label: "v at ops_safe", source: "sim:erc4626", status: "not_applicable", observed_at: AS_OF, our_value: null,
+      measure: { reason: "not re-checked this run: the position is worth less than $100,000 this run ($2,000)" } },
+  ];
+  const p = D.plan({ entity_id: fresh({ attestation: { payload: { checks } } }) });
+  const e = D.section({ dossier_id: p.dossier_id, section: "exit_liquidity" }).data.exit_checks;
+  const a = e.positions.find((x) => x.holder === SAFE1);
+  assert.deepStrictEqual([a.status, a.withdrawal_simulation.status, a.withdrawal_simulation.revert_reason, a.withdrawal_simulation.block_number],
+    ["passed", "failed", "reverted: vault paused", 7]);
+  assert.match(a.withdrawal_simulation.result, /^the withdrawal reverts: reverted: vault paused$/);
+  const n = e.positions.find((x) => x.holder === SAFE2);
+  assert.deepStrictEqual([n.status, n.exitable_ratio, n.withdrawal_simulation], ["not_applicable", null, null]);
+  assert.match(n.result, /not re-checked this run: the position is worth less than \$100,000/);
+  assert.deepStrictEqual([e.summary.not_rechecked, e.summary.simulated, e.summary.simulation_failed], [1, 1, 1]);
+});
+
+test("v2: a classification conflict is shown as four separate layers and listed for review", () => {
+  const conflict = { kind: "classification_conflict", subject: "yRECOVERY at 0xbb", asset_id: "ethereum:0xaa:0xbb", materiality: "material",
+    failed_check_id: "realizability_control|exit.available:ethereum:0xaa:0xbb|sim:erc4626", check_ids: ["realizability_control|exit.available:ethereum:0xaa:0xbb|sim:erc4626"],
+    gross_observed_value_usd: 3800000, verified_treasury_value_usd: 0, liquid_value_usd: 0, onchain_withdrawal_check: "passed",
+    curated_classification: ["redemption_limits", "pending_classification"], classification_status: "conflicted", score_treatment: "conservative_exclusion",
+    review_required: true, resolution_event: "the decision named in the curated note: pending YIP-90", score_effect: "provisional; ...", statement: "The yRECOVERY position ..." };
+  const p = D.plan({ entity_id: fresh({}, { attestation: { verification_status: "valid", verification_detail: "signature verified with key k", payload: {},
+    materiality: { policy_id: "tcs6-materiality/1.1", effect: "provisional", review_required: true, assessments: [conflict] } } }) });
+  const c = D.section({ dossier_id: p.dossier_id, section: "exit_liquidity" }).data.classification_conflicts[0];
+  assert.deepStrictEqual(Object.keys(c.layers), ["onchain_observability", "technical_withdrawal", "economic_liquidity", "governance_classification"]);
+  assert.strictEqual(c.layers.onchain_observability.observed_value_usd, 3800000);
+  assert.strictEqual(c.layers.technical_withdrawal.check, "passed");
+  assert.strictEqual(c.layers.economic_liquidity.status, "not_measured");
+  assert.match(c.layers.governance_classification.resolution_event, /YIP-90/);
+  assert.deepStrictEqual([c.score_treatment, c.verified_treasury_value_usd, c.liquid_value_usd, c.review_required], ["conservative_exclusion", 0, 0, true]);
+  const u = D.section({ dossier_id: p.dossier_id, section: "unresolved_items" }).data;
+  assert.strictEqual(u.classification_conflicts[0].subject, "yRECOVERY at 0xbb");
 });
 
 test("sections the snapshot cannot support are marked unavailable up front and left out of calls_required", () => {
