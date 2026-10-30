@@ -316,3 +316,27 @@ const SIBLING = path.join(__dirname, "../../treasury-capital-score/lib/scoring.j
 test("the vendored scoring core is byte-identical to TCS-6's", { skip: !fs.existsSync(SIBLING) }, () => {
   assert.strictEqual(fs.readFileSync(path.join(__dirname, "../lib/tcs6-scoring.js"), "utf8"), fs.readFileSync(SIBLING, "utf8"));
 });
+
+test("1.3: each divergence shows how it changed the score: available value, the encumbered rest, the loan read, review", () => {
+  const TOK = A(9);
+  const health = { debt_usd: 4478943, liquidation_threshold: 0.83, encumbered_usd: 5396317, block_number: 7 };
+  const checks = [
+    { field: `exit.available:ethereum:${TOK}:${SAFE1}`, label: "aWETH at treasury_safe", source: "sim:aave", status: "passed", observed_at: AS_OF, our_value: { usd: 23000000 }, measure: { exitable_ratio: 1 } },
+    { field: `exit.simulated:ethereum:${TOK}:${SAFE1}`, source: "sim:aave:eth_call", status: "failed", observed_at: AS_OF, block_number: 7, block_hash: "0x07",
+      measure: { recoverable_ratio: null, method: "withdraw(address,uint256,address)", revert_reason: "HealthFactorLowerThanLiquidationThreshold()", cause: "backs_a_loan", loan_health: health } },
+  ];
+  const div = { kind: "realizability_control", subject: `aWETH at ${SAFE1}`, asset_id: `ethereum:${TOK}:${SAFE1}`, failed_check_id: "c1", check_ids: ["c1"], failure_reason: "backs_a_loan",
+    materiality: "material", treatment: "evidence_based_discount", position_value_usd: 23000000, gross_observed_value_usd: 23000000, available_value_usd: 17603683,
+    unavailable_value_usd: 5396317, unavailable_as: "encumbered", loan_health: health, evidence_hashes: ["sha256:x"], large_divergence: true, review_required: true,
+    score_effect: "provisional; ...", statement: "The aWETH position ..." };
+  const p = D.plan({ entity_id: fresh({ attestation: { payload: { checks } } }, { attestation: { verification_status: "valid", verification_detail: "ok", payload: {},
+    materiality: { policy_id: "tcs6-materiality/1.2", effect: "provisional", review_required: true, assessments: [div] } } }) });
+  const ex = D.section({ dossier_id: p.dossier_id, section: "exit_liquidity" }).data;
+  const pos = ex.exit_checks.positions[0];
+  assert.deepStrictEqual(pos.score_treatment, { treatment: "evidence_based_discount", available_value_usd: 17603683, unavailable_value_usd: 5396317, unavailable_as: "encumbered", large_divergence: true });
+  assert.deepStrictEqual(pos.withdrawal_simulation.loan_health, health);
+  assert.deepStrictEqual([ex.divergences.length, ex.divergences[0].evidence_hashes], [1, ["sha256:x"]]);
+  const u = D.section({ dossier_id: p.dossier_id, section: "unresolved_items" }).data;
+  assert.strictEqual(u.score_review_required, true);
+  assert.deepStrictEqual(u.divergences.map((d) => [d.cause, d.treatment, d.large_divergence]), [["backs_a_loan", "evidence_based_discount", true]]);
+});

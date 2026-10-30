@@ -232,12 +232,26 @@ function simulationOf(c) {
       : c.status === "failed" ? (m.revert_reason ? `a withdrawal of the full position reverts: ${m.explanation || m.revert_reason} (smaller amounts not tested; see the liquidity check)` : `the withdrawal returns ${round2((ratio || 0) * 100)}% of the expected amount`)
       : c.status === "not_applicable" ? reasonOf(c) : EXIT_RESULT.unavailable,
     recoverable_ratio: ratio, method: m.method || null, ...(m.revert_reason ? { revert_reason: m.revert_reason } : {}),
-    ...(m.cause ? { cause: m.cause } : {}), ...(m.backs_loans ? { backs_loans: m.backs_loans } : {}),
+    ...(m.cause ? { cause: m.cause } : {}), ...(m.backs_loans ? { backs_loans: m.backs_loans } : {}), ...(m.loan_health ? { loan_health: m.loan_health } : {}),
     block_number: c.block_number ?? null, block_hash: c.block_hash || null, observed_at: c.observed_at, evidence_hash: c.evidence_hash || null,
   };
 }
 
-function exitChecks(bundle) {
+// TCS-6 materiality 1.2 (owner 2026-10-30): how each signed divergence changed the score. The gross value stays;
+// liquid capital counts the available value; the rest is shown as encumbered, illiquid, restricted or unverified.
+function divergences(report) {
+  const m = (report.attestation || {}).materiality || {};
+  return (m.assessments || []).filter((a) => a.treatment && a.kind !== "classification_conflict").map((a) => ({
+    kind: a.kind, subject: a.subject, asset_id: a.asset_id || null, cause: a.failure_reason, materiality: a.materiality, treatment: a.treatment,
+    gross_observed_value_usd: a.gross_observed_value_usd ?? a.position_value_usd, available_value_usd: a.available_value_usd ?? null,
+    unavailable_value_usd: a.unavailable_value_usd ?? null, unavailable_as: a.unavailable_as || null,
+    large_divergence: !!a.large_divergence, review_required: !!a.review_required, score_effect: a.score_effect, statement: a.statement || null,
+    check_ids: a.check_ids || [a.failed_check_id], evidence_hashes: a.evidence_hashes || [], ...(a.loan_health ? { loan_health: a.loan_health } : {}),
+  }));
+}
+
+function exitChecks(bundle, report = {}) {
+  const treated = new Map(divergences(report).filter((d) => d.asset_id).map((d) => [d.asset_id.toLowerCase(), d]));
   const all = ((bundle.attestation || {}).payload || {}).checks || [];
   const checks = all.filter((c) => /^exit\.available:/.test(c.field || ""));
   const sims = new Map(all.filter((c) => /^exit\.simulated:/.test(c.field || "")).map((c) => [c.field.slice("exit.simulated:".length), c]));
@@ -257,6 +271,8 @@ function exitChecks(bundle) {
       ...(ageH > 24 ? { observed_hours_before_snapshot: ageH } : {}),
       evidence_hash: c.evidence_hash || null,
       withdrawal_simulation: simulationOf(sims.get(c.field.slice("exit.available:".length))),
+      score_treatment: (({ treatment, available_value_usd, unavailable_value_usd, unavailable_as, large_divergence } = {}) => (treatment
+        ? { treatment, available_value_usd, unavailable_value_usd, unavailable_as, large_divergence } : null))(treated.get(`${chain}:${token}:${holder}`.toLowerCase())),
     };
   }).sort((a, b) => (b.value_at_check_usd || 0) - (a.value_at_check_usd || 0));
   const sum = (xs, k) => round2(xs.reduce((s, p) => s + (p[k] || 0), 0));
@@ -297,7 +313,7 @@ function classificationConflicts(report) {
 
 function exitLiquidity(report, bundle) {
   const rows = rowsOf(bundle);
-  const checks = exitChecks(bundle);
+  const checks = exitChecks(bundle, report);
   const conflicts = classificationConflicts(report);
   const restricted = rows.filter((r) => r.flags.some((f) => f === "lockup" || f === "redemption_limits" || f === "unlock_pending" || f === "legal_restriction"));
   const free = rows.filter((r) => !restricted.includes(r));
@@ -312,6 +328,7 @@ function exitLiquidity(report, bundle) {
       loan_and_liquidity_risks: (report.risks || []).filter((x) => /liquidat|exit|depeg|lock/i.test(`${x.id} ${x.description}`)),
       exit_checks: checks,
       classification_conflicts: conflicts,
+      divergences: divergences(report).filter((d) => d.kind === "realizability_control"),
       method: "v2: lock-up and redemption flags, lock end dates and loan health, the collector's signed exit checks (exit_checks) with the withdrawal simulated from the holder's address where available, and classification conflicts (positions the curated data restricts while the chain shows them withdrawable), each split into on-chain observability, technical withdrawal, economic liquidity and governance classification.",
     },
     ...(checks.positions.length ? { chart: { type: "bar", title: "Checked positions: could be withdrawn now vs not (USD)", series: [
@@ -343,6 +360,9 @@ function unresolvedItems(report) {
     data: {
       data_gaps: (report.data_gaps || []).map((g) => ({ field: g.field, reason: g.reason, remediation: g.remediation || null })),
       review_required: p.review_required ?? null,
+      score_review_required: ((report.attestation || {}).materiality || {}).review_required === true,
+      divergences: divergences(report).map((d) => ({ kind: d.kind, subject: d.subject, cause: d.cause, treatment: d.treatment, large_divergence: d.large_divergence,
+        review_required: d.review_required, score_effect: d.score_effect })),
       review_items: p.review_items || null,
       failed_gates: (report.hard_gates || []).filter((g) => g.status !== "pass").map((g) => ({ id: g.id, status: g.status, effect: g.effect })),
       perimeter_gaps: (report.capital_perimeter || {}).known_perimeter_gaps || [],
