@@ -68,7 +68,7 @@ test("every tamper, replay, staleness and malformed case is labelled, never thro
   assert.ok(VEC.envelope.payload.review_items.failed_checks.every((c) => c.failure_reason && c.materiality === "undetermined"));
   const blk = attestationBlock(bundleWith(VEC.envelope), { status: "valid", detail: "ok" });
   assert.equal(blk.scoring_policy_version, SCORING_POLICY_VERSION);
-  assert.match(blk.statement, /computed under scoring policy version tcs-6\/1\.0 with materiality policy tcs6-materiality\/1\.1\./);
+  assert.match(blk.statement, /computed under scoring policy version tcs-6\/1\.0 with materiality policy tcs6-materiality\/1\.2\./);
   e = clone(VEC.envelope); e.payload.schema_version = "tcs6-attestation/1.0";
   const old = verifyEnvelope(e, bundleWith(e), KEYS, { now: NOW });
   assert.match(old.status + ":" + old.detail, /^invalid:unsupported attestation schema/);

@@ -144,6 +144,7 @@ function valueAsset(asset, asOfMs) {
   if (!Number.isFinite(asset.quantity) || prices.length === 0) return null;
   let usd;
   let check;
+  let spreadPct = 0;
   if (prices.length === 1) {
     usd = prices[0].usd;
     check = "single_source";
@@ -151,7 +152,7 @@ function valueAsset(asset, asOfMs) {
     const vals = prices.map((p) => p.usd);
     const lo = Math.min(...vals);
     const hi = Math.max(...vals);
-    const spreadPct = lo > 0 ? ((hi - lo) / lo) * 100 : hi > 0 ? Infinity : 0;
+    spreadPct = lo > 0 ? ((hi - lo) / lo) * 100 : hi > 0 ? Infinity : 0;
     if (spreadPct <= PRICE_AGREEMENT_PCT) {
       usd = sum(vals) / vals.length;
       check = "consistent";
@@ -164,6 +165,7 @@ function valueAsset(asset, asOfMs) {
   return {
     fair: asset.quantity * usd,
     price_check: check,
+    price_spread_pct: spreadPct,
     price_fresh: Number.isFinite(newestPrice) && asOfMs - newestPrice <= PRICE_FRESH_MS,
     holdings_fresh: asOfMs - ms(asset.holdings_observed_at) <= HOLDINGS_FRESH_MS,
   };
@@ -257,16 +259,22 @@ function d1(base, peerNrts) {
   return dim("D1", score, "complete", metrics, { _peers: eligible.length, _pct: pct });
 }
 
+// Materiality 1.2: where a signed exit check measured how much of a position can leave now, liquid capital
+// counts only that share (base.available: asset_id -> withdrawable fraction). Gross value is unchanged.
+const availableShare = (base, r) => (base.available && base.available.has(r.h.asset_id) ? base.available.get(r.h.asset_id) : 1);
+
 function d2(base, bundle) {
   const hqlaRows = base.verifiedRows.filter((r) => isHqla(r.h));
-  const hqla = sum(hqlaRows, (r) => r.adjusted);
+  const hqla = sum(hqlaRows, (r) => r.adjusted * availableShare(base, r));
+  const discounted = hqlaRows.filter((r) => availableShare(base, r) < 1).length;
   const uses = bundle.cash_uses_12m;
   const refs = holdingsRefs(hqlaRows);
   const vs = valuationStatus(base);
   const usesOk = uses && Number.isFinite(uses.usd) && uses.usd > 0;
   const runway = usesOk ? (12 * hqla) / uses.usd : null;
   const metrics = [
-    metric("tier_0_to_1_hqla_usd", base.verifiedRows.length ? hqla : null, "USD", "post-haircut value of cash equivalents, fiat-backed stablecoins, BTC/ETH-class assets; excludes any flagged for redemption limits, legal restriction, lockup, active depeg, thin depth, or custody concentration", vs, refs),
+    metric("tier_0_to_1_hqla_usd", base.verifiedRows.length ? hqla : null, "USD", "post-haircut value of cash equivalents, fiat-backed stablecoins, BTC/ETH-class assets; excludes any flagged for redemption limits, legal restriction, lockup, active depeg, thin depth, or custody concentration"
+      + (discounted ? `; ${discounted} position(s) counted at the share a signed exit check measured as withdrawable now (materiality 1.2)` : ""), vs, refs),
     metric("expected_12m_cash_uses_usd", usesOk ? uses.usd : null, "USD", "documented budget + debt service + unavoidable commitments", usesOk ? uses.status || "single_source" : "insufficient_data", usesOk ? uses.source_refs : []),
     metric("liquidity_runway_months", runway, "months", "12 * hqla / expected_12m_cash_uses", runway === null ? "insufficient_data" : "estimated", [...refs, ...(usesOk ? uses.source_refs || [] : [])]),
   ];

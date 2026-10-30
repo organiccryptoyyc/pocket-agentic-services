@@ -1,7 +1,7 @@
 {
-  "policy_id": "tcs6-materiality/1.1",
+  "policy_id": "tcs6-materiality/1.2",
   "status": "active",
-  "approved": "owner 2026-10-17 (decision D18); 1.1 adds classification_conflict, owner 2026-10-29",
+  "approved": "owner 2026-10-17 (decision D18); 1.1 adds classification_conflict, owner 2026-10-29; 1.2 divergent scoring, owner 2026-10-30",
   "value_threshold_usd": 100000,
   "treasury_share_threshold": 0.02,
   "threshold_operator": "either",
@@ -28,28 +28,36 @@
       "critical": "insufficient_data; score null"
     },
     "realizability_control": {
-      "active": false,
-      "rule": "stays in gross value, excluded from liquid value; material share: provisional; affects a core solvency or runway input: insufficient_data"
+      "active": true,
+      "rule": "a signed exit check (exit.available / exit.simulated) that failed. Withdrawable fraction: exitable_ratio (insufficient liquidity); 0 (redemptions disabled); 1 - encumbered / position for collateral backing a loan, encumbered = debt / liquidation threshold read on chain (Aave v3 getUserAccountData), assigned to the positions whose full withdrawal reverts, largest first; not measured: the whole position counts as encumbered. An unexplained revert has no measurable basis: no discount, the whole position counts as unverified. An unavailable exit check is a disclosed data gap (flag only)",
+      "non_material": "flag_only",
+      "material": "evidence_based_discount (measured) or confidence_cap (not measured)",
+      "critical": "as material when the divergence is measured (owner 2026-10-30): the score stays reproducible; review required",
+      "debt": "the loan stays an obligation and the collateral stays in gross value: the debt is never subtracted twice"
     },
     "naming_control": {
-      "active": false,
-      "rule": "non-material when the address is independently attributed (registry, Safe configuration, governance record, transaction history); material when the name is the only link: exclude the wallet from verified value or provisional; critical: insufficient_data"
+      "active": true,
+      "rule": "flag only when ownership is independently established (the wallet's control is verified from the registry, Safe configuration or governance record); otherwise confidence_cap by the gross affected value"
     },
     "price_comparison": {
-      "active": false,
-      "rule": "<= 2%: passes; > 2% and <= 5%: attestation flag only; > 5% on a material position: material price conflict, provisional; no defensible price: materiality by affected position, critical: insufficient_data, otherwise provisional with the value excluded or conservatively valued"
+      "active": true,
+      "rule": "<= 2%: pass; > 2% and <= 5%: flag only (the engine values the position at the lower reading with 0 consistency points: a confidence limitation, never the more favourable price); > 5% on a material position: confidence_cap, both readings kept with their sources; no defensible price: the value is excluded (a data gap)"
     },
     "retrieval_control": {
-      "active": false,
-      "rule": "a transport failure while another source agrees: disclosed, no score change; chain state unretrievable for a material position: material; critical: insufficient_data"
+      "active": true,
+      "rule": "a transport or secondary-RPC failure (unavailable) with the primary state reproducible: flag only; a disagreement between sources on a material position: confidence_cap"
     },
     "disclosure_reconciliation": {
-      "active": false,
-      "rule": "reconciliation flag; unresolved difference above the thresholds: provisional; the observed value is never rewritten to match the report"
+      "active": true,
+      "rule": "the reported-vs-observed gap (USD) is the affected value: material: confidence_cap; large: review required. The observed value is never rewritten to match the report"
     },
     "classification_conflict": {
       "active": true,
-      "restrictive_flags": ["redemption_limits", "pending_classification", "lockup"],
+      "restrictive_flags": [
+        "redemption_limits",
+        "pending_classification",
+        "lockup"
+      ],
       "not_a_trigger": "legal_restriction: a legal or governance earmark (e.g. a legal-defense reserve) is not enforced on chain, so a passing exit check does not contradict it",
       "rule": "a position the curated data restricts (one of restrictive_flags) while a signed on-chain exit check (exit.available or exit.simulated) passes in full. Two different questions: can it be withdrawn on chain today (yes) and is it available treasury capital under the protocol's policy (unresolved). Never resolved automatically and never described as worthless or non-withdrawable: the observed value and the passed check are reported",
       "material": "conservative exclusion: the position leaves verified and liquid value (it was already restricted), provisional, review required, confidence capped; no extra penalty points",
@@ -62,5 +70,23 @@
       "rule": "existing obligations policy: a one-time obligations_penalty_points deduction when materially incomplete; insufficient_data when missing obligations make the score non-reproducible",
       "deferred_until": "Build C (owner 2026-10-17, D20): until the missing obligations can be valued, the existing rule stays live: PARTIAL_OBLIGATIONS_PENALTY (10 points, once per report) whenever obligations are partial and bounded, regardless of materiality"
     }
+  },
+  "large_divergence": {
+    "value_usd": 1000000,
+    "treasury_share": 0.1,
+    "position_share": 0.25,
+    "measured_on": "the unavailable or unverified part of the position (value_usd, treasury_share); the gross position (position_share)",
+    "effect": "provisional; review_required; blocks ready"
+  },
+  "measures": {
+    "materiality": "the gross affected position (flag_only vs confidence_cap)",
+    "score_credit": "the verified available value (evidence-based discount on liquid capital)",
+    "large_divergence": "the unavailable or unverified part"
+  },
+  "treatments": {
+    "flag_only": "score 0, no status or confidence effect; the check stays visible",
+    "confidence_cap": "provisional, confidence capped at confidence_cap, no penalty points",
+    "evidence_based_discount": "as confidence_cap, and liquid capital (D2) counts position x measured withdrawable fraction; the rest is reported separately (restricted, encumbered, illiquid), never deleted",
+    "critical": "insufficient_data, score null, review required: a >= critical_core_share_threshold input with no defensible value or attribution, or a non-reproducible score"
   }
 }

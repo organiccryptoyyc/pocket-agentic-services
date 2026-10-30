@@ -139,6 +139,7 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
     bundle = M.withExclusions(bundle, mat.excluded);
     base = S.computeBase(bundle);
   }
+  if (mat && mat.available.size) base = { ...base, available: mat.available };
   const dims = [S.d1(base, peerNrts), S.d2(base, bundle), S.d3(base, bundle), S.d4(base), S.d5(bundle), S.d6(base, bundle)];
   const rights = rightsFilter(bundle.sources);
   const gateList = S.gates(entity, base, bundle, rights.blocked);
@@ -193,10 +194,12 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
     id: "classification_conflict", category: "data_quality", severity: i.score_treatment === "conservative_exclusion" ? "high" : "medium",
     description: `${i.statement} (${i.materiality} under ${mat.policy_id}; effect: ${i.score_effect}.)`,
     monitoring_action: `Resolve the classification: ${i.resolution_event}. Until then the conflict stays open and both the observed value and the conservative treatment are reported.` })) : [];
-  const materialRisks = mat ? mat.items.filter((i) => i.kind !== "classification_conflict" && i.policy_active_for_kind && (i.materiality === "material" || i.materiality === "critical")).map((i) => ({
-    id: `material_${i.kind}`, category: "data_quality", severity: i.materiality === "critical" ? "critical" : "high",
-    description: `${i.subject}: ${i.kind.replace(/_/g, " ")} failed (${i.failure_reason}); ${i.materiality} under ${mat.policy_id} (${i.treasury_share === null ? "share not calculable" : (i.treasury_share * 100).toFixed(2) + "% of counted treasury value"}). Effect: ${i.score_effect}.`,
-    monitoring_action: "Curator reviews the failed control; the effect clears when the check passes." })) : [];
+  const materialRisks = mat ? mat.items.filter((i) => i.kind !== "classification_conflict" && i.policy_active_for_kind && i.treatment !== "flag_only" && (i.materiality === "material" || i.materiality === "critical")).map((i) => ({
+    id: `material_${i.kind}`, category: "data_quality", severity: i.materiality === "critical" || i.large_divergence ? "critical" : "high",
+    description: i.statement ? `${i.statement} (${i.materiality} under ${mat.policy_id}; effect: ${i.score_effect}.)`
+      : `${i.subject}: ${i.kind.replace(/_/g, " ")} failed (${i.failure_reason}); ${i.materiality} under ${mat.policy_id} (${i.treasury_share === null ? "share not calculable" : (i.treasury_share * 100).toFixed(2) + "% of counted treasury value"}). Effect: ${i.score_effect}.`,
+    monitoring_action: i.review_required ? "Large divergence: a curator reviews it before the report can read ready; the effect clears when the check passes."
+      : "Curator reviews the failed control; the effect clears when the check passes." })) : [];
   const penaltyRisks = penalties.map((p) => ({ id: `penalty_${p.id}`, category: "other", severity: "medium", description: `Documented penalty of ${p.points} points: ${p.reason}`, monitoring_action: "Re-evaluate at next refresh." }));
 
   const statusMap = { eligible: "ready", provisional: "provisional", insufficient_data: "insufficient_data", ineligible: "insufficient_data" };

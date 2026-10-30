@@ -536,13 +536,104 @@
                   },
                   "statement": {
                     "type": "string"
+                  },
+                  "treatment": {
+                    "type": "string",
+                    "enum": [
+                      "flag_only",
+                      "confidence_cap",
+                      "evidence_based_discount",
+                      "conservative_exclusion",
+                      "withheld"
+                    ],
+                    "description": "tcs6-materiality/1.2: how the divergence changed the report"
+                  },
+                  "withdrawable_fraction": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "description": "realizability: the share the chain measured as withdrawable now; null when there is no measurable basis"
+                  },
+                  "available_value_usd": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "description": "realizability: the verified available value liquid capital counts"
+                  },
+                  "unavailable_value_usd": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "description": "realizability: the rest of the position, reported (not deleted)"
+                  },
+                  "unavailable_as": {
+                    "type": "string",
+                    "enum": [
+                      "encumbered",
+                      "restricted",
+                      "illiquid",
+                      "unverified"
+                    ]
+                  },
+                  "loan_health": {
+                    "type": "object",
+                    "description": "collateral backing a loan: the borrower account read on chain (debt, liquidation threshold, encumbered value, block)"
+                  },
+                  "evidence_hashes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "large_divergence": {
+                    "type": "boolean",
+                    "description": "the unavailable or unverified part > $1M or > 10% of counted treasury, or the position >= 25%: review required, never ready"
+                  },
+                  "observed_value_usd": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "reported_value_usd": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "reported_as_of": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "gap_usd": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "price_spread_pct": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "price_readings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
                   }
                 }
               }
             },
             "review_required": {
               "type": "boolean",
-              "description": "present (true) when the report carries a classification conflict (tcs6-materiality/1.1)"
+              "description": "present (true) when the report carries a classification conflict (1.1) or a large divergence or withheld score (1.2)"
             }
           }
         },

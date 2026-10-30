@@ -19,6 +19,16 @@
 // classification_conflict (1.1): a curated-restricted position whose signed exit check passes in full. Material ->
 // conservative exclusion (it leaves verified and liquid value), provisional, confidence capped, review required, no
 // penalty points; critical is treated as material (the conservative treatment keeps the score reproducible).
+//
+// 1.2 divergent scoring (owner 2026-10-30): a signed check that disagrees with the headline value changes the
+// score, citing the check. Three measures: materiality (flag vs cap) on the gross affected position; score
+// credit from the verified available value; the large-divergence status on the unavailable or unverified part.
+//   realizability_control      failed exit checks: liquid capital (D2) counts position x measured withdrawable
+//                              fraction (the `available` map); the rest is reported, never deleted
+//   price_comparison           > 5% on a material position: provisional, capped; <= 5%: flag only
+//   disclosure_reconciliation  the reported-vs-observed gap is the affected value
+//   naming / retrieval         flag only when ownership is established / the failure is transport only
+// A large divergence (policy.large_divergence) sets review_required; it is provisional, so it never reads `ready`.
 "use strict";
 
 const POLICY = require("../methodology/tcs6_materiality_policy_v1.json");
@@ -119,17 +129,229 @@ function conflictItem(cf, treasury, policy) {
   };
 }
 
-// -> null when there is no valid attestation with review items or classification conflicts; otherwise the assessment.
+// --- 1.2 divergent scoring ---------------------------------------------------------------------------------
+
+const round2 = (v) => (v === null ? null : Math.round(v * 100) / 100);
+const share = (v, treasury) => (v === null || !(treasury > 0) ? null : Math.round((v / treasury) * 1e6) / 1e6);
+const pctText = (r) => `${Number((r * 100).toPrecision(3))}%`;
+
+// Large divergence: the unavailable or unverified part (`part`) above the value or treasury-share line, or a
+// position that is itself >= position_share of counted treasury value.
+function isLarge(part, gross, treasury, policy) {
+  const ld = policy.large_divergence;
+  if (!ld) return false;
+  return part > ld.value_usd || (treasury > 0 && (part / treasury > ld.treasury_share || gross / treasury >= ld.position_share));
+}
+
+// Signed exit checks by position ("chain:token:holder", lowercase): the latest of each prefix.
+function exitChecks(payload) {
+  const by = new Map();
+  for (const c of payload.checks || []) {
+    const m = /^exit\.(available|simulated):(.+)$/.exec(c.field || "");
+    if (!m) continue;
+    const id = m[2].toLowerCase();
+    if (!by.has(id)) by.set(id, {});
+    by.get(id)[m[1]] = c;
+  }
+  return by;
+}
+
+const RESTRICTED_AS = { backs_a_loan: "encumbered", redemptions_disabled: "restricted", insufficient_liquidity: "illiquid" };
+
+// Failed exit checks -> realizability items. Each gets a withdrawable fraction when the chain measured one.
+function realizability(base, payload) {
+  const rows = new Map(base.verifiedRows.map((r) => [String(r.h.asset_id || "").toLowerCase(), r]));
+  const out = [];
+  const loans = new Map(); // chain:holder -> { health, items }: one loan per borrower account
+  for (const [id, ck] of exitChecks(payload)) {
+    const av = ck.available && ck.available.status === "failed" ? ck.available : null;
+    const sim = ck.simulated && ck.simulated.status === "failed" ? ck.simulated : null;
+    const row = rows.get(id);
+    if ((!av && !sim) || !row) continue;
+    const sm = (sim && sim.measure) || {};
+    const ratio = av && av.measure && Number.isFinite(av.measure.exitable_ratio) ? av.measure.exitable_ratio : null;
+    const it = { row, checks: [av, sim].filter(Boolean), cause: sm.cause || (ratio !== null ? "insufficient_liquidity" : "unexplained"), fraction: null, basis: null };
+    if (it.cause === "redemptions_disabled") {
+      it.fraction = 0;
+      it.basis = "the vault has redemptions switched off, so nothing can be withdrawn now";
+    } else if (it.cause === "backs_a_loan") {
+      const [chain, , holder] = id.split(":");
+      const k = `${chain}:${holder}`;
+      if (!loans.has(k)) loans.set(k, { health: null, items: [] });
+      const g = loans.get(k);
+      g.health = g.health || sm.loan_health || null;
+      g.items.push(it);
+    } else if (ratio !== null) {
+      it.cause = "insufficient_liquidity";
+      it.fraction = ratio;
+      it.basis = `the pool or vault holds ${pctText(ratio)} of the position in withdrawable cash`;
+    } else {
+      it.basis = "the full withdrawal reverted for a reason the chain does not quantify, so there is no measurable basis for a discount";
+    }
+    out.push(it);
+  }
+  // Collateral: the loan's measured need (debt / liquidation threshold) is assigned to the positions whose full
+  // withdrawal reverts, largest first. Not measured: the whole position counts as encumbered.
+  for (const g of loans.values()) {
+    const need = g.health && Number.isFinite(g.health.encumbered_usd) ? g.health.encumbered_usd : null;
+    let left = need;
+    for (const it of g.items.sort((a, b) => b.row.fair - a.row.fair)) {
+      if (left === null) {
+        it.fraction = 0;
+        it.basis = "the position backs a loan whose collateral need was not measured, so the whole position is treated as encumbered";
+        continue;
+      }
+      const enc = Math.min(it.row.fair, left);
+      left -= enc;
+      it.fraction = it.row.fair > 0 ? 1 - enc / it.row.fair : 0;
+      it.loan_health = g.health;
+      it.basis = `the position backs a loan: ${usdText(enc)} of it keeps the loan at a health factor of 1 `
+        + `(debt ${usdText(g.health.debt_usd)} / liquidation threshold ${pctText(g.health.liquidation_threshold)}, read on chain at block ${g.health.block_number})`;
+    }
+  }
+  return out;
+}
+
+function realizabilityItem(it, treasury, policy) {
+  const { row } = it;
+  const gross = row.fair;
+  const materiality = materialityOf(gross, treasury, policy);
+  const flag = materiality === "non_material";
+  const measured = it.fraction !== null;
+  const available = measured ? gross * it.fraction : null;
+  const part = measured ? gross - available : gross;
+  const large = !flag && isLarge(part, gross, treasury, policy);
+  const treatment = flag ? "flag_only" : measured ? "evidence_based_discount" : "confidence_cap";
+  const symbol = row.h.symbol || "position";
+  const label = RESTRICTED_AS[it.cause] || "unverified";
+  const checks = it.checks.map((c) => c.check_id).sort();
+  const statement = `The ${symbol} position (${usdText(gross)}) cannot be fully withdrawn now: ${it.basis}. `
+    + (flag ? "It is below the materiality thresholds: disclosed, no score effect."
+      : measured ? `Liquid capital counts ${usdText(available)} of it; ${usdText(part)} is reported as ${label}, not deleted. The report is provisional and confidence is capped at ${policy.confidence_cap}.`
+      : `No discount is applied; the report is provisional and confidence is capped at ${policy.confidence_cap}.`)
+    + (large ? " The divergence is large, so the report needs review and cannot read ready." : "");
+  return {
+    item: {
+      failed_check_id: checks[0], check_ids: checks, kind: "realizability_control",
+      subject: `${symbol} at ${String(row.h.address || "").toLowerCase()}`,
+      contract: (String(row.h.asset_id || "").split(":")[1] || "").toLowerCase() || null,
+      failure_reason: it.cause,
+      position_value_usd: round2(gross), treasury_value_usd: round2(treasury), treasury_share: share(gross, treasury),
+      materiality, policy_active_for_kind: true,
+      score_effect: flag ? "none (flag only)" : measured ? `provisional; liquid capital counts the available ${usdText(available)}; confidence capped at ${policy.confidence_cap}; no penalty points`
+        : `provisional; confidence capped at ${policy.confidence_cap}; no discount (no measurable basis)`,
+      asset_id: row.h.asset_id, treatment,
+      withdrawable_fraction: measured ? Math.round(it.fraction * 1e6) / 1e6 : null,
+      gross_observed_value_usd: round2(gross),
+      available_value_usd: round2(available),
+      unavailable_value_usd: round2(part), unavailable_as: label,
+      ...(it.loan_health ? { loan_health: it.loan_health } : {}),
+      evidence_hashes: it.checks.map((c) => c.evidence_hash).filter(Boolean),
+      large_divergence: large, review_required: large, confidence: flag ? "unchanged" : "capped",
+      statement,
+    },
+    effect: flag ? "disclose" : "provisional",
+    fraction: !flag && measured ? it.fraction : null,
+  };
+}
+
+// Reported vs observed treasury total: the gap is the affected value; the observed value is never rewritten.
+function reconciliationItem(c, treasury, policy) {
+  const observed = Number(c.our_value);
+  const reported = c.other_value && Number(c.other_value.usd);
+  const gap = Number.isFinite(observed) && Number.isFinite(reported) ? Math.abs(observed - reported) : null;
+  const materiality = materialityOf(gap, treasury, policy);
+  const flag = materiality === "non_material";
+  const large = gap === null || (!flag && isLarge(gap, 0, treasury, policy));
+  const asOf = (c.other_value && c.other_value.as_of) || null;
+  return {
+    item: {
+      failed_check_id: c.check_id, check_ids: [c.check_id], kind: "disclosure_reconciliation", subject: c.label || "reported vs observed treasury total",
+      contract: null, failure_reason: "reported_vs_observed_gap",
+      position_value_usd: round2(gap), treasury_value_usd: round2(treasury), treasury_share: share(gap, treasury),
+      materiality, policy_active_for_kind: true,
+      score_effect: flag ? "none (flag only)" : `provisional; confidence capped at ${policy.confidence_cap}; observed value kept (never rewritten to match the report)`,
+      treatment: flag ? "flag_only" : "confidence_cap",
+      observed_value_usd: round2(observed), reported_value_usd: round2(reported), reported_as_of: asOf, gap_usd: round2(gap),
+      evidence_hashes: [c.evidence_hash].filter(Boolean),
+      large_divergence: large, review_required: large, confidence: flag ? "unchanged" : "capped",
+      statement: `The protocol reported ${usdText(reported)}${asOf ? ` as of ${asOf}` : ""}; we observe ${usdText(observed)} for the same scope, a gap of ${gap === null ? "an amount that cannot be calculated" : usdText(gap)}. `
+        + `The observed value is kept. ${flag ? "The gap is below the materiality thresholds: disclosed, no score effect." : `The report is provisional and confidence is capped at ${policy.confidence_cap}.`}`
+        + (large ? " The gap is large, so the report needs review and cannot read ready." : ""),
+    },
+    effect: flag ? "disclose" : "provisional",
+  };
+}
+
+// Price disagreement, from a signed price_comparison check or from the engine's own readings of one holding.
+function priceItem(subject, checkId, rows, spreadPct, readings, hashes, treasury, policy) {
+  const gross = rows.reduce((s, r) => s + r.fair, 0);
+  const over = spreadPct > policy.price_materiality_threshold * 100;
+  const materiality = materialityOf(gross, treasury, policy);
+  const flag = !over || materiality === "non_material";
+  const large = !flag && isLarge(gross, gross, treasury, policy);
+  return {
+    item: {
+      failed_check_id: checkId, check_ids: [checkId], kind: "price_comparison", subject,
+      contract: rows.length ? (String(rows[0].h.asset_id || "").split(":")[1] || "").toLowerCase() || null : null,
+      failure_reason: over ? "price_spread_above_5pct" : "price_spread_2_to_5pct",
+      position_value_usd: round2(gross), treasury_value_usd: round2(treasury), treasury_share: share(gross, treasury),
+      materiality, policy_active_for_kind: true,
+      score_effect: flag ? "none (flag only; the lower reading is used and the position gets no consistency points)"
+        : `provisional; confidence capped at ${policy.confidence_cap}; valued at the lower reading, both readings kept`,
+      treatment: flag ? "flag_only" : "confidence_cap",
+      price_spread_pct: Math.round(spreadPct * 1e4) / 1e4, price_readings: readings,
+      evidence_hashes: hashes, large_divergence: large, review_required: large, confidence: flag ? "unchanged" : "capped",
+    },
+    effect: flag ? "disclose" : "provisional",
+  };
+}
+
+// -> null when there is no valid attestation with review items, classification conflicts or divergences;
+// otherwise the assessment.
 function assess(bundle, base, verdict, policy = POLICY) {
   if (!verdict || verdict.status !== "valid") return null;
   const payload = bundle && bundle.attestation && bundle.attestation.payload;
   const ri = payload && payload.review_items;
   const found = payload ? conflicts(bundle, base, payload, policy) : [];
-  if ((!ri || !Array.isArray(ri.failed_checks)) && !found.length) return null;
   const treasury = base.grossVerified;
+  const active = (k) => !!(policy.classes[k] && policy.classes[k].active);
+  const divergent = [];
+  if (payload && active("realizability_control")) for (const it of realizability(base, payload)) divergent.push(realizabilityItem(it, treasury, policy));
+  if (payload && active("disclosure_reconciliation")) {
+    for (const c of payload.checks || []) {
+      if (c.kind === "disclosure_reconciliation" && (c.status === "conflicted" || c.status === "failed")) divergent.push(reconciliationItem(c, treasury, policy));
+    }
+  }
+  const priced = new Set();
+  if (payload && active("price_comparison")) {
+    for (const c of payload.checks || []) {
+      if (c.kind !== "price_comparison" || !(c.status === "conflicted" || c.status === "failed") || !Number.isFinite(c.delta_pct)) continue;
+      const contract = (String(c.field || "").split(":")[2] || "").toLowerCase();
+      const rows = base.verifiedRows.filter((r) => String(r.h.asset_id || "").toLowerCase().split(":")[1] === contract);
+      if (!rows.length) continue;
+      rows.forEach((r) => priced.add(r.h.asset_id));
+      divergent.push(priceItem(c.label || c.field, c.check_id, rows, c.delta_pct,
+        [{ source: "ours", value: c.our_value }, { source: c.source, value: c.other_value }], [c.evidence_hash].filter(Boolean), treasury, policy));
+    }
+  }
+  if (active("price_comparison")) {
+    for (const r of base.verifiedRows) {
+      if (r.price_check !== "conflict" || priced.has(r.h.asset_id)) continue;
+      divergent.push(priceItem(`${r.h.symbol || "position"} at ${String(r.h.address || "").toLowerCase()}`, `price_comparison|holding:${r.h.asset_id}|engine`, [r], r.price_spread_pct,
+        (r.h.prices || []).map((p) => ({ source: p.source_ref, usd: p.usd, observed_at: p.observed_at })), [], treasury, policy));
+    }
+  }
+  if ((!ri || !Array.isArray(ri.failed_checks)) && !found.length && !divergent.length) return null;
   const items = [];
   const excluded = new Set();
+  const available = new Map();
   let effect = "none";
+  for (const d of divergent) {
+    items.push(d.item);
+    if (RANK[d.effect] > RANK[effect]) effect = d.effect;
+    if (Number.isFinite(d.fraction)) available.set(d.item.asset_id, d.fraction);
+  }
   for (const cf of found) {
     const item = conflictItem(cf, treasury, policy);
     if (item.score_treatment === "conservative_exclusion") {
@@ -139,14 +361,21 @@ function assess(bundle, base, verdict, policy = POLICY) {
     items.push(item);
   }
   for (const fc of [...((ri && ri.failed_checks) || []), ...((ri && ri.conflicted_checks) || [])]) {
+    if (HANDLED_ABOVE.has(fc.kind) && active(fc.kind)) continue;
     const cls = policy.classes[fc.kind];
-    const active = !!(cls && cls.active);
+    const isActive = !!(cls && cls.active);
     const rows = affectedRows(base, fc.contract, chainOf(fc.check_id));
     const value = rows === null ? null : rows.reduce((s, r) => s + r.fair, 0);
     const materiality = materialityOf(value, treasury, policy);
-    const itemEffect = !active ? "none" : materiality === "critical" ? "insufficient_data" : materiality === "material" ? "provisional" : "disclose";
-    if (active && materiality === "material") for (const r of rows) excluded.add(r.h.asset_id);
+    // naming: the wallet's control is verified (registry, Safe, governance record), so ownership is established
+    // independently of the name: flag only. Naming and retrieval never take a position out of verified value.
+    const flagOnly = fc.kind === "naming_control" && rows !== null;
+    const excludes = fc.kind === "contract_identity_control";
+    const itemEffect = !isActive ? "none" : flagOnly ? "disclose" : materiality === "critical" && fc.kind !== "naming_control" ? "insufficient_data"
+      : materiality === "material" || materiality === "undetermined" && fc.kind === "naming_control" ? "provisional" : "disclose";
+    if (isActive && excludes && materiality === "material") for (const r of rows) excluded.add(r.h.asset_id);
     if (RANK[itemEffect] > RANK[effect]) effect = itemEffect;
+    const large = itemEffect === "provisional" && (value === null || isLarge(value, value, treasury, policy));
     items.push({
       failed_check_id: fc.check_id,
       kind: fc.kind,
@@ -157,14 +386,19 @@ function assess(bundle, base, verdict, policy = POLICY) {
       treasury_value_usd: Math.round(treasury * 100) / 100,
       treasury_share: value === null || !(treasury > 0) ? null : Math.round((value / treasury) * 1e6) / 1e6,
       materiality,
-      policy_active_for_kind: active,
+      policy_active_for_kind: isActive,
       score_effect: itemEffect === "insufficient_data" ? "insufficient_data; score null"
-        : itemEffect === "provisional" ? `provisional; position excluded from verified value; confidence capped at ${policy.confidence_cap}`
-        : itemEffect === "disclose" ? "none (disclosed)" : "none (class not active under this policy)",
+        : itemEffect === "provisional" ? `provisional; ${excludes ? "position excluded from verified value; " : ""}confidence capped at ${policy.confidence_cap}`
+        : itemEffect === "disclose" ? (flagOnly ? "none (flag only: ownership established independently of the name)" : "none (disclosed)") : "none (class not active under this policy)",
+      ...(isActive ? { treatment: itemEffect === "insufficient_data" ? "withheld" : itemEffect === "provisional" ? (excludes ? "conservative_exclusion" : "confidence_cap") : "flag_only",
+        large_divergence: large || itemEffect === "insufficient_data", review_required: large || itemEffect === "insufficient_data" } : {}),
     });
   }
-  return { policy_id: policy.policy_id, effect, items, excluded };
+  if (!items.length) return null;
+  return { policy_id: policy.policy_id, effect, items, excluded, available, review_required: items.some((i) => i.review_required === true) };
 }
+
+const HANDLED_ABOVE = new Set(["realizability_control", "disclosure_reconciliation", "price_comparison"]);
 
 // Holdings of the bundle with the excluded positions taken out of verified value (control relabelled).
 function withExclusions(bundle, excluded) {
