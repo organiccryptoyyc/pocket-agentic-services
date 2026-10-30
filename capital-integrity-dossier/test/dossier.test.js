@@ -218,6 +218,24 @@ test("v2: each exit position carries its withdrawal simulation; a position not r
   assert.deepStrictEqual([e.summary.not_rechecked, e.summary.simulated, e.summary.simulation_failed], [1, 1, 1]);
 });
 
+test("v2: a revert reads in plain English, keeps the raw reason, and names the loan a position backs", () => {
+  const TOK = A(9);
+  const loan = [{ obligation_id: "DAO-GHO-DEBT", what: "Safe GHO borrow", usd: 6470000 }];
+  const checks = [
+    { field: `exit.available:ethereum:${TOK}:${SAFE1}`, label: "aWETH at treasury_safe", source: "sim:aave", status: "passed", observed_at: AS_OF, our_value: { usd: 23000000 }, measure: { exitable_ratio: 1 } },
+    { field: `exit.simulated:ethereum:${TOK}:${SAFE1}`, source: "sim:aave:eth_call", status: "failed", observed_at: AS_OF, block_number: 7, block_hash: "0x07",
+      measure: { recoverable_ratio: null, method: "withdraw(address,uint256,address)", tested_amount: "full position",
+        revert_reason: "HealthFactorLowerThanLiquidationThreshold(): the position backs a loan, so withdrawing it all would breach the loan's health factor",
+        cause: "backs_a_loan", backs_loans: loan,
+        explanation: "the position is collateral for a loan (Safe GHO borrow, $6,470,000; already counted as an obligation), so withdrawing all of it would breach the loan's health factor" } },
+  ];
+  const p = D.plan({ entity_id: fresh({ attestation: { payload: { checks } } }) });
+  const s = D.section({ dossier_id: p.dossier_id, section: "exit_liquidity" }).data.exit_checks.positions[0].withdrawal_simulation;
+  assert.match(s.result, /^a withdrawal of the full position reverts: the position is collateral for a loan \(Safe GHO borrow, \$6,470,000; already counted/);
+  assert.deepStrictEqual([s.cause, s.backs_loans], ["backs_a_loan", loan]);
+  assert.match(s.revert_reason, /^HealthFactorLowerThanLiquidationThreshold/);
+});
+
 test("v2: a classification conflict is shown as four separate layers and listed for review", () => {
   const conflict = { kind: "classification_conflict", subject: "yRECOVERY at 0xbb", asset_id: "ethereum:0xaa:0xbb", materiality: "material",
     failed_check_id: "realizability_control|exit.available:ethereum:0xaa:0xbb|sim:erc4626", check_ids: ["realizability_control|exit.available:ethereum:0xaa:0xbb|sim:erc4626"],

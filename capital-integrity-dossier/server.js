@@ -13,7 +13,7 @@ const store = require("./lib/store");
 const D = require("./lib/dossier");
 
 const SERVICE = "capital-integrity-dossier";
-const VERSION = "1.2.0";
+const VERSION = "1.2.1";
 const PORT = Number(process.env.PORT || 8080);
 const PAIR_REFRESH_MS = 5 * 60 * 1000;
 
