@@ -12,6 +12,7 @@ const { verifyEnvelope, attestationBlock, loadKeys } = require("./attestation");
 const crypto = require("crypto");
 const S = require("./scoring");
 const M = require("./materiality");
+const WX = require("./walletexit");
 const O = require("./obligations");
 const { sanitize } = require("./http");
 
@@ -78,7 +79,8 @@ function rationale(d) {
     case "D5":
       return `Trailing 12-month self-funding ratio is ${v("self_funding_ratio")}% (recurring treasury inflows ${fmtUsd(v("trailing_12m_recurring_treasury_inflows_usd"))} vs controllable uses ${fmtUsd(v("trailing_12m_controllable_cash_uses_usd"))}).`;
     case "D6":
-      return `Verified control covers ${v("verified_control_value_pct")}% of reported value; reconciliation ${v("address_or_custody_reconciliation_pct") === null ? "not evidenced" : v("address_or_custody_reconciliation_pct") + "%"}, latest disclosure ${v("disclosure_age_days") === null ? "date not evidenced" : v("disclosure_age_days") + " days old"}; controls: ${v("treasury_policy_and_multisig_controls")}.`;
+      return `Verified control covers ${v("verified_control_value_pct")}% of reported value; reconciliation ${v("address_or_custody_reconciliation_pct") === null ? "not evidenced" : v("address_or_custody_reconciliation_pct") + "%"}, latest disclosure ${v("disclosure_age_days") === null ? "date not evidenced" : v("disclosure_age_days") + " days old"}; controls: ${v("treasury_policy_and_multisig_controls")}.`
+        + (v("one_hour_exit_usd") === undefined || v("one_hour_exit_usd") === null ? "" : ` Wallet exit: ${fmtUsd(v("one_hour_exit_usd"))} (${v("one_hour_exit_share_pct")}% of counted value) could leave within one hour if wallet signing control were compromised.`);
     default:
       return "";
   }
@@ -140,6 +142,9 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
     base = S.computeBase(bundle);
   }
   if (mat && mat.available.size) base = { ...base, available: mat.available };
+  // Wallet exit (owner 2026-10-30): from the signed control and borrow paths; caps D6 inside S.d6.
+  const wx = WX.assess(bundle, base, verdict);
+  if (wx) base = { ...base, walletExit: wx };
   const dims = [S.d1(base, peerNrts), S.d2(base, bundle), S.d3(base, bundle), S.d4(base), S.d5(bundle), S.d6(base, bundle)];
   const rights = rightsFilter(bundle.sources);
   const gateList = S.gates(entity, base, bundle, rights.blocked);
@@ -230,6 +235,7 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
     data_gaps: [...derivedGaps(dims, overallScore), ...warningGaps, ...curatedGaps],
     disclaimer: DISCLAIMER,
     ...(obligationsPolicy ? { obligations_policy: obligationsPolicy } : {}),
+    ...(wx ? { wallet_exit: wx } : {}),
   });
   // Signed input attestation (Verified layer): attached after cleanText so the signed payload reaches the
   // caller byte-for-byte as the Pi signed it. Absent for bundles that carry neither an attestation nor a

@@ -19,7 +19,7 @@ const store = require("./lib/store");
 const S = require("./lib/scoring");
 
 const SERVICE = "treasury-capital-score";
-const VERSION = "1.7.0";
+const VERSION = "1.8.0";
 const PORT = Number(process.env.PORT || 8080);
 
 function findEntity(body) {

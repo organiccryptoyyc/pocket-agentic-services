@@ -340,3 +340,20 @@ test("1.3: each divergence shows how it changed the score: available value, the 
   assert.strictEqual(u.score_review_required, true);
   assert.deepStrictEqual(u.divergences.map((d) => [d.cause, d.treatment, d.large_divergence]), [["backs_a_loan", "evidence_based_discount", true]]);
 });
+
+test("1.4: authority_graph shows wallet exit; exit_liquidity shows on-chain sale depth and LP exits (evidence only)", () => {
+  const TOK = A(9);
+  const checks = [{ field: `exit.market:ethereum:${TOK}:${SAFE1}`, label: "UNI at treasury_safe", source: "quote:onchain", status: "passed", observed_at: AS_OF,
+    our_value: { usd: 10000000 }, block_number: 7, evidence_hash: "sha256:m",
+    measure: { reference_usd_per_token: 10, tranches: [{ share: 0.01, proceeds_usd: 99800, price_impact_pct: 0.2, venue: "uniswap_v3:3000:WETH" }, { share: 1, proceeds_usd: 8333333, price_impact_pct: 16.67, venue: "uniswap_v3:3000:WETH" }] } }];
+  const wx = { policy_id: "tcs6-wallet-exit/1.0", one_hour_exit_usd: 24000000, one_hour_exit_share: 0.2, d6_cap: 75, direct_usd: 20000000, borrow_usd: 4000000,
+    freezable_usd: 10000000, protected_usd: 0, treasury_value_usd: 120000000, unknown_control_wallets: 0, borrow_caps: [], wallets: [{ address: SAFE1, protected: false }],
+    statement: "If the signing control of the exposed wallets were compromised, about $24,000,000 ..." };
+  const p = D.plan({ entity_id: fresh({ attestation: { payload: { checks } } }, { wallet_exit: wx }) });
+  const ag = D.section({ dossier_id: p.dossier_id, section: "authority_graph" }).data.wallet_exit;
+  assert.deepStrictEqual([ag.one_hour_exit_usd, ag.d6_cap, ag.borrow_usd], [24000000, 75, 4000000]);
+  assert.match(ag.method, /KelpDAO \(April 2026\), Binance \(October 2026\)/);
+  const el = D.section({ dossier_id: p.dossier_id, section: "exit_liquidity" }).data.economic_liquidity;
+  assert.strictEqual(el.sales[0].tranches[1].price_impact_pct, 16.67);
+  assert.match(el.scope, /on-chain markets only/);
+});

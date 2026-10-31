@@ -165,7 +165,37 @@ function authorityGraph(report, bundle) {
       governance: { multisig_scored: g.multisig || null, timelock_evidenced: !!g.timelock, treasury_policy_documented: !!g.has_treasury_policy },
       proxy_checks: ((bundle.verification_summary || {}).fields || []).filter((f) => f.field.startsWith("control.")).map((f) => ({ label: f.label, status: f.status })),
       method: "Safe getThreshold()/getOwners() read on chain each collector run; EIP-1967 slots compared across two RPCs plus Sourcify (evidence bank).",
+      ...(report.wallet_exit ? { wallet_exit: walletExit(report) } : {}),
     },
+  };
+}
+
+// TCS-6 wallet exit (tcs6-wallet-exit/1.0, owner 2026-10-30): how much could leave within one hour if a wallet's
+// signing control were compromised, by direct transfer or by borrowing unfreezable WETH against collateral.
+function walletExit(report) {
+  const w = report.wallet_exit;
+  return {
+    one_hour_exit_usd: w.one_hour_exit_usd, one_hour_exit_share: w.one_hour_exit_share, d6_cap: w.d6_cap,
+    direct_usd: w.direct_usd, borrow_usd: w.borrow_usd, freezable_usd: w.freezable_usd, protected_usd: w.protected_usd,
+    unknown_control_wallets: w.unknown_control_wallets, borrow_caps: w.borrow_caps || [], wallets: w.wallets || [], statement: w.statement,
+    method: "Control path read on chain (EOA, Safe, timelock delay, governor, owner / proxy admin); protected at a vote or a delay of at least 48 hours (Compound Timelock MINIMUM_DELAY). Borrow paths from Aave v3 and Compound v3, capped by the WETH cash those markets hold. Incidents that used these methods: KelpDAO (April 2026), Binance (October 2026).",
+  };
+}
+
+// v2c (owner 2026-10-30), evidence only: what a sale of 1%, 10%, 25% and 100% of a large plain token holding would fetch
+// on chain, and what an LP or vault position returns. On-chain markets only.
+function marketDepth(bundle) {
+  const all = ((bundle.attestation || {}).payload || {}).checks || [];
+  const pick = (prefix) => all.filter((c) => (c.field || "").startsWith(prefix));
+  const pos = (c) => { const [, chain, token, holder] = c.field.split(":"); return { label: c.label || null, chain, token, holder }; };
+  return {
+    sales: pick("exit.market:").map((c) => ({ ...pos(c), status: c.status, value_usd: (c.our_value || {}).usd ?? null,
+      reference_usd_per_token: (c.measure || {}).reference_usd_per_token ?? null, tranches: (c.measure || {}).tranches || [],
+      ...(c.status === "unavailable" ? { reason: (c.measure || {}).reason || null } : {}),
+      block_number: c.block_number ?? null, evidence_hash: c.evidence_hash || null })),
+    lp_exits: pick("exit.lp:").map((c) => ({ ...pos(c), status: c.status, value_usd: (c.our_value || {}).usd ?? null, method: (c.measure || {}).method || null,
+      ...(c.measure || {}), block_number: c.block_number ?? null, evidence_hash: c.evidence_hash || null })),
+    scope: "on-chain markets only (Uniswap v3, Curve): exchange order books, aggregators and selling over time are not measured, so on-chain price impact overstates the loss for tokens that trade mainly on exchanges",
   };
 }
 
@@ -329,6 +359,7 @@ function exitLiquidity(report, bundle) {
       exit_checks: checks,
       classification_conflicts: conflicts,
       divergences: divergences(report).filter((d) => d.kind === "realizability_control"),
+      economic_liquidity: marketDepth(bundle),
       method: "v2: lock-up and redemption flags, lock end dates and loan health, the collector's signed exit checks (exit_checks) with the withdrawal simulated from the holder's address where available, and classification conflicts (positions the curated data restricts while the chain shows them withdrawable), each split into on-chain observability, technical withdrawal, economic liquidity and governance classification.",
     },
     ...(checks.positions.length ? { chart: { type: "bar", title: "Checked positions: could be withdrawn now vs not (USD)", series: [

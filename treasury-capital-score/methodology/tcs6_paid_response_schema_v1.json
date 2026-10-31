@@ -1519,6 +1519,71 @@
           }
         }
       }
+    },
+    "wallet_exit": {
+      "type": "object",
+      "description": "tcs6-wallet-exit/1.0 (owner 2026-10-30): value that could leave within one hour if a treasury wallet's signing control were compromised; caps D6",
+      "required": [
+        "policy_id",
+        "one_hour_exit_usd",
+        "one_hour_exit_share",
+        "d6_cap",
+        "wallets",
+        "statement"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string"
+        },
+        "one_hour_exit_usd": {
+          "type": "number"
+        },
+        "one_hour_exit_share": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "direct_usd": {
+          "type": "number"
+        },
+        "borrow_usd": {
+          "type": "number"
+        },
+        "freezable_usd": {
+          "type": "number"
+        },
+        "protected_usd": {
+          "type": "number"
+        },
+        "treasury_value_usd": {
+          "type": "number"
+        },
+        "d6_cap": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "unknown_control_wallets": {
+          "type": "integer"
+        },
+        "borrow_caps": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "wallets": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "statement": {
+          "type": "string"
+        }
+      }
     }
   },
   "$defs": {

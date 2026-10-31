@@ -1,0 +1,32 @@
+{
+  "policy_id": "tcs6-wallet-exit/1.0",
+  "status": "active",
+  "approved": "owner 2026-10-30 (scored now: it could happen now; Aave v3 and Compound v3; industry-standard delay; bands as proposed)",
+  "question": "If a treasury wallet's signing control were compromised, how much could leave within one hour as liquid assets nobody can freeze?",
+  "horizon_minutes": 60,
+  "delay_standard_hours": 48,
+  "delay_standard_source": "Compound Timelock MINIMUM_DELAY = 2 days (compound-finance/compound-protocol, contracts/Timelock.sol), the timelock Uniswap and many DAOs reuse",
+  "protected_when": "every control path needs an on-chain vote or a delay of at least delay_standard_hours",
+  "unknown_control_path": "counted as extractable and flagged, unless a cited curated control path says otherwise",
+  "paths": {
+    "direct": "liquid, non-freezable tokens the wallet can transfer now; lent positions only up to the share a signed exit check measured as withdrawable",
+    "borrow": "collateral escape: plain freezable tokens x the best collateral factor (Aave v3 LTV, Compound v3 borrow collateral factor); lent positions (freezable, or the part that cannot be withdrawn) x LTV up to the account's unused Aave v3 borrowing room; per chain capped by the WETH cash the Aave v3 core pool and the Compound v3 WETH market hold",
+    "freezable": "issuer-freezable stablecoins count only through the borrow path; the rest is reported as freezable",
+    "locked": "positions flagged lockup or unlock_pending, and locked_unverifiable assets, cannot leave within the hour"
+  },
+  "lending_markets": ["Aave v3 core pools", "Compound v3 WETH markets"],
+  "freezable_symbols": ["USDC", "EURC", "USDT", "USDT0", "XAUT", "PYUSD", "USDP", "PAXG", "FDUSD", "TUSD", "USDG", "RLUSD", "USD1", "GUSD"],
+  "freezable_rule": "the issuer's token contract can block an address (Circle, Tether, Paxos, First Digital, TrueUSD, Ripple, World Liberty Financial, Gemini); a lending receipt of one (e.g. aEthUSDC) counts as freezable",
+  "locked_flags": ["lockup", "unlock_pending"],
+  "locked_classes": ["locked_unverifiable"],
+  "bands": [
+    { "max_share": 0.10, "d6_cap": null },
+    { "max_share": 0.25, "d6_cap": 75 },
+    { "max_share": 0.50, "d6_cap": 50 },
+    { "max_share": null, "d6_cap": 25 }
+  ],
+  "incidents": [
+    { "name": "KelpDAO", "month": "April 2026", "method": "unbacked rsETH posted as collateral on Aave, WETH borrowed and the collateral abandoned; Aave's USDT and USDC pools reached 100% utilization and over $5B of deposits could not be withdrawn for a time", "attribution": "attributed to Lazarus Group by blockchain analytics firms" },
+    { "name": "Binance", "month": "October 2026", "method": "about $6.3B taken from hot wallets across 10 chains; about $2.7-3B in stablecoins frozen by their issuers; one report (single source) says stablecoins were supplied to Aave and ETH, which cannot be frozen, borrowed against them", "attribution": "attributed to TraderTraitor (Lazarus Group) by TRM Labs, Chainalysis and Elliptic; not confirmed by Binance" }
+  ]
+}

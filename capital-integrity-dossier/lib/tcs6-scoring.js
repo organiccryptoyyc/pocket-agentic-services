@@ -397,6 +397,10 @@ function d6(base, bundle) {
   else if (recon >= 95 && g.independent_attestation && visibleControls && g.has_treasury_policy && g.governance_transparent) [score, rule] = [100, "reconciliation >=95%, independent attestation, visible controls, documented policy, transparent governance"];
   else if (recon >= 80 && visibleControls && g.has_treasury_policy) [score, rule] = [75, "reconciliation >=80%, visible controls, documented policy"];
   else [score, rule] = [50, "identifiable wallets with partial disclosure"];
+  // Wallet exit (tcs6-wallet-exit/1.0, owner 2026-10-30): the share of counted treasury value that could leave within
+  // one hour if a wallet's signing control were compromised caps D6 (base.walletExit, from signed checks only).
+  const wx = base.walletExit || null;
+  if (wx && wx.d6_cap !== null && score > wx.d6_cap) [score, rule] = [wx.d6_cap, `${rule}; capped at ${wx.d6_cap} by wallet exit (${(wx.one_hour_exit_share * 100).toFixed(1)}% of counted value could leave within one hour)`];
 
   const yn = (b) => (b ? "yes" : "no");
   const st = g.status || "single_source";
@@ -418,6 +422,10 @@ function d6(base, bundle) {
     metric("treasury_policy_and_multisig_controls", `${controlsText}; treasury policy ${g.has_treasury_policy ? "documented" : "not documented"}`, "text", "rubric anchors 0/25/50/75/100 per blueprint D6", st, refs),
     ...evidence,
     metric("d6_rubric_step", `${score}: ${rule}`, "text", "first rubric rule satisfied, checked from 0 upward", "estimated", refs),
+    ...(wx ? [
+      metric("one_hour_exit_usd", wx.one_hour_exit_usd, "USD", "value that could leave exposed wallets within one hour if their signing control were compromised: direct transfers plus unfreezable WETH borrowed against collateral (Aave v3, Compound v3), capped by the markets' WETH cash; wallets behind a vote or a >= 48 h delay excluded", "estimated", []),
+      metric("one_hour_exit_share_pct", wx.one_hour_exit_share === null ? null : wx.one_hour_exit_share * 100, "pct", "one_hour_exit_usd / counted treasury value; caps D6: <= 10% none, <= 25% 75, <= 50% 50, > 50% 25", wx.one_hour_exit_share === null ? "insufficient_data" : "estimated", []),
+    ] : []),
   ]);
 }
 
