@@ -95,10 +95,10 @@ test("a wallet behind a >= 48 h timelock is protected; an unresolved control pat
 
 test("a cited curated control path overrides an unresolved on-chain read", () => {
   const b = bundleWith([h(UNKNOWN, 3, "WETH", 5000000)], [{ ...control(UNKNOWN, null), status: "unavailable",
-    measure: { reason: "x", curated: { protected: true, source_ref: "governance docs", delay_hours: 72 } } }]);
+    measure: { reason: "x", curated: { protected: true, source_ref: "governance docs", delay_hours: 72, bounded_exposure_usd: 743863 } } }]);
   const w = report(b).wallet_exit;
   const e = w.wallets.find((x) => x.address === UNKNOWN);
-  assert.deepEqual([e.protected, e.protected_by, e.source_ref], [true, "curated", "governance docs"]);
+  assert.deepEqual([e.protected, e.protected_by, e.source_ref, e.bounded_exposure_usd], [true, "curated", "governance docs", 743863]);
   assert.equal(w.direct_usd, 0);
 });
 

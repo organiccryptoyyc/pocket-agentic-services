@@ -71,6 +71,8 @@ function assess(bundle, base, verdict, policy = POLICY) {
     const entry = { chain, address, control: c ? m.type || null : null, protected: prot, protected_by: curated ? "curated" : c ? "on_chain" : "not_read",
       ...(m.threshold ? { safe_threshold: `${m.threshold}-of-${m.signers ?? "?"}` } : {}), ...(m.delay_hours != null ? { delay_hours: m.delay_hours } : {}),
       ...(curated && curated.source_ref ? { source_ref: curated.source_ref } : {}),
+      // a limited, noted path the curator did not count (e.g. Aave Collector steward budgets)
+      ...(curated && Number(curated.bounded_exposure_usd) > 0 ? { bounded_exposure_usd: round2(Number(curated.bounded_exposure_usd)) } : {}),
       value_usd: round2(value), direct_usd: 0, borrow_usd: 0, freezable_usd: 0, locked_usd: 0 };
     if (prot === true) {
       protectedUsd += value;
