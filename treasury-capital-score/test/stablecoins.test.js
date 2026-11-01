@@ -59,7 +59,7 @@ test("groups by underlying, flags freezable issuers, checks the peg on plain hol
   assert.equal(Math.round(s.freezable_usd), 3000000);
   assert.deepEqual(s.off_peg.map((o) => [o.symbol, o.deviation_pct]), [["USDT", -1]], "sUSDS at $1.12 is a yield wrapper, not a depeg");
   assert.deepEqual(s.unmapped.map((u) => u.symbol), ["alUSD"]);
-  assert.equal(s.pmic_crypto_coverage, Math.round((3000000 / 10050000) * 1e4) / 1e4);
+  assert.equal(s.pmic_crypto_coverage, Math.round((10000000 / 10050000) * 1e4) / 1e4, "USDS, USDC and USDT are tracked; alUSD is not");
   assert.match(s.statement, /the largest is USDS \(Sky\)/);
   assert.match(s.statement, /Evidence only: no effect on the score/);
   assert.ok(validateReport(report(b)).ok, validateReport(report(b)).errors.join("\n"));
