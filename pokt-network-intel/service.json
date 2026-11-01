@@ -1,0 +1,7 @@
+{
+  "service_id": "pokt-network-intel",
+  "name": "POKT Network Intelligence",
+  "compute_units_per_relay": 10000,
+  "card": "card.json",
+  "networks": {}
+}

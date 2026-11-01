@@ -1,15 +1,16 @@
 {
   "name": "pokt-network-intel",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "POKT Network Intelligence — a Pocket Network service backend. Live Shannon-protocol chain data over REST.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/unit-cache.js"
+    "test": "node test/unit-cache.js && node test/unit-config.js && node ops/build-card.js --check"
   },
   "engines": {
     "node": ">=18"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "license": "Apache-2.0"
 }

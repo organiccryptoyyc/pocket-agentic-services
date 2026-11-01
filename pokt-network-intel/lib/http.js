@@ -84,7 +84,7 @@ function readJsonBody(req) {
  * routes: Map<"METHOD /path", async (body, req) => jsonSerializableObject>
  * GET routes receive body === undefined.
  */
-function createServer({ service, version, versionPath, healthPath, routes }) {
+function createServer({ service, version, versionPath, healthPath, routes, info = {} }) {
   return http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, "http://localhost");
@@ -94,7 +94,7 @@ function createServer({ service, version, versionPath, healthPath, routes }) {
         return sendJson(res, 200, { service, status: "ok" });
       }
       if (req.method === "GET" && path === versionPath) {
-        return sendJson(res, 200, { service, version });
+        return sendJson(res, 200, { service, version, ...info });
       }
       if (req.method === "GET" && path === healthPath) {
         return sendJson(res, 200, { status: "ok" });

@@ -10,7 +10,8 @@
 // value that lives on-chain) and its caching guidance (governance params ~1h,
 // participant counts short TTL, tip data never cached as final).
 //
-// Endpoints (network selected by POCKET_NETWORK=main|beta, default main):
+// Endpoints (network selected by POCKET_NETWORK=main|beta, default main; each URL can be
+// replaced with POCKET_LCD_URL, POCKET_RPC_URL, POCKET_INDEXER_URL to use your own node or indexer):
 //   LCD (Cosmos REST)   - source of truth for governance params, validator
 //                         total-bonded tokens, raw tx data.
 //   GraphQL indexer      - PoktScan/Pocketdex, PostGraphile. Indexed/aggregated
@@ -37,7 +38,16 @@ if (!LCD[NETWORK]) {
   throw new Error(`POCKET_NETWORK must be "main" or "beta", got ${JSON.stringify(NETWORK)}`);
 }
 
+// Optional overrides (PNF issue #6): a supplier with its own node or indexer points here instead of
+// the public endpoints. Unset keeps the public URL for the selected network.
+const LCD_URL = (process.env.POCKET_LCD_URL || LCD[NETWORK]).replace(/\/+$/, "");
+const RPC_URL = (process.env.POCKET_RPC_URL || RPC[NETWORK]).replace(/\/+$/, "");
+const INDEXER_URL = process.env.POCKET_INDEXER_URL || INDEXER[NETWORK];
+
 const FETCH_TIMEOUT_MS = Number(process.env.POCKET_FETCH_TIMEOUT_MS || 8000);
+// A failed refresh serves the last good value (tagged stale) only up to this age; older than this
+// the request fails with a JSON 422 instead, so no supplier serves hour-old data as current.
+const MAX_STALE_MS = Number(process.env.POCKET_MAX_STALE_MS || 3_600_000);
 
 class UpstreamError extends Error {
   constructor(message, cause) {
@@ -85,7 +95,7 @@ async function withRetry(fn, attempts = 2) {
 }
 
 function lcdBase() {
-  return LCD[NETWORK];
+  return LCD_URL;
 }
 
 async function lcdGet(path) {
@@ -93,13 +103,13 @@ async function lcdGet(path) {
 }
 
 async function rpcGet(path) {
-  return withRetry(() => fetchJSON(`${RPC[NETWORK]}${path}`));
+  return withRetry(() => fetchJSON(`${RPC_URL}${path}`));
 }
 
 async function graphql(query, variables) {
   const body = JSON.stringify({ query, variables: variables || {} });
   const data = await withRetry(() =>
-    fetchJSON(INDEXER[NETWORK], { method: "POST", headers: { "Content-Type": "application/json" }, body })
+    fetchJSON(INDEXER_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body })
   );
   if (data.errors) {
     throw new UpstreamError("graphql errors: " + data.errors.map((e) => e.message).join("; "));
@@ -132,7 +142,7 @@ async function cached(key, ttlMs, fetcher) {
     _cache.set(key, { value, fetchedAt: now });
     return { value, stale: false, ageMs: 0 };
   } catch (e) {
-    if (hit) {
+    if (hit && now - hit.fetchedAt <= MAX_STALE_MS) {
       return { value: hit.value, stale: true, ageMs: now - hit.fetchedAt, error: e.message };
     }
     throw e;
@@ -153,6 +163,10 @@ module.exports = {
   LCD,
   RPC,
   INDEXER,
+  LCD_URL,
+  RPC_URL,
+  INDEXER_URL,
+  MAX_STALE_MS,
   UpstreamError,
   fetchJSON,
   lcdGet,

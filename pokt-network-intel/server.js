@@ -17,7 +17,7 @@ const { createServer, ClientError } = require("./lib/http");
 const pocket = require("./lib/pocket");
 
 const SERVICE = "pokt-network-intel";
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const VERSION_PATH = "/v1/version";
 const HEALTH_PATH = "/v1/health";
 
@@ -479,7 +479,10 @@ const routes = new Map([
   ["POST /v1/supplier-trust", handleSupplierTrust],
 ]);
 
-const server = createServer({ service: SERVICE, version: VERSION, versionPath: VERSION_PATH, healthPath: HEALTH_PATH, routes });
+// /v1/version reports the network the backend reads, so a Beta card's healthcheck can reject a
+// backend left on the MainNet default (PNF issue #6).
+const server = createServer({ service: SERVICE, version: VERSION, versionPath: VERSION_PATH, healthPath: HEALTH_PATH, routes,
+  info: { network: pocket.NETWORK, max_stale_ms: pocket.MAX_STALE_MS } });
 const PORT = Number(process.env.PORT || 8080);
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`${SERVICE} v${VERSION} listening on :${PORT} (network=${pocket.NETWORK})`);

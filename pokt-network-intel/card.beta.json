@@ -1,0 +1,87 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "POKT Network Intelligence: live Pocket Network (Shannon) chain state as JSON. Network pulse, governance and tokenomics parameters, validators, suppliers, applications, relay throughput, per-service supply and demand, and a 0-100 trust score for one supplier. Read live from Pocket's public indexer and LCD on each cache expiry; no hardcoded chain values. Endpoints and shapes: the OpenAPI spec in specs[].",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "pokt-network-intel on :8080; mount at /",
+      "notes": "POST /v1/{pulse,tokenomics,validators,suppliers,throughput,applications,service-demand,supplier-trust}; GET /v1/version, /v1/health. JSON body only; errors are 4xx JSON, never 5xx."
+    }
+  ],
+  "apis": [
+    "pokt-network-intel"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "pokt-network-intel",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/pokt-network-intel-v1.1.0/pokt-network-intel/openapi.json",
+      "sha256": "29eb11e1e8b46be6566a2437e31f4704c8343d25f4eb48b0bea3be2615e192d5"
+    }
+  ],
+  "access": "public",
+  "results": "variable",
+  "serving": {
+    "backend": "Image ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.0 (Node, no dependencies, no keys, no state) behind a RelayMiner at http://<container>:8080. One container per network: set POCKET_NETWORK=beta. Needs outbound HTTPS to Pocket's public indexer and LCD, or your own via POCKET_LCD_URL, POCKET_RPC_URL, POCKET_INDEXER_URL.",
+    "implementations": [
+      "ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.0"
+    ],
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/version",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.service",
+          "matches": "^pokt-network-intel$"
+        },
+        "notes": "Identity probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/version",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.network",
+          "matches": "^beta$"
+        },
+        "notes": "Network probe: the backend must read Beta (POCKET_NETWORK=beta)."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/health",
+          "method": "GET"
+        },
+        "expect": {
+          "json_path": "$.status",
+          "matches": "^ok$"
+        },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": {
+          "path": "/v1/tokenomics",
+          "method": "POST",
+          "body": {}
+        },
+        "expect": {
+          "json_path": "$.mint_ratio",
+          "matches": "^[0-9.]+$"
+        },
+        "notes": "Functional probe: reads a live governance parameter."
+      }
+    ],
+    "notes": "Responses are cached 15s to 1h per endpoint; a failed refresh serves the last good value tagged cache.stale for at most 1 hour (POCKET_MAX_STALE_MS), then returns 422. Gateways: passthrough, rpc_types [\"rest\"]."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/pokt-network-intel-v1.1.0/pokt-network-intel/SUPPLIERS.md",
+  "updated": "2026-11-01"
+}

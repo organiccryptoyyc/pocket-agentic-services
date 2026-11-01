@@ -1,5 +1,8 @@
 # POKT Network Intelligence
 
+**Suppliers and callers: start with [SUPPLIERS.md](SUPPLIERS.md)** (run, connect, verify, call, support).
+This README is the build history.
+
 A standalone [Pocket Network](https://pocket.network) service: eight read-only
 endpoints over Pocket's own Shannon-protocol chain state — network pulse,
 tokenomics, validators, suppliers, throughput, applications, service demand,
@@ -97,6 +100,6 @@ node -r ./test/stub-fetch.js server.js   # run against canned fixtures, no netwo
 
 ## Deploying
 
-See `../docs/registration-runbook.md` for the full stake/register sequence
-(Beta TestNet first, then MainNet) — service id `pokt-network-intel`,
-confirmed conflict-free against both networks' live catalogs on 2026-09-19.
+Image, settings, relay-miner entries and healthchecks: [SUPPLIERS.md](SUPPLIERS.md). The owner's own
+deployment runs on Hetzner through the Pocket Service Manager (`node ops/package-psm.js beta|main`).
+The cards are generated: `node ops/build-card.js` writes `card.json` (MainNet) and `card.beta.json` (Beta).

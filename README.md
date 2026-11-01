@@ -73,5 +73,5 @@ own keyring, and only after explicit go-ahead in the moment.
 
 ## License
 
-Not yet chosen — add one before relying on this repo publicly if a specific
-license matters to you.
+Apache License 2.0 (owner 2026-11-01; see `LICENSE`). Any operator may run, change and
+redistribute these services under its terms. Data each service reads stays under its source's own terms.

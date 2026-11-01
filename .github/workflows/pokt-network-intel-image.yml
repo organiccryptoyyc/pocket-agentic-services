@@ -1,0 +1,44 @@
+# Publishes ghcr.io/organiccryptoyyc/pokt-network-intel:<version> when a tag
+# pokt-network-intel-v<version> is pushed (PNF issue #6). The tag must match package.json.
+name: pokt-network-intel image
+
+on:
+  push:
+    tags: ["pokt-network-intel-v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check tag matches package.json
+        id: v
+        run: |
+          v=$(node -p "require('./pokt-network-intel/package.json').version")
+          test "${GITHUB_REF_NAME}" = "pokt-network-intel-v${v}"
+          echo "version=${v}" >> "$GITHUB_OUTPUT"
+      - name: Tests
+        working-directory: pokt-network-intel
+        run: npm test
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: pokt-network-intel
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/organiccryptoyyc/pokt-network-intel:${{ steps.v.outputs.version }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/organiccryptoyyc/pocket-agentic-services
+            org.opencontainers.image.title=pokt-network-intel
+            org.opencontainers.image.version=${{ steps.v.outputs.version }}
+            org.opencontainers.image.licenses=Apache-2.0

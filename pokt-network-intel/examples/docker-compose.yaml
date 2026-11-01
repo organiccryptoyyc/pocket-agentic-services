@@ -1,0 +1,27 @@
+# Plain docker compose for a third-party supplier: one backend per network, both on the Docker network
+# your RelayMiner uses. Keep only the network(s) you are staked on. See ../SUPPLIERS.md.
+services:
+  pokt-network-intel-main:
+    image: ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.0
+    container_name: pokt-network-intel-main
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      POCKET_NETWORK: main
+    expose: ["8080"]
+    networks: [relayminer]
+
+  pokt-network-intel-beta:
+    image: ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.0
+    container_name: pokt-network-intel-beta
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      POCKET_NETWORK: beta
+    expose: ["8080"]
+    networks: [relayminer]
+
+networks:
+  relayminer:
+    external: true
+    name: relayminer   # change to the network your RelayMiner container is on
