@@ -1584,6 +1584,34 @@
           "type": "string"
         }
       }
+    },
+    "stablecoin_exposure": {
+      "type": "object",
+      "description": "tcs6-stablecoin-exposure/1.0 (owner 2026-10-31), evidence only: stablecoins held directly or wrapped, by underlying stablecoin and issuer, peg check on plain holdings, and the pmic-crypto-signals series that track each one's supply; no score effect",
+      "required": [
+        "policy_id",
+        "stablecoin_usd",
+        "share_of_treasury",
+        "stablecoins",
+        "off_peg",
+        "unmapped",
+        "pmic_crypto_coverage",
+        "statement"
+      ],
+      "properties": {
+        "policy_id": { "type": "string" },
+        "stablecoin_usd": { "type": "number" },
+        "share_of_treasury": { "type": ["number", "null"] },
+        "treasury_value_usd": { "type": "number" },
+        "largest_issuer": { "type": ["object", "null"] },
+        "freezable_usd": { "type": "number" },
+        "pmic_crypto_covered_usd": { "type": "number" },
+        "pmic_crypto_coverage": { "type": ["number", "null"] },
+        "stablecoins": { "type": "array", "items": { "type": "object" } },
+        "off_peg": { "type": "array", "items": { "type": "object" } },
+        "unmapped": { "type": "array", "items": { "type": "object" } },
+        "statement": { "type": "string" }
+      }
     }
   },
   "$defs": {

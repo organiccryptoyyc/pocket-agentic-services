@@ -1,0 +1,43 @@
+{
+  "policy_id": "tcs6-stablecoin-exposure/1.0",
+  "status": "beta",
+  "approved": "owner 2026-10-31 (\"run stablecoin coverage build out tonight\"); evidence only, no score effect",
+  "question": "Which stablecoins does the treasury hold, directly or wrapped, how much rests on each issuer, is any plain stablecoin off its peg, and which pmic-crypto-signals series tracks each one's supply?",
+  "scope": "verified holdings with asset_class fiat_stablecoin; wrappers (lending receipts, savings and vault shares) are counted under the stablecoin they hold",
+  "peg_tolerance": 0.005,
+  "peg_rule": "only plain tokens are compared with $1; wrappers accrue yield, so their price is above $1 by design",
+  "freezable_rule": "the issuer can block an address (the wallet-exit policy's freezable_symbols list)",
+  "underlyings": {
+    "USDC": { "issuer": "Circle", "design": "fiat-backed", "pmic_crypto_series": ["chainrpc:usdc_supply:eth", "chainrpc:usdc_supply:base", "chainrpc:usdc_supply:arb-one", "chainrpc:usdc_supply:poly", "chainrpc:usdc_supply:avax", "chainrpc:usdc_supply:op", "chainrpc:usdc_supply:solana"] },
+    "USDT": { "issuer": "Tether", "design": "fiat-backed", "pmic_crypto_series": ["chainrpc:usdt_supply:eth", "chainrpc:usdt_supply:avax", "chainrpc:usdt_supply:tron", "chainrpc:usdt_supply:solana"] },
+    "USDS": { "issuer": "Sky", "design": "crypto- and RWA-collateralized", "pmic_crypto_series": [] },
+    "DAI": { "issuer": "Sky (Maker)", "design": "crypto- and RWA-collateralized", "pmic_crypto_series": [] },
+    "GHO": { "issuer": "Aave DAO", "design": "crypto-collateralized (Aave borrows)", "pmic_crypto_series": [] },
+    "DOLA": { "issuer": "Inverse Finance", "design": "crypto-collateralized (FiRM borrows)", "pmic_crypto_series": [] },
+    "CRVUSD": { "issuer": "Curve DAO", "design": "crypto-collateralized (LLAMMA)", "pmic_crypto_series": [] },
+    "FRXUSD": { "issuer": "Frax", "design": "fiat- and RWA-backed", "pmic_crypto_series": [] },
+    "USDE": { "issuer": "Ethena", "design": "synthetic (delta-hedged)", "pmic_crypto_series": [] },
+    "RLUSD": { "issuer": "Ripple", "design": "fiat-backed", "pmic_crypto_series": [] },
+    "USDP": { "issuer": "Paxos", "design": "fiat-backed", "pmic_crypto_series": [] },
+    "PYUSD": { "issuer": "Paxos (PayPal)", "design": "fiat-backed", "pmic_crypto_series": [] },
+    "GUSD": { "issuer": "Gemini", "design": "fiat-backed", "pmic_crypto_series": [] },
+    "TUSD": { "issuer": "TrueUSD", "design": "fiat-backed", "pmic_crypto_series": [] },
+    "FDUSD": { "issuer": "First Digital", "design": "fiat-backed", "pmic_crypto_series": [] },
+    "USDG": { "issuer": "Paxos (Global Dollar)", "design": "fiat-backed", "pmic_crypto_series": [] },
+    "USD1": { "issuer": "World Liberty Financial", "design": "fiat-backed", "pmic_crypto_series": [] },
+    "OUSD": { "issuer": "Origin", "design": "yield-bearing basket of USDC, USDT and DAI", "pmic_crypto_series": [] }
+  },
+  "aliases": {
+    "USDCN": "USDC", "USDCE": "USDC", "USDC.E": "USDC", "USDT0": "USDT"
+  },
+  "wrappers": {
+    "aave_receipt": { "pattern": "^A(?:ETH|PLA|BNB|ARB|POL|BAS|GNO|OPT|AVA|SCR|LIN|SON|ZKS|MET|CEL|HORRWA)?(?:LIDO|ETHERFI)?(.+)$", "note": "Aave v2/v3 aToken: market prefix, then the underlying symbol (aEthLidoGHO, aPlaUSDT0, AUSDT)" },
+    "symbols": {
+      "SDAI": "DAI", "SUSDS": "USDS", "SGHO": "GHO", "STKGHO": "GHO", "SDOLA": "DOLA", "SFRXUSD": "FRXUSD", "SUSDE": "USDE", "SCRVUSD": "CRVUSD",
+      "CUSDCV3": "USDC", "CIUSDCV3": "USDC", "CUSDTV3": "USDT",
+      "YVUSDC-1": "USDC", "YVUSDC-2": "USDC", "YVFLEXUSDC": "USDC", "YVUSD": "USDC", "YVUSDS-1": "USDS", "YVDAI-1": "DAI", "YVCRVUSD-2": "CRVUSD",
+      "KPK_USDC_V2": "USDC"
+    },
+    "symbol_sources": "Aave aToken naming (bgd-labs/aave-address-book); vault asset() / Comet baseToken() read on chain 2026-11-01 for KPK_USDC_V2, yvUSD and ciUSDCv3 (all USDC); savings tokens by their issuers' docs (sDAI, sUSDS, sGHO, sDOLA, sfrxUSD, sUSDe, scrvUSD)"
+  }
+}

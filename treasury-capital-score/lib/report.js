@@ -13,6 +13,7 @@ const crypto = require("crypto");
 const S = require("./scoring");
 const M = require("./materiality");
 const WX = require("./walletexit");
+const SC = require("./stablecoins");
 const O = require("./obligations");
 const { sanitize } = require("./http");
 
@@ -145,6 +146,8 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
   // Wallet exit (owner 2026-10-30): from the signed control and borrow paths; caps D6 inside S.d6.
   const wx = WX.assess(bundle, base, verdict);
   if (wx) base = { ...base, walletExit: wx };
+  // Stablecoin exposure (owner 2026-10-31), evidence only: signed bundles only, so older bundles and golden fixtures are unchanged.
+  const sc = verdict && verdict.status === "valid" ? SC.assess(base) : null;
   const dims = [S.d1(base, peerNrts), S.d2(base, bundle), S.d3(base, bundle), S.d4(base), S.d5(bundle), S.d6(base, bundle)];
   const rights = rightsFilter(bundle.sources);
   const gateList = S.gates(entity, base, bundle, rights.blocked);
@@ -236,6 +239,7 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
     disclaimer: DISCLAIMER,
     ...(obligationsPolicy ? { obligations_policy: obligationsPolicy } : {}),
     ...(wx ? { wallet_exit: wx } : {}),
+    ...(sc ? { stablecoin_exposure: sc } : {}),
   });
   // Signed input attestation (Verified layer): attached after cleanText so the signed payload reaches the
   // caller byte-for-byte as the Pi signed it. Absent for bundles that carry neither an attestation nor a
