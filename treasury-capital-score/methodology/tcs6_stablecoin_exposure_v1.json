@@ -25,13 +25,25 @@
     "FDUSD": { "issuer": "First Digital", "design": "fiat-backed", "pmic_crypto_series": [] },
     "USDG": { "issuer": "Paxos (Global Dollar)", "design": "fiat-backed", "pmic_crypto_series": [] },
     "USD1": { "issuer": "World Liberty Financial", "design": "fiat-backed", "pmic_crypto_series": [] },
-    "OUSD": { "issuer": "Origin", "design": "yield-bearing basket of USDC, USDT and DAI", "pmic_crypto_series": [] }
+    "OUSD": { "issuer": "Origin", "design": "yield-bearing basket of USDC, USDT and DAI", "pmic_crypto_series": [] },
+    "LUSD": { "issuer": "Liquity", "design": "ETH-collateralized", "pmic_crypto_series": [] },
+    "ALUSD": { "issuer": "Alchemix", "design": "synthetic (self-repaying loans)", "pmic_crypto_series": [] },
+    "FRAX": { "issuer": "Frax", "design": "collateralized (legacy Frax dollar)", "pmic_crypto_series": [] }
   },
   "aliases": {
-    "USDCN": "USDC", "USDCE": "USDC", "USDC.E": "USDC", "USDT0": "USDT"
+    "USDCN": "USDC", "USDCE": "USDC", "USDC.E": "USDC", "USDBC": "USDC", "USDT0": "USDT"
   },
+  "tokens": {
+    "_rule": "checked before any symbol rule (chain:token address); read on chain 2026-11-01: name(), symbol(), UNDERLYING_ASSET_ADDRESS() or asset()",
+    "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9": { "underlying": "ALUSD", "wrapped": false, "name": "Alchemix USD (alUSD)" },
+    "ethereum:0x3fe6a295459fae07df8a0cecc36f37160fe86aa9": { "underlying": "LUSD", "wrapped": true, "name": "Aave Ethereum LUSD (aEthLUSD)" },
+    "optimism:0x8eb270e296023e9d92081fdf967ddd7878724424": { "underlying": "LUSD", "wrapped": true, "name": "Aave Optimism LUSD (aOptLUSD)" },
+    "ethereum:0x9b44efca3e2a707b63dc00ce79d646e5e5d24ba5": { "underlying": "USDC", "wrapped": true, "name": "USDC Mix Yield Token (mixUSDC)" },
+    "ethereum:0x4c1736099f4ad8f02180940cf12eeb8317edd31d": { "underlying": "USDC", "wrapped": true, "name": "EVK Vault eUSDC-130 (Euler)" }
+  },
+  "ambiguous_symbols": ["ALUSD"],
   "wrappers": {
-    "aave_receipt": { "pattern": "^A(?:ETH|PLA|BNB|ARB|POL|BAS|GNO|OPT|AVA|SCR|LIN|SON|ZKS|MET|CEL|HORRWA)?(?:LIDO|ETHERFI)?(.+)$", "note": "Aave v2/v3 aToken: market prefix, then the underlying symbol (aEthLidoGHO, aPlaUSDT0, AUSDT)" },
+    "aave_receipt": { "pattern": "^A(?:ETH|PLA|BNB|ARB|POL|BAS|GNO|OPT|AVA|SCR|LIN|SON|ZKS|MET|CEL|HORRWA|AMM)?(?:LIDO|ETHERFI)?(.+)$", "note": "Aave v2/v3 aToken: market prefix (AMM is the retired Aave v2 AMM market), then the underlying symbol (aEthLidoGHO, aPlaUSDT0, AUSDT, aAmmUSDC)" },
     "symbols": {
       "SDAI": "DAI", "SUSDS": "USDS", "SGHO": "GHO", "STKGHO": "GHO", "SDOLA": "DOLA", "SFRXUSD": "FRXUSD", "SUSDE": "USDE", "SCRVUSD": "CRVUSD",
       "CUSDCV3": "USDC", "CIUSDCV3": "USDC", "CUSDTV3": "USDT",

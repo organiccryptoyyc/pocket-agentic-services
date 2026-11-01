@@ -37,11 +37,14 @@ const report = (bundle, verdict = VALID) => {
 test("wrappers resolve to the stablecoin they hold", () => {
   const cases = { USDC: "USDC", aEthLidoGHO: "GHO", AUSDT: "USDT", aPlaUSDT0: "USDT", aArbUSDCn: "USDC", aGnoUSDCe: "USDC", aHorRwaRLUSD: "RLUSD",
     aEthsUSDe: "USDE", SDAI: "DAI", SUSDS: "USDS", sDOLA: "DOLA", cUSDCv3: "USDC", ciUSDCv3: "USDC", yvUSD: "USDC", "yvcrvUSD-2": "CRVUSD",
-    KPK_USDC_V2: "USDC", ATUSD: "TUSD", AGUSD: "GUSD", aUSDP: "USDP" };
+    KPK_USDC_V2: "USDC", ATUSD: "TUSD", AGUSD: "GUSD", aUSDP: "USDP", aAmmUSDC: "USDC", aBasUSDbC: "USDC", aArbLUSD: "LUSD", aArbFRAX: "FRAX" };
   for (const [sym, want] of Object.entries(cases)) assert.equal((SC.resolve(sym) || {}).underlying, want, sym);
   assert.equal(SC.resolve("USDC").wrapped, false);
   assert.equal(SC.resolve("aEthLidoGHO").wrapped, true);
-  assert.equal(SC.resolve("alUSD"), null, "an unknown token is not guessed");
+  assert.equal(SC.resolve("alUSD"), null, "an ambiguous symbol is not guessed");
+  assert.deepEqual(SC.resolve("ALUSD", undefined, "ethereum:0xBC6DA0FE9AD5F3B0D58160288917AA56653660E9"), { underlying: "ALUSD", wrapped: false });
+  assert.deepEqual(SC.resolve("ALUSD", undefined, "ethereum:0x3fe6a295459fae07df8a0cecc36f37160fe86aa9"), { underlying: "LUSD", wrapped: true });
+  assert.equal(SC.resolve("FOOUSD"), null, "an unknown token is not guessed");
   assert.equal(SC.resolve("WETH"), null);
 });
 

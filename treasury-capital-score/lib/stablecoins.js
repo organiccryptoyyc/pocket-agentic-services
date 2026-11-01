@@ -13,9 +13,13 @@ const round2 = (v) => Math.round(v * 100) / 100;
 const share = (part, whole) => (whole > 0 ? Math.round((part / whole) * 1e4) / 1e4 : null);
 const AAVE = new RegExp(POLICY.wrappers.aave_receipt.pattern);
 
-// -> { underlying, wrapped } or null when the symbol isn't a known stablecoin or wrapper
-function resolve(symbol, policy = POLICY) {
+// -> { underlying, wrapped } or null when the token isn't a known stablecoin or wrapper. A listed chain:token address
+// wins over the symbol rules; an ambiguous symbol (alUSD and Aave's aLUSD both reach us as ALUSD) needs the address.
+function resolve(symbol, policy = POLICY, token = null) {
+  const known = token && policy.tokens[String(token).toLowerCase()];
+  if (known) return { underlying: known.underlying, wrapped: known.wrapped };
   let s = String(symbol || "").toUpperCase();
+  if (policy.ambiguous_symbols.includes(s)) return null;
   let wrapped = false;
   for (let i = 0; i < 3; i++) {
     const plain = policy.aliases[s] || s;
@@ -39,7 +43,8 @@ function assess(base, policy = POLICY) {
   const unmapped = [];
   const offPeg = [];
   for (const r of rows) {
-    const res = resolve(r.h.symbol, policy);
+    const [chain, token] = String(r.h.asset_id || "").split(":");
+    const res = resolve(r.h.symbol, policy, `${chain}:${token}`);
     if (!res) {
       unmapped.push({ symbol: r.h.symbol || null, chain: r.h.chain || null, value_usd: round2(r.fair) });
       continue;
