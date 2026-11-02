@@ -1,0 +1,59 @@
+{
+  "schema": "pocket-service-card/v1",
+  "description": "Brand Protection Monitor. Finds lookalike domains of a brand (typos, homoglyphs incl. IDN, TLD swaps, added words like -claim or -airdrop, and new names seen in Certificate Transparency logs), checks which exist, and for those reads the registry (RDAP), the live TLS certificate and the homepage. Each finding has a deterministic 0-100 risk score with plain reasons (recently registered, fresh certificate, page copies the brand's title or icon, wallet or password prompt, parked, redirects to the official site) and an evidence record with fetch times and SHA-256 hashes. Built for crypto brands first. POST /v1/brand/scan (brand, official_domains[], keywords[]?, since?, limit?): the watched report; an unwatched brand gets a quick DNS-only scan now and a full scan on the next collector cycle. Use since for 'what changed since my last call'. POST /v1/brand/lookalikes (domain): which lookalikes exist right now. POST /v1/brand/evidence (evidence_id): the evidence behind one finding. GET /v1/brand/watched: brands under watch. Every response is a JSON object. Detection and evidence only: findings are observed signals, not a finding of fraud; no takedowns.",
+  "rpc_types": [
+    {
+      "type": "REST",
+      "intent": "expected",
+      "backend_hint": "brand-protection HTTP server on :8080; mount at /",
+      "notes": "Only POST /v1/brand/scan, /v1/brand/lookalikes, /v1/brand/evidence and GET /v1/brand/watched, /v1/version, /v1/health are expected. Every response is a JSON object; bad input returns 4xx with a JSON error object, never HTML or plain text."
+    }
+  ],
+  "apis": [
+    "brand-protection-scan",
+    "brand-protection-lookalikes",
+    "brand-protection-evidence"
+  ],
+  "specs": [
+    {
+      "kind": "openapi",
+      "api": "brand-protection-scan",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/brand-protection/openapi.json",
+      "notes": "Covers all routes in one document. Pin to a commit SHA and add a sha256 before MainNet registration."
+    }
+  ],
+  "access": "public",
+  "results": "deterministic",
+  "serving": {
+    "backend": "The brand-protection Node.js HTTP server (no external dependencies) behind a RelayMiner, REST backend at http://<container>:8080. Reports come from a store filled by the operator's collector; the backend itself only makes DNS queries for a quick scan of an unwatched brand. It needs outbound DNS.",
+    "implementations": [
+      "brand-protection >= 0.1"
+    ],
+    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/main/brand-protection",
+    "min_disk_gb": 1,
+    "min_ram_gb": 1,
+    "healthcheck": [
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/version", "method": "GET" },
+        "expect": { "json_path": "$.service", "matches": "^brand-protection$" },
+        "notes": "Identity probe: pins the backend to this service."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/health", "method": "GET" },
+        "expect": { "json_path": "$.status", "matches": "^ok$" },
+        "notes": "Readiness probe."
+      },
+      {
+        "rpc_type": "REST",
+        "request": { "path": "/v1/brand/watched", "method": "GET" },
+        "expect": { "json_path": "$.service", "matches": "^brand-protection$" },
+        "notes": "Functional probe: reads the store without making any outbound call."
+      }
+    ],
+    "notes": "Request bodies are capped at 1 MiB; responses are a few KB to ~100 KB (limit caps findings at 200). A quick scan is bounded to about 9 s; keep the relay timeout at 15 s or more. Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
+  },
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/brand-protection/README.md",
+  "updated": "2026-11-02"
+}

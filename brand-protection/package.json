@@ -1,0 +1,15 @@
+{
+  "name": "brand-protection",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Brand Protection Monitor: a Pocket Network service backend. Lookalike domains, certificates and copied homepages for a brand, with evidence hashes, over REST.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/brand.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,7 @@
+{
+  "service_id": "brand-protection",
+  "name": "Brand Protection Monitor",
+  "compute_units_per_relay": 100000,
+  "card": "card.json",
+  "networks": {}
+}

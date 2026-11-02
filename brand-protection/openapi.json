@@ -1,0 +1,145 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Brand Protection Monitor",
+    "version": "0.1.0",
+    "description": "Lookalike domains, certificates and copied homepages for a brand, with deterministic risk scores and evidence hashes. Detection and evidence only."
+  },
+  "paths": {
+    "/v1/brand/scan": {
+      "post": {
+        "operationId": "brandScan",
+        "summary": "The watched report for a brand; queues a full scan for a brand nobody watched yet",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScanRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Report", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Report" } } } },
+          "422": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/v1/brand/lookalikes": {
+      "post": {
+        "operationId": "brandLookalikes",
+        "summary": "Which lookalikes of one domain exist right now (watch-list report if watched, else a quick DNS-only check)",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": {
+            "type": "object", "required": ["domain"],
+            "properties": {
+              "domain": { "type": "string", "example": "uniswap.org" },
+              "since": { "type": "string", "format": "date-time" },
+              "limit": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 }
+            }
+          } } }
+        },
+        "responses": {
+          "200": { "description": "Report", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Report" } } } },
+          "422": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/v1/brand/evidence": {
+      "post": {
+        "operationId": "brandEvidence",
+        "summary": "The evidence record behind one finding",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": {
+            "type": "object", "required": ["evidence_id"],
+            "properties": { "evidence_id": { "type": "string", "pattern": "^[0-9a-f]{24}$" } }
+          } } }
+        },
+        "responses": {
+          "200": { "description": "Evidence", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Evidence" } } } },
+          "404": { "$ref": "#/components/responses/Error" },
+          "422": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/v1/brand/watched": {
+      "get": {
+        "operationId": "brandWatched",
+        "summary": "Brands under watch",
+        "responses": { "200": { "description": "Watch list", "content": { "application/json": { "schema": { "type": "object" } } } } }
+      }
+    },
+    "/v1/version": { "get": { "responses": { "200": { "description": "Service identity", "content": { "application/json": { "schema": { "type": "object" } } } } } } },
+    "/v1/health": { "get": { "responses": { "200": { "description": "Readiness", "content": { "application/json": { "schema": { "type": "object" } } } } } } }
+  },
+  "components": {
+    "responses": {
+      "Error": {
+        "description": "Bad input or not found",
+        "content": { "application/json": { "schema": {
+          "type": "object",
+          "properties": { "error": { "type": "object", "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } }
+        } } }
+      }
+    },
+    "schemas": {
+      "ScanRequest": {
+        "type": "object",
+        "required": ["official_domains"],
+        "properties": {
+          "brand": { "type": "string", "maxLength": 64, "example": "Uniswap" },
+          "official_domains": { "type": "array", "minItems": 1, "maxItems": 5, "items": { "type": "string" }, "example": ["uniswap.org"] },
+          "keywords": { "type": "array", "maxItems": 10, "items": { "type": "string", "maxLength": 40 } },
+          "since": { "type": "string", "format": "date-time", "description": "Only findings new or changed after this time" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 }
+        }
+      },
+      "Finding": {
+        "type": "object",
+        "properties": {
+          "domain": { "type": "string" },
+          "unicode": { "type": "string", "description": "Present for IDN lookalikes" },
+          "fuzzer": { "type": "string", "enum": ["ct-log", "tld-swap", "added-word", "homoglyph", "idn-homoglyph", "omission", "transposition", "replacement", "repetition", "hyphenation", "insertion", "vowel-swap"] },
+          "risk": { "type": "number", "minimum": 0, "maximum": 100 },
+          "risk_level": { "type": "string", "enum": ["none", "low", "medium", "high"] },
+          "status": { "type": "string", "enum": ["copies_brand", "live", "resolves", "parked", "registered_not_live", "redirects_to_official", "refused_private_address", "no_longer_seen"] },
+          "reasons": { "type": "array", "items": { "type": "string" } },
+          "registered_at": { "type": "string", "nullable": true },
+          "certificate_issuer": { "type": "string", "nullable": true },
+          "title": { "type": "string", "nullable": true },
+          "checked": { "type": "string", "enum": ["full", "dns_only"] },
+          "first_seen": { "type": "string", "format": "date-time" },
+          "changed_at": { "type": "string", "format": "date-time" },
+          "evidence_id": { "type": "string" }
+        }
+      },
+      "Report": {
+        "type": "object",
+        "properties": {
+          "service": { "type": "string" },
+          "brand_id": { "type": "string" },
+          "brand": { "type": "string" },
+          "official_domains": { "type": "array", "items": { "type": "string" } },
+          "as_of": { "type": "string", "format": "date-time" },
+          "age_hours": { "type": "number" },
+          "scan_type": { "type": "string", "enum": ["quick", "full"] },
+          "full_scan": { "type": "string", "enum": ["done", "queued", "not_queued_watch_list_full"] },
+          "coverage": { "type": "object" },
+          "findings_total": { "type": "integer" },
+          "findings": { "type": "array", "items": { "$ref": "#/components/schemas/Finding" } }
+        }
+      },
+      "Evidence": {
+        "type": "object",
+        "properties": {
+          "evidence_id": { "type": "string" },
+          "domain": { "type": "string" },
+          "collected_at": { "type": "string", "format": "date-time" },
+          "sources": { "type": "array", "items": { "type": "object" } },
+          "dns": { "type": "object" },
+          "rdap": { "type": "object", "nullable": true },
+          "certificate": { "type": "object", "nullable": true },
+          "homepage": { "type": "object", "nullable": true, "description": "Derived fields and a SHA-256 of the page; never the page itself" },
+          "ct_log_entry": { "type": "object", "nullable": true }
+        }
+      }
+    }
+  }
+}
