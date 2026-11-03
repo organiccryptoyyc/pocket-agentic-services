@@ -102,7 +102,11 @@ function mergeFindings(prev, next, asOf) {
 
 function saveResult(result) {
   const prev = loadBrand(result.brand_id);
-  const findings = mergeFindings(prev, result.findings, result.as_of);
+  // A domain added to official_domains is the brand's own, not a lookalike
+  // that went away, so it leaves the report at once.
+  const official = new Set(result.official_domains || []);
+  const kept = prev ? { ...prev, findings: prev.findings.filter((f) => !official.has(f.domain)) } : prev;
+  const findings = mergeFindings(kept, result.findings, result.as_of);
   for (const e of result.evidence || []) writeJsonAtomic(paths.evidence(e.evidence_id), e);
   const { evidence, ...rest } = result;
   const doc = { ...rest, findings };

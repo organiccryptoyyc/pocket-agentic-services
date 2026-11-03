@@ -133,6 +133,15 @@ test("deadline makes a partial, DNS-only scan", async () => {
   assert.strictEqual(r.coverage.partial, true);
 });
 
+test("a candidate cap is partial and shared across official domains", async () => {
+  const r = await scanBrand({ brand: "Uniswap", official_domains: ["uniswap.org", "uniswap.com"] }, { maxCandidates: 10, deepLimit: 0, skipOfficial: true });
+  assert.ok(r.coverage.candidates_generated > 10);
+  assert.strictEqual(r.coverage.candidates_dns_checked, 10);
+  assert.strictEqual(r.coverage.partial, true, "names cut by the cap make the scan partial");
+  const full = await scanBrand({ brand: "Uniswap", official_domains: ["uniswap.org"] }, { deepLimit: 0, skipOfficial: true, maxCandidates: 10000 });
+  assert.strictEqual(full.coverage.candidates_dns_checked, full.coverage.candidates_generated);
+});
+
 // --- store ------------------------------------------------------------------------
 
 test("merge keeps first_seen, stamps changes, keeps vanished findings 30 days", () => {
@@ -146,6 +155,14 @@ test("merge keeps first_seen, stamps changes, keeps vanished findings 30 days", 
   assert.strictEqual(by["b.com"].status, "no_longer_seen");
   const later = store.mergeFindings({ findings: next }, [f("a.com", 20)], "2026-12-01T00:00:00Z");
   assert.ok(!later.some((x) => x.domain === "b.com"), "dropped after 30 days");
+});
+
+test("a domain made official leaves the stored report at once", () => {
+  const f = (domain, risk) => ({ domain, risk, status: "copies_brand", evidence_id: "0".repeat(24) });
+  const base = { brand_id: "alchemix.fi", brand: "Alchemix", evidence: [] };
+  store.saveResult({ ...base, official_domains: ["alchemix.fi"], as_of: "2026-11-03T09:53:04Z", findings: [f("alchemix.finance", 80), f("alchemix.dev", 35)] });
+  store.saveResult({ ...base, official_domains: ["alchemix.fi", "alchemix.finance"], as_of: "2026-11-03T13:35:20Z", findings: [f("alchemix.dev", 35)] });
+  assert.deepStrictEqual(store.loadBrand("alchemix.fi").findings.map((x) => x.domain), ["alchemix.dev"]);
 });
 
 test("ingest rejects unknown brands and key-like strings; token check", () => {

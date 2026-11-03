@@ -89,9 +89,13 @@ async function scanBrand(request, opts = {}) {
   for (const h of opts.ctHits || []) {
     if (!seen.has(h.domain) && checks.isValidDomain(h.domain)) { seen.add(h.domain); candidates.push({ domain: h.domain, fuzzer: "ct-log" }); }
   }
-  for (const d of official) {
-    for (const p of permutations(d, { exclude: official })) {
-      if (!seen.has(p.domain)) { seen.add(p.domain); candidates.push(p); }
+  // Round-robin across the official domains, so a cap cuts each domain's
+  // least likely names rather than the whole of the second domain's list.
+  const lists = official.map((d) => permutations(d, { exclude: official }));
+  for (let i = 0; lists.some((l) => i < l.length); i++) {
+    for (const l of lists) {
+      const p = l[i];
+      if (p && !seen.has(p.domain)) { seen.add(p.domain); candidates.push(p); }
     }
   }
   const generated = candidates.length;
@@ -182,7 +186,7 @@ async function scanBrand(request, opts = {}) {
       existing: existing.length,
       full_checks: deepChecked,
       ct_hits: (opts.ctHits || []).length,
-      partial: dnsChecked < candidates.length || deepChecked < existing.length,
+      partial: dnsChecked < generated || deepChecked < existing.length,
       duration_ms: Date.now() - started,
     },
     findings,
