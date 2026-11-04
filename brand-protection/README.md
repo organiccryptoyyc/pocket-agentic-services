@@ -33,10 +33,11 @@ Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
 
 ## How a finding is made (`bp-risk/2`)
 
-1. **Candidates:** names from Certificate Transparency logs built around the brand
-   word (collector only), then our own permutations in priority order: TLD swap,
+1. **Candidates:** our own permutations in priority order: TLD swap,
    added word (`-claim`, `-airdrop`, `-wallet` …), ASCII and IDN homoglyphs,
    omission, transposition, keyboard replacement, repetition, hyphenation, insertion.
+   The code can also take names from Certificate Transparency logs, but that follower is not
+   running on the live service, so `coverage.ct_hits` is 0.
 2. **DNS** for every candidate; the ones that exist go on.
 3. **RDAP** straight from the registry (IANA bootstrap), **TLS** handshake, and
    **one homepage GET** (robots.txt honoured, private addresses refused, pinned to
