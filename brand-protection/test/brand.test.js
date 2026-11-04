@@ -44,7 +44,7 @@ fingerprint.homepage = async (domain) => ({
 // --- bp-risk/2: real Beta findings, so a change to the scale shows up here -------
 
 // reg = days since registration; null = the registry gave no age.
-function realCase({ reg, cert, title, terms, wallet, pw, mx, icon, sameTitle, text }) {
+function realCase({ reg, cert, title, terms, wallet, pw, mx, icon, sameTitle, text, host }) {
   return riskScore({
     dns: { exists: true, resolves: true, mx: mx ? ["mx.example"] : [], ns: ["ns1.example.net"] },
     rdap: reg === null ? null : { registered: true, age_days: reg },
@@ -52,6 +52,7 @@ function realCase({ reg, cert, title, terms, wallet, pw, mx, icon, sameTitle, te
     page: {
       reachable: true, title: sameTitle ? "Official" : (title || "Some page"), brand_in_title: !!terms, brand_terms_in_title: terms || [],
       brand_in_page: !!terms || !!text, wallet_prompt: !!wallet, has_password_form: !!pw, icon_sha256: icon ? "i" : "p",
+      ...(host ? { final_host: host } : {}),
     },
     official: { domains: ["official.example"], title: "Official", icon_sha256: "i", ns_sets: [] },
   });
@@ -59,12 +60,12 @@ function realCase({ reg, cert, title, terms, wallet, pw, mx, icon, sameTitle, te
 
 test("bp-risk/2: unrelated businesses with an ordinary brand word drop out of medium", () => {
   const cases = [
-    ["pocket.capital", { reg: 900, cert: 21, mx: true, terms: ["pocket"] }, 25],
-    ["curve.us", { reg: 900, terms: ["curve"], pw: true }, 20],
-    ["compound.co", { reg: 900, cert: 2, mx: true, terms: ["compound"] }, 25],
-    ["silo.network", { reg: 900, cert: 8, terms: ["silo"] }, 20],
-    ["morpho.world", { reg: 900, cert: 9, mx: true, terms: ["morpho"] }, 25],
-    ["gearbox.app", { reg: 3000, cert: 27, mx: true, terms: ["gearbox"], pw: true }, 15],
+    ["pocket.capital", { reg: 900, cert: 21, mx: true, terms: ["pocket"], title: "Pocket Capital" }, 25],
+    ["curve.us", { reg: 900, terms: ["curve"], pw: true, title: "Curve Fragrances" }, 20],
+    ["compound.co", { reg: 900, cert: 2, mx: true, terms: ["compound"], title: "Compound Health" }, 25],
+    ["silo.network", { reg: 900, cert: 8, terms: ["silo"], title: "Silo Network" }, 20],
+    ["morpho.world", { reg: 900, cert: 9, mx: true, terms: ["morpho"], title: "Morpho by Tomorrowland" }, 25],
+    ["gearbox.app", { reg: 3000, cert: 27, mx: true, terms: ["gearbox"], pw: true, title: "GEARBOX" }, 15],
   ];
   for (const [name, input, want] of cases) {
     const r = realCase(input);
@@ -76,15 +77,15 @@ test("bp-risk/2: unrelated businesses with an ordinary brand word drop out of me
 
 test("bp-risk/2: real clones and new lookalikes stay flagged", () => {
   const cases = [
-    ["aavestaking.com", { reg: 21, cert: 21, terms: ["aave"], wallet: true }, 95, "high"],
-    ["aavemigrate.com", { reg: 800, cert: 7, terms: ["aave"], wallet: true }, 70, "high"],
-    ["compound-labs.xyz", { reg: 5, cert: 5, terms: ["compound"] }, 65, "medium"],
-    ["pancakeswap.co", { reg: 900, cert: 19, terms: ["pancakeswap"] }, 40, "medium"],
-    ["synthetix.live", { reg: 900, cert: 26, terms: ["synthetix"] }, 40, "medium"],
+    ["aavestaking.com", { reg: 21, cert: 21, terms: ["aave"], title: "Aave Staking", wallet: true }, 85, "high"],
+    ["aavemigrate.com", { reg: 800, cert: 7, terms: ["aave"], title: "AaveMigrate", wallet: true }, 60, "medium"],
+    ["compound-labs.xyz", { reg: 5, cert: 5, terms: ["compound"], title: "Compound" }, 65, "medium"],
+    ["pancakeswap.co", { reg: 900, cert: 19, terms: ["pancakeswap"], title: "Exchange | PancakeSwap" }, 40, "medium"],
+    ["synthetix.live", { reg: 900, cert: 26, terms: ["synthetix"], title: "Synthetix" }, 40, "medium"],
     ["stargate.fi", { reg: 900, mx: true, text: true, icon: true, sameTitle: true }, 55, "medium"],
     ["cow.foundation", { reg: 900, cert: 15, mx: true, icon: true }, 50, "medium"],
-    ["silo.global", { reg: 900, mx: true, terms: ["silo"], wallet: true }, 55, "medium"],
-    ["app-balancer.fi", { reg: 36, terms: ["balancer"] }, 40, "medium"],
+    ["silo.global", { reg: 900, mx: true, terms: ["silo"], title: "Silo", wallet: true }, 55, "medium"],
+    ["app-balancer.fi", { reg: 36, terms: ["balancer"], title: "Balancer" }, 40, "medium"],
   ];
   for (const [name, input, score, level] of cases) {
     const r = realCase(input);
@@ -94,13 +95,28 @@ test("bp-risk/2: real clones and new lookalikes stay flagged", () => {
 });
 
 test("bp-risk/2: an unknown age keeps the certificate and password signals", () => {
-  assert.strictEqual(realCase({ reg: null, cert: 10, terms: ["curve"], pw: true }).score, 40);
+  assert.strictEqual(realCase({ reg: null, cert: 10, terms: ["curve"], title: "Curve", pw: true }).score, 40);
 });
 
 test("bp-risk/2: a word that isn't on the list stays distinctive", () => {
-  const r = realCase({ reg: 900, terms: ["notonthelistword"] });
-  assert.strictEqual(r.score, 40);
+  const r = realCase({ reg: 900, terms: ["notonthelistword"], title: "Notonthelistword" });
+  assert.strictEqual(r.score, 30);
   assert.strictEqual(r.status, "copies_brand");
+});
+
+test("bp-risk/2: a title that only repeats the hostname doesn't name the brand", () => {
+  for (const [host, title, terms] of [
+    ["alchemix.me", "alchemix.me", ["alchemix"]],
+    ["synthetix.click", "synthetix.click | 523: Origin is unreachable", ["synthetix"]],
+    ["www.machinex.us", "www.machinex.us", ["machinex"]],
+  ]) {
+    const r = realCase({ reg: 900, terms, title, host });
+    assert.strictEqual(r.status, "live", host);
+    assert.strictEqual(r.score, 20, host);
+    assert.ok(r.reasons.includes("page text names the brand (+5)"), host);
+  }
+  const named = realCase({ reg: 900, terms: ["alchemix"], title: "Alchemix on alchemix.me", host: "alchemix.me" });
+  assert.strictEqual(named.status, "copies_brand", "the name outside the hostname still counts");
 });
 
 test("analyzeHtml says which brand terms the title used", () => {

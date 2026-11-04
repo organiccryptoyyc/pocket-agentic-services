@@ -15,7 +15,7 @@ const { domainToASCII, domainToUnicode } = require("url");
 const checks = require("./checks");
 const fingerprint = require("./fingerprint");
 const { splitDomain, brandKeywords } = require("./permute");
-const { riskScore, titleTermsAreCommon, METHOD } = require("./score");
+const { riskScore, titleSignal, METHOD } = require("./score");
 const { officialFingerprint } = require("./scan");
 
 const SCHEMA = "bp-recheck/1";
@@ -125,11 +125,12 @@ function corroboration({ rdap, cert, page, official, status }) {
     if (official && official.icon_sha256 && page.icon_sha256 === official.icon_sha256) strong.push("site icon identical to the official site's");
     if (official && official.title && page.title === official.title) strong.push("page title identical to the official site's");
     if (asksSecret) strong.push("page mentions a seed, recovery or secret phrase or a private key");
-    if (page.wallet_prompt && page.brand_in_title && !asksSecret) strong.push("page names the brand in its title and prompts for a wallet");
-    if (page.brand_in_title && !titleTermsAreCommon(page)) strong.push("page title names a distinctive brand name");
-    else if (page.brand_in_title) weak.push("page title contains the brand word, which is also a common word");
+    const title = titleSignal(page);
+    if (page.wallet_prompt && title.kind !== "none" && !asksSecret) strong.push("page names the brand in its title and prompts for a wallet");
+    if (title.kind === "distinctive") strong.push("page title names a distinctive brand name");
+    else if (title.kind === "common") weak.push("page title contains the brand word, which is also a common word");
     else if (page.brand_in_page) weak.push("page text contains the brand word");
-    if (page.wallet_prompt && !page.brand_in_title && !asksSecret) weak.push("page mentions a wallet, without the brand in its title");
+    if (page.wallet_prompt && title.kind === "none" && !asksSecret) weak.push("page mentions a wallet, without the brand in its title");
     // Any shop with accounts has a password field, so this never corroborates by itself.
     if (page.has_password_form) weak.push("page has a password field");
   }

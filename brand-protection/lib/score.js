@@ -6,14 +6,14 @@
 const METHOD = "bp-risk/2";
 
 // bp-risk/2 (2026-11-04), tuned on 1,446 real Beta findings:
-//  - A fresh certificate on an established domain is a routine renewal. It only
-//    counts on a young domain, when the age is unknown, or when the page copies
-//    the brand or prompts for a wallet.
+//  - A title that only repeats the site's own hostname ("alchemix.me",
+//    "synthetix.click | 523: Origin is unreachable") doesn't name the brand.
 //  - A brand name that is an ordinary word ("curve", "pocket") turns up on
-//    unrelated sites. In a title it needs something else pointing at the brand;
-//    a distinctive name ("pancakeswap") counts for more than it did.
-//  - A password field is normal on any shop, so on an established domain it needs
-//    the same support.
+//    unrelated sites. In a title it needs something else pointing at the brand.
+//    A distinctive name ("pancakeswap") scores as it did in bp-risk/1.
+//  - A fresh certificate on an established domain is a routine renewal, and any
+//    shop has a password field. Both need support: a young domain, an unknown
+//    age, a copied icon or title, a wallet prompt, or a distinctive name in the title.
 // A word missing from this list is treated as distinctive, so the list can only
 // ever miss a false alarm, never hide a finding by accident.
 const COMMON_BRAND_WORDS = new Set([
@@ -27,10 +27,19 @@ const COMMON_BRAND_WORDS = new Set([
 ]);
 const YOUNG_DOMAIN_DAYS = 180;
 
-// True when every brand term in the page title is an ordinary word.
-function titleTermsAreCommon(page) {
-  const terms = page && page.brand_terms_in_title;
-  return Array.isArray(terms) && terms.length > 0 && terms.every((t) => COMMON_BRAND_WORDS.has(String(t).toLowerCase()));
+// What the page title says about the brand, once the site's own hostname is taken
+// out: "none", "common" (only ordinary words) or "distinctive". A page without
+// term detail counts as distinctive, the same as a word missing from the list.
+function titleSignal(page) {
+  if (!page || !page.brand_in_title) return { kind: "none", word: null };
+  const terms = page.brand_terms_in_title;
+  if (!Array.isArray(terms)) return { kind: "distinctive", word: null };
+  let title = String(page.title || "").toLowerCase();
+  const host = String(page.final_host || "").toLowerCase();
+  for (const h of [host, host.replace(/^www\./, "")]) if (h) title = title.split(h).join(" ");
+  const left = terms.map((t) => String(t).toLowerCase()).filter((t) => title.includes(t));
+  if (left.length === 0) return { kind: "none", word: null };
+  return { kind: left.every((t) => COMMON_BRAND_WORDS.has(t)) ? "common" : "distinctive", word: left[0] };
 }
 
 // Nameservers that millions of unrelated domains share (registrar defaults,
@@ -76,9 +85,10 @@ function riskScore({ dns, rdap, cert, page, official, ct }) {
   const sameTitle = !!(pageRead && official && official.title && page.title && page.title === official.title);
   const walletPrompt = !!(pageRead && page.wallet_prompt);
   const supported = young || sameIcon || sameTitle || walletPrompt;
-  const commonTitle = pageRead && titleTermsAreCommon(page);
+  const title = pageRead ? titleSignal(page) : { kind: "none", word: null };
+  const renewalNeedsNoSupport = !ageKnown || supported || title.kind === "distinctive";
   const freshCert = !!(cert && cert.currently_valid && cert.issued_days_ago != null && cert.issued_days_ago <= 30);
-  if (freshCert && (!ageKnown || supported)) add(10, `TLS certificate issued ${cert.issued_days_ago} days ago`);
+  if (freshCert && renewalNeedsNoSupport) add(10, `TLS certificate issued ${cert.issued_days_ago} days ago`);
   if (ct && ct.seen) add(5, "new certificate seen in Certificate Transparency logs");
 
   let copiesBrand = false;
@@ -92,11 +102,9 @@ function riskScore({ dns, rdap, cert, page, official, ct }) {
     add(-40, `redirects to the official site (${page.final_host}), likely the brand's own defensive registration`);
   } else if (page && page.reachable && !page.skipped) {
     if (page.parked) add(-20, "page looks parked or for sale");
-    if (page.brand_in_title) {
-      if (!commonTitle) { add(25, "page title names the brand"); copiesBrand = true; }
-      else if (supported) { add(15, "page title names the brand"); copiesBrand = true; }
-      else add(5, `page title contains the common word "${page.brand_terms_in_title[0]}", with nothing else pointing at the brand`);
-    } else if (page.brand_in_page) add(5, "page text names the brand");
+    if (title.kind === "distinctive" || (title.kind === "common" && supported)) { add(15, "page title names the brand"); copiesBrand = true; }
+    else if (title.kind === "common") add(5, `page title contains the common word "${title.word}", with nothing else pointing at the brand`);
+    else if (page.brand_in_page) add(5, "page text names the brand");
     if (sameIcon) {
       add(20, "site icon is byte-identical to the official site's");
       copiesBrand = true;
@@ -105,7 +113,7 @@ function riskScore({ dns, rdap, cert, page, official, ct }) {
       add(10, "page title is identical to the official site's");
       copiesBrand = true;
     }
-    if (page.has_password_form && (!ageKnown || supported || (page.brand_in_title && !commonTitle))) add(10, "page has a password field");
+    if (page.has_password_form && renewalNeedsNoSupport) add(10, "page has a password field");
     if (walletPrompt) add(20, "page asks to connect a wallet or enter a recovery phrase");
   }
 
@@ -123,4 +131,4 @@ function riskScore({ dns, rdap, cert, page, official, ct }) {
   return { score, level, status, reasons, method: METHOD };
 }
 
-module.exports = { riskScore, sharesOfficialDns, titleTermsAreCommon, METHOD };
+module.exports = { riskScore, sharesOfficialDns, titleSignal, METHOD };
