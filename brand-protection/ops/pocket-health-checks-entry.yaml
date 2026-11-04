@@ -1,0 +1,31 @@
+- service_id: brand-protection
+  # Brand Protection Monitor: an agentic REST service (not a blockchain), so no sync_check or
+  # sync_allowance. Identity, readiness, and one functional check that reads the store and makes
+  # no outbound call, matching the service card's serving.healthcheck.
+  check_interval: 30s
+  enabled: true
+  checks:
+    - name: version
+      type: rest
+      method: GET
+      path: /v1/version
+      expected_status_code: 200
+      expected_response_contains: '"brand-protection"'
+      timeout: 5s
+      reputation_signal: critical_error
+    - name: health
+      type: rest
+      method: GET
+      path: /v1/health
+      expected_status_code: 200
+      expected_response_contains: '"status":"ok"'
+      timeout: 5s
+      reputation_signal: major_error
+    - name: watched
+      type: rest
+      method: GET
+      path: /v1/brand/watched
+      expected_status_code: 200
+      expected_response_contains: '"max_watched"'
+      timeout: 5s
+      reputation_signal: major_error
