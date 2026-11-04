@@ -12,7 +12,7 @@ const ICON = "a".repeat(64);
 const WORLD = {
   "brand.org": { a: ["198.51.100.1"], ns: ["a.ns.cloudflare.com", "b.ns.cloudflare.com"], page: { title: "Brand App", icon_sha256: ICON, final_host: "brand.org" } },
   "brand-claim.org": { a: ["203.0.113.10"], mx: ["mx.brand-claim.org"], age: 5, certDays: 3, page: { title: "Brand App", icon_sha256: ICON, wallet_prompt: true, wallet_terms: ["seed phrase"], brand_in_title: true, brand_in_page: true, final_host: "brand-claim.org" } },
-  "brand.shop": { a: ["203.0.113.11"], age: 2000, certDays: 200, page: { title: "Brand new shoes", icon_sha256: "c".repeat(64), brand_in_title: true, brand_in_page: true, final_host: "brand.shop" } },
+  "brand.shop": { a: ["203.0.113.11"], age: 2000, certDays: 200, page: { title: "Brand new shoes", icon_sha256: "c".repeat(64), brand_in_title: true, brand_terms_in_title: ["brand"], brand_in_page: true, final_host: "brand.shop" } },
   "brand.xyz": { a: ["203.0.113.12"], age: 900, page: { title: "brand.xyz is for sale", parked: true, final_host: "brand.xyz" } },
   "brand.net": { a: ["203.0.113.13"], age: 900, page: { title: "Brand App", final_host: "brand.org" } },
   "brandd.org": { a: ["10.0.0.5"], age: 10 },

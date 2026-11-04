@@ -41,6 +41,73 @@ fingerprint.homepage = async (domain) => ({
   brand_in_title: false, brand_in_page: false, has_password_form: false, wallet_prompt: false, parked: false, ...WORLD[domain].page,
 });
 
+// --- bp-risk/2: real Beta findings, so a change to the scale shows up here -------
+
+// reg = days since registration; null = the registry gave no age.
+function realCase({ reg, cert, title, terms, wallet, pw, mx, icon, sameTitle, text }) {
+  return riskScore({
+    dns: { exists: true, resolves: true, mx: mx ? ["mx.example"] : [], ns: ["ns1.example.net"] },
+    rdap: reg === null ? null : { registered: true, age_days: reg },
+    cert: cert == null ? null : { currently_valid: true, issued_days_ago: cert },
+    page: {
+      reachable: true, title: sameTitle ? "Official" : (title || "Some page"), brand_in_title: !!terms, brand_terms_in_title: terms || [],
+      brand_in_page: !!terms || !!text, wallet_prompt: !!wallet, has_password_form: !!pw, icon_sha256: icon ? "i" : "p",
+    },
+    official: { domains: ["official.example"], title: "Official", icon_sha256: "i", ns_sets: [] },
+  });
+}
+
+test("bp-risk/2: unrelated businesses with an ordinary brand word drop out of medium", () => {
+  const cases = [
+    ["pocket.capital", { reg: 900, cert: 21, mx: true, terms: ["pocket"] }, 25],
+    ["curve.us", { reg: 900, terms: ["curve"], pw: true }, 20],
+    ["compound.co", { reg: 900, cert: 2, mx: true, terms: ["compound"] }, 25],
+    ["silo.network", { reg: 900, cert: 8, terms: ["silo"] }, 20],
+    ["morpho.world", { reg: 900, cert: 9, mx: true, terms: ["morpho"] }, 25],
+    ["gearbox.app", { reg: 3000, cert: 27, mx: true, terms: ["gearbox"], pw: true }, 15],
+  ];
+  for (const [name, input, want] of cases) {
+    const r = realCase(input);
+    assert.strictEqual(r.score, want, name);
+    assert.strictEqual(r.level, "low", name);
+    assert.strictEqual(r.status, "live", `${name} no longer reads as copying the brand`);
+  }
+});
+
+test("bp-risk/2: real clones and new lookalikes stay flagged", () => {
+  const cases = [
+    ["aavestaking.com", { reg: 21, cert: 21, terms: ["aave"], wallet: true }, 95, "high"],
+    ["aavemigrate.com", { reg: 800, cert: 7, terms: ["aave"], wallet: true }, 70, "high"],
+    ["compound-labs.xyz", { reg: 5, cert: 5, terms: ["compound"] }, 65, "medium"],
+    ["pancakeswap.co", { reg: 900, cert: 19, terms: ["pancakeswap"] }, 40, "medium"],
+    ["synthetix.live", { reg: 900, cert: 26, terms: ["synthetix"] }, 40, "medium"],
+    ["stargate.fi", { reg: 900, mx: true, text: true, icon: true, sameTitle: true }, 55, "medium"],
+    ["cow.foundation", { reg: 900, cert: 15, mx: true, icon: true }, 50, "medium"],
+    ["silo.global", { reg: 900, mx: true, terms: ["silo"], wallet: true }, 55, "medium"],
+    ["app-balancer.fi", { reg: 36, terms: ["balancer"] }, 40, "medium"],
+  ];
+  for (const [name, input, score, level] of cases) {
+    const r = realCase(input);
+    assert.strictEqual(r.score, score, name);
+    assert.strictEqual(r.level, level, name);
+  }
+});
+
+test("bp-risk/2: an unknown age keeps the certificate and password signals", () => {
+  assert.strictEqual(realCase({ reg: null, cert: 10, terms: ["curve"], pw: true }).score, 40);
+});
+
+test("bp-risk/2: a word that isn't on the list stays distinctive", () => {
+  const r = realCase({ reg: 900, terms: ["notonthelistword"] });
+  assert.strictEqual(r.score, 40);
+  assert.strictEqual(r.status, "copies_brand");
+});
+
+test("analyzeHtml says which brand terms the title used", () => {
+  const s = fingerprint.analyzeHtml(Buffer.from("<title>Pocket and POKT tools</title>"), ["pocket", "pokt", "other"]);
+  assert.deepStrictEqual(s.brand_terms_in_title, ["pocket", "pokt"]);
+});
+
 // --- the re-check's extra detail ------------------------------------------------
 
 test("wallet terms name what a page really used", () => {
@@ -105,7 +172,7 @@ test("risk score: not registered, full impersonation, parked", () => {
 test("homepage analysis and robots.txt", () => {
   const html = Buffer.from('<html><head><title>Uniswap | Claim</title><link rel="shortcut icon" href="/i.png"></head><body><input type="password"> Connect Wallet</body></html>');
   const s = fingerprint.analyzeHtml(html, ["uniswap"]);
-  assert.deepStrictEqual(s, { title: "Uniswap | Claim", brand_in_title: true, brand_in_page: true, has_password_form: true, wallet_prompt: true, parked: false, icon_href: "/i.png" });
+  assert.deepStrictEqual(s, { title: "Uniswap | Claim", brand_in_title: true, brand_terms_in_title: ["uniswap"], brand_in_page: true, has_password_form: true, wallet_prompt: true, parked: false, icon_href: "/i.png" });
   assert.strictEqual(fingerprint.analyzeHtml(Buffer.from("<title>For Sale Domain: uniswap.pro</title>"), ["uniswap"]).parked, true);
   assert.strictEqual(checks.robotsDisallowsRoot("User-agent: *\nDisallow: /"), true);
   assert.strictEqual(checks.robotsDisallowsRoot("User-agent: Googlebot\nDisallow: /\nUser-agent: *\nDisallow: /admin"), false);

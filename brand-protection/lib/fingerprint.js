@@ -41,6 +41,7 @@ function analyzeHtml(body, keywords) {
   return {
     title,
     brand_in_title: !!title && keywords.some((k) => title.toLowerCase().includes(k)),
+    brand_terms_in_title: title ? keywords.filter((k) => title.toLowerCase().includes(k)) : [],
     brand_in_page: keywords.some((k) => lower.includes(k)),
     has_password_form: PASSWORD_RE.test(text),
     wallet_prompt: WALLET_RE.test(text),

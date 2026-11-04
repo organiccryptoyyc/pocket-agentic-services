@@ -31,7 +31,7 @@ whether a page's claims are true. Raw page content is never kept.
 
 Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
 
-## How a finding is made (`bp-risk/1`)
+## How a finding is made (`bp-risk/2`)
 
 1. **Candidates:** names from Certificate Transparency logs built around the brand
    word (collector only), then our own permutations in priority order: TLD swap,
@@ -47,6 +47,13 @@ Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
    old registrations count down. A lookalike that **redirects to the official site**
    or **uses the official site's own nameservers** (on a provider that assigns
    per-account sets) is reported as the brand's own and capped at 20.
+
+   `bp-risk/2` (from 0.1.3) was tuned on 1,446 real findings. A fresh certificate only counts on a domain up to 180
+   days old, when the age is unknown, or when the page copies the brand or prompts for a wallet, because renewals are
+   routine. A distinctive brand name in a title is worth +25. An ordinary-word brand name ("curve", "pocket") is worth
+   +15 with support (young domain, identical icon or title, wallet prompt) and +5 without, and then the finding doesn't
+   read as copying the brand. A password field on an established domain needs the same support. Names missing from
+   the common-word list count as distinctive, so the list can miss a false alarm but can't hide a finding by accident.
 
 Statuses: `copies_brand`, `live`, `resolves`, `parked`, `registered_not_live`,
 `redirects_to_official`, `likely_brand_owned`, `refused_private_address`,
