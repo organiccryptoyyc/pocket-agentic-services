@@ -21,7 +21,7 @@ const { scanBrand, brandIdFor } = require("./lib/scan");
 const { startIngest } = require("./lib/ingest");
 
 const SERVICE = "brand-protection";
-const VERSION = "0.1.1";
+const VERSION = "0.1.2";
 const QUICK = {
   deadlineMs: Number(process.env.BP_QUICK_DEADLINE_MS || 9000),
   maxCandidates: Number(process.env.BP_QUICK_MAX_CANDIDATES || 120),
@@ -95,7 +95,7 @@ function report(doc, { since, limit }, extra = {}) {
     findings_total: findings.length,
     findings_returned: Math.min(limit, findings.length),
     findings: findings.slice(0, limit),
-    risk_scale: "0-100, higher means more signs of impersonation; 70+ high, 40-69 medium",
+    risk_scale: "0-100, higher means more signs of impersonation; 70+ high, 40-69 medium; unchecked means only DNS was read, so the page and registry have not been assessed and the number is a floor, not a verdict",
     note: "Findings are observed signals (lookalike name, recent registration, fresh certificate, page copies the brand, " +
       "wallet or password prompt), not a finding of fraud. Detection and evidence only. Fetch /v1/brand/evidence " +
       "with a finding's evidence_id for fetch times and SHA-256 hashes.",

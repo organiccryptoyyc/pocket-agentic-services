@@ -129,6 +129,8 @@ test("scanBrand finds, scores and evidences the lookalikes", async () => {
 test("deadline makes a partial, DNS-only scan", async () => {
   const r = await scanBrand({ brand: "Uniswap", official_domains: ["uniswap.org"] }, { deepLimit: 0, skipOfficial: true });
   assert.ok(r.findings.every((f) => f.checked === "dns_only"));
+  const unvetted = r.findings.filter((f) => f.status !== "refused_private_address");
+  assert.ok(unvetted.length > 0 && unvetted.every((f) => f.risk_level === "unchecked"), "a DNS-only finding is never called low");
   assert.strictEqual(r.coverage.full_checks, 0);
   assert.strictEqual(r.coverage.partial, true);
 });

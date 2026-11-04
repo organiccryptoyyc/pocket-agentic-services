@@ -159,7 +159,8 @@ async function scanBrand(request, opts = {}) {
       ...(c.unicode ? { unicode: c.unicode } : {}),
       fuzzer: c.fuzzer,
       risk: risk.score,
-      risk_level: risk.level,
+      // A DNS-only finding has not been assessed: its page and registry were never read.
+      risk_level: deep || refused ? risk.level : "unchecked",
       status: risk.status,
       reasons: risk.reasons,
       registered_at: rdap && rdap.registered_at || null,
