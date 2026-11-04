@@ -18,8 +18,8 @@
     {
       "kind": "openapi",
       "api": "brand-protection-scan",
-      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/73dc9c5b4914446016ed41d08edf7deb81f36a98/brand-protection/openapi.json",
-      "sha256": "f5f2fbd24fc87369761840142c5a0df459d49d44268d89d1b3c33f74e476b3f4",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/0f0e8a25f4e2427b0edaae6973748fbd984f3fa6/brand-protection/openapi.json",
+      "sha256": "09fe09d9905d26bfde7e9ca34adac80736d61201ca88b8a28f93f0534ad65c53",
       "notes": "Covers all routes in one document."
     }
   ],
@@ -30,7 +30,7 @@
     "implementations": [
       "brand-protection >= 0.1"
     ],
-    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/73dc9c5b4914446016ed41d08edf7deb81f36a98/brand-protection",
+    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/0f0e8a25f4e2427b0edaae6973748fbd984f3fa6/brand-protection",
     "min_disk_gb": 1,
     "min_ram_gb": 1,
     "healthcheck": [
@@ -55,6 +55,6 @@
     ],
     "notes": "Request bodies are capped at 1 MiB; responses are a few KB to ~100 KB (limit caps findings at 200). A quick scan is bounded to about 9 s; keep the relay timeout at 15 s or more. Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
   },
-  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/73dc9c5b4914446016ed41d08edf7deb81f36a98/brand-protection/README.md",
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/0f0e8a25f4e2427b0edaae6973748fbd984f3fa6/brand-protection/README.md",
   "updated": "2026-11-03"
 }
