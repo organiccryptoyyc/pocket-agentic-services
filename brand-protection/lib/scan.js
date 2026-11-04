@@ -195,4 +195,4 @@ async function scanBrand(request, opts = {}) {
   };
 }
 
-module.exports = { scanBrand, brandIdFor, evidenceId, pool };
+module.exports = { scanBrand, brandIdFor, evidenceId, pool, officialFingerprint };

@@ -127,7 +127,7 @@ async function rdapBaseFor(tld) {
   return value[tld] || null;
 }
 
-async function rdapLookup(domain) {
+async function rdapLookup(domain, opts = {}) {
   const tld = domain.split(".").pop();
   const base = await rdapBaseFor(tld);
   if (!base) return { available: false, reason: `no RDAP server published for .${tld}` };
@@ -144,7 +144,7 @@ async function rdapLookup(domain) {
     ? ((registrar.vcardArray[1] || []).find((f) => f[0] === "fn") || [])[3] || null
     : null;
   const reg = events.registration ? Date.parse(events.registration) : NaN;
-  return {
+  const out = {
     available: true,
     registered: true,
     source_url: url,
@@ -154,21 +154,41 @@ async function rdapLookup(domain) {
     registrar: registrarName,
     status: j.status || [],
   };
+  if (!opts.detail) return out;
+  // The re-check keeps more of the record. Personal contact data is left out;
+  // the abuse address is the registrar's published role contact.
+  const abuse = registrar && (registrar.entities || []).find((e) => (e.roles || []).includes("abuse"));
+  const abuseEmail = abuse && Array.isArray(abuse.vcardArray)
+    ? ((abuse.vcardArray[1] || []).find((f) => f[0] === "email") || [])[3] || null
+    : null;
+  return {
+    ...out,
+    updated_at: events["last changed"] || null,
+    nameservers: (j.nameservers || []).map((n) => String(n.ldhName || "").toLowerCase()).filter(Boolean),
+    registrar_iana_id: registrar ? ((registrar.publicIds || []).find((p) => /iana/i.test(p.type || "")) || {}).identifier || null : null,
+    registrar_abuse_email: abuseEmail,
+    response_json_sha256: sha256(JSON.stringify(j)),
+  };
 }
 
 // --- Live TLS certificate --------------------------------------------------------
 
-function tlsCertInfo(domain, ip) {
+function tlsCertInfo(domain, ip, opts = {}) {
   return new Promise((resolve, reject) => {
     const socket = tls.connect({ host: ip, servername: domain, port: 443, timeout: HTTP_TIMEOUT_MS, rejectUnauthorized: false }, () => {
       const cert = socket.getPeerCertificate();
       const authorized = !!socket.authorized;
+      const authorizationError = socket.authorizationError ? String(socket.authorizationError) : null;
+      const protocol = socket.getProtocol();
       socket.end();
       if (!cert || Object.keys(cert).length === 0) return reject(new UpstreamError(`no certificate presented by '${domain}'`));
       const now = Date.now();
       const from = cert.valid_from ? Date.parse(cert.valid_from) : NaN;
       const to = cert.valid_to ? Date.parse(cert.valid_to) : NaN;
       const sans = (cert.subjectaltname || "").split(",").map((s) => s.trim().replace(/^DNS:/, "")).filter(Boolean);
+      const detail = opts.detail
+        ? { ip, tls_protocol: protocol, authorization_error: authorizationError, serial_number: cert.serialNumber || null, sans: sans.slice(0, 50), sans_truncated: sans.length > 50 }
+        : {};
       resolve({
         subject_cn: cert.subject?.CN || null,
         subject_org: cert.subject?.O || null,
@@ -181,6 +201,7 @@ function tlsCertInfo(domain, ip) {
         chain_trusted: authorized,
         san_count: sans.length,
         sha256_fingerprint: cert.fingerprint256 || null,
+        ...detail,
       });
     });
     socket.on("error", (e) => reject(new UpstreamError(`TLS handshake with '${domain}' failed: ${e.message}`)));

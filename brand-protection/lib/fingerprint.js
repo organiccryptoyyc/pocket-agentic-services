@@ -18,6 +18,18 @@ function decodeEntities(s) {
   return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
 }
 
+// Which wallet terms a page really used, so a reader can tell "mentions MetaMask"
+// from "asks for your recovery phrase". Pure.
+function walletTerms(text) {
+  const re = new RegExp(WALLET_RE.source, "gi");
+  const found = new Set();
+  for (const m of text.matchAll(re)) {
+    found.add(m[0].toLowerCase().replace(/\s+/g, " "));
+    if (found.size >= 10) break;
+  }
+  return [...found].sort();
+}
+
 // Pure: derive signals from page bytes. Exported for tests.
 function analyzeHtml(body, keywords) {
   const text = body.toString("utf8");
@@ -37,7 +49,7 @@ function analyzeHtml(body, keywords) {
   };
 }
 
-async function homepage(domain, keywords) {
+async function homepage(domain, keywords, opts = {}) {
   const fetched_at = new Date().toISOString();
   let base = `https://${domain}/`;
   let robots;
@@ -84,7 +96,15 @@ async function homepage(domain, keywords) {
     sha256: checks.sha256(page.body),
     icon_sha256,
     ...rest,
+    ...(opts.detail
+      ? {
+          wallet_terms: walletTerms(page.body.toString("utf8")),
+          content_type: page.headers["content-type"] || null,
+          server: page.headers.server || null,
+          robots_txt_status: robots.status,
+        }
+      : {}),
   };
 }
 
-module.exports = { homepage, analyzeHtml };
+module.exports = { homepage, analyzeHtml, walletTerms };

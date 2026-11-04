@@ -18,6 +18,19 @@ takedowns or interacts with suspect sites beyond one page fetch.
 
 Every response is a JSON object; bad input is a 4xx JSON error, never a 5xx.
 
+## Re-check engine (`lib/recheck.js`, library only)
+
+`recheckDomain({domain, official_domains?, keywords?}, {previous?})` reads one domain live and returns a
+`bp-recheck/1` record. No route calls it yet, so it changes nothing on the live service. Beyond a scan's evidence record it has:
+which checks completed (`completeness`), one retry for passing network failures, a score marked as a floor when a
+check is missing, whether the signals back each other up (`assessment.corroboration`, which never changes the score),
+more registry and certificate detail, the wallet terms a page really used, what changed since an earlier record
+(`changes`; a failed read is "not comparable", never a change) and a SHA-256 over the whole record
+(`integrity`). That hash shows the record wasn't edited after hashing; it isn't a signature and says nothing about
+whether a page's claims are true. Raw page content is never kept.
+
+Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
+
 ## How a finding is made (`bp-risk/1`)
 
 1. **Candidates:** names from Certificate Transparency logs built around the brand

@@ -41,6 +41,13 @@ fingerprint.homepage = async (domain) => ({
   brand_in_title: false, brand_in_page: false, has_password_form: false, wallet_prompt: false, parked: false, ...WORLD[domain].page,
 });
 
+// --- the re-check's extra detail ------------------------------------------------
+
+test("wallet terms name what a page really used", () => {
+  assert.deepStrictEqual(fingerprint.walletTerms("Connect  Wallet, then enter your Seed Phrase. connect wallet"), ["connect wallet", "seed phrase"]);
+  assert.deepStrictEqual(fingerprint.walletTerms("<p>plain page</p>"), []);
+});
+
 // --- permutations ---------------------------------------------------------------
 
 test("permutations are deterministic, valid and never include the original", () => {
