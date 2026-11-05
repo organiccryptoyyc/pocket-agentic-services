@@ -31,7 +31,7 @@ whether a page's claims are true. Raw page content is never kept.
 
 Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
 
-## How a finding is made (`bp-risk/2`)
+## How a finding is made (`bp-risk/3`)
 
 1. **Candidates:** our own permutations in priority order: TLD swap,
    added word (`-claim`, `-airdrop`, `-wallet` …), ASCII and IDN homoglyphs,
@@ -55,6 +55,9 @@ Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
    as copying the brand. A distinctive name is worth +15, as before. A fresh certificate or password field on an
    established domain needs that support or a distinctive name in the title. Names missing from the common-word list
    count as distinctive, so the list can miss a false alarm but can't hide a finding by accident.
+
+   `bp-risk/3` (from 0.1.5) adds the shape of the name: a live site named with the brand plus a word like `-wallet` or
+   `-airdrop` is +15, unless it's parked or the brand's own.
 
 Statuses: `copies_brand`, `live`, `resolves`, `parked`, `registered_not_live`,
 `redirects_to_official`, `likely_brand_owned`, `refused_private_address`,
