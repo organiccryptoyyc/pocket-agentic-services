@@ -3,7 +3,12 @@
 // what was observed ("copies the brand, wallet prompt"), not "fraud".
 "use strict";
 
-const METHOD = "bp-risk/2";
+const METHOD = "bp-risk/3";
+
+// bp-risk/3 (2026-11-05) adds the shape of the name. A live site built from the brand
+// plus a word like -wallet or -airdrop is +15, whatever its page says, unless it
+// is parked or the brand's own. Picked from 143 such names on Beta: +10 misses most
+// of them and +20 sweeps in far too many.
 
 // bp-risk/2 (2026-11-04), tuned on 1,446 real Beta findings:
 //  - A title that only repeats the site's own hostname ("alchemix.me",
@@ -26,6 +31,7 @@ const COMMON_BRAND_WORDS = new Set([
   "terra", "tide", "token", "trust", "union", "unity", "vault", "venture", "wallet", "wave", "zero",
 ]);
 const YOUNG_DOMAIN_DAYS = 180;
+const ADDED_WORD_POINTS = 15;
 
 // What the page title says about the brand, once the site's own hostname is taken
 // out: "none", "common" (only ordinary words) or "distinctive". A page without
@@ -62,7 +68,7 @@ function sharesOfficialDns(dnsNs, officialNsSets) {
   return officialNsSets.includes(key);
 }
 
-function riskScore({ dns, rdap, cert, page, official, ct }) {
+function riskScore({ dns, rdap, cert, page, official, ct, fuzzer }) {
   const reasons = [];
   let score = 0;
   const add = (pts, why) => { score += pts; reasons.push(`${why} (${pts >= 0 ? "+" : ""}${pts})`); };
@@ -115,6 +121,10 @@ function riskScore({ dns, rdap, cert, page, official, ct }) {
     }
     if (page.has_password_form && renewalNeedsNoSupport) add(10, "page has a password field");
     if (walletPrompt) add(20, "page asks to connect a wallet or enter a recovery phrase");
+  }
+
+  if (fuzzer === "added-word" && dns.resolves && !toOfficial && !sameOwner && !(page && page.parked)) {
+    add(ADDED_WORD_POINTS, "name adds a phishing-style word to the brand");
   }
 
   score = Math.max(0, Math.min(100, score));

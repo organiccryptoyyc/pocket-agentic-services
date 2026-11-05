@@ -119,6 +119,20 @@ test("bp-risk/2: a title that only repeats the hostname doesn't name the brand",
   assert.strictEqual(named.status, "copies_brand", "the name outside the hostname still counts");
 });
 
+test("bp-risk/3: a live name built on a phishing word is flagged, not a parked or owned one", () => {
+  const live = riskScore({ dns: { exists: true, resolves: true, mx: [], ns: ["ns1.example.net"] }, rdap: { registered: true, age_days: 900 }, fuzzer: "added-word" });
+  assert.strictEqual(live.score, 30);
+  assert.ok(live.reasons.includes("name adds a phishing-style word to the brand (+15)"));
+  const typo = riskScore({ dns: { exists: true, resolves: true, mx: [], ns: ["ns1.example.net"] }, rdap: { registered: true, age_days: 900 }, fuzzer: "omission" });
+  assert.strictEqual(typo.score, 15);
+  const parked = riskScore({ dns: { exists: true, resolves: true, mx: [], ns: ["ns1.example.net"] }, page: { reachable: true, parked: true }, fuzzer: "added-word" });
+  assert.ok(!parked.reasons.some((r) => r.startsWith("name adds")));
+  const own = riskScore({ dns: { exists: true, resolves: true, mx: [], ns: ["ns1.example.net"] }, page: { reachable: true, final_host: "official.example" }, official: { domains: ["official.example"], ns_sets: [] }, fuzzer: "added-word" });
+  assert.ok(!own.reasons.some((r) => r.startsWith("name adds")));
+  const noAddress = riskScore({ dns: { exists: true, resolves: false, mx: [], ns: ["ns1.example.net"] }, fuzzer: "added-word" });
+  assert.ok(!noAddress.reasons.some((r) => r.startsWith("name adds")));
+});
+
 test("analyzeHtml says which brand terms the title used", () => {
   const s = fingerprint.analyzeHtml(Buffer.from("<title>Pocket and POKT tools</title>"), ["pocket", "pokt", "other"]);
   assert.deepStrictEqual(s.brand_terms_in_title, ["pocket", "pokt"]);

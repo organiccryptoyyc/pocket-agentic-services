@@ -139,7 +139,7 @@ async function scanBrand(request, opts = {}) {
     const ct = ctByDomain.get(c.domain) || null;
     const risk = refused
       ? { score: 0, level: "none", status: "refused_private_address", reasons: [refused], method: METHOD }
-      : riskScore({ dns: probe, rdap, cert, page, official: officialFp, ct: ct ? { seen: true } : null });
+      : riskScore({ dns: probe, rdap, cert, page, official: officialFp, ct: ct ? { seen: true } : null, fuzzer: c.fuzzer });
     const id = evidenceId(brandId, c.domain, as_of);
     evidence.push({
       evidence_id: id,

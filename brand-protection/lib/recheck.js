@@ -14,7 +14,7 @@
 const { domainToASCII, domainToUnicode } = require("url");
 const checks = require("./checks");
 const fingerprint = require("./fingerprint");
-const { splitDomain, brandKeywords } = require("./permute");
+const { permutations, splitDomain, brandKeywords } = require("./permute");
 const { riskScore, titleSignal, METHOD } = require("./score");
 const { officialFingerprint } = require("./scan");
 
@@ -115,9 +115,10 @@ function completeness({ sources, probe, ips, rdap, page, refused }) {
 // A brand that is an ordinary word (curve, pocket) puts its name on unrelated
 // pages. The name alone is weak; the score stays as it is, and this says what
 // the score rests on.
-function corroboration({ rdap, cert, page, official, status }) {
+function corroboration({ rdap, cert, page, official, status, fuzzer }) {
   const strong = [];
   const weak = [];
+  if (fuzzer === "added-word") weak.push("name adds a phishing-style word to the brand");
   const reachable = page && page.reachable && !page.skipped;
   if (reachable) {
     const terms = page.wallet_terms || [];
@@ -268,11 +269,14 @@ async function recheckDomain(request, opts = {}) {
   const rdap = await rdapPromise;
 
   const done = completeness({ sources, probe, ips, rdap, page, refused });
+  // The same name reached through a scan has to score the same here.
+  const shape = official.flatMap((d) => permutations(d, { exclude: official })).find((p) => p.domain === domain);
+  const fuzzer = shape ? shape.fuzzer : null;
   let risk;
   if (refused) risk = { score: 0, level: "none", status: "refused_private_address", reasons: [refused], method: METHOD };
   else if (!probe) risk = { score: 0, level: "unchecked", status: "dns_failed", reasons: ["DNS could not be read, so nothing can be said about this name"], method: METHOD };
   else if (!probe.exists) risk = scoreWithoutDns({ probe, rdap, official: officialFp });
-  else risk = riskScore({ dns: probe, rdap, cert, page, official: officialFp, ct: null });
+  else risk = riskScore({ dns: probe, rdap, cert, page, official: officialFp, ct: null, fuzzer });
 
   // A missing check can only hide signals, so the score is a floor. A floor that
   // already reads medium or high stands; a lower one isn't a clean result.
@@ -298,7 +302,8 @@ async function recheckDomain(request, opts = {}) {
       brand_comparison: brandCompared
         ? "compared"
         : official.length ? "official_site_unavailable" : "no_official_domain_given",
-      corroboration: corroboration({ rdap, cert, page, official: officialFp, status: risk.status }),
+      name_shape: fuzzer,
+      corroboration: corroboration({ rdap, cert, page, official: officialFp, status: risk.status, fuzzer }),
     },
     sources: [...sources].sort((a, b) => SOURCE_ORDER.indexOf(a.kind) - SOURCE_ORDER.indexOf(b.kind)),
     dns: probe ? { a: probe.a, aaaa: probe.aaaa, mx: probe.mx, ns: probe.ns, nxdomain: probe.nxdomain } : null,
