@@ -8,7 +8,8 @@ const METHOD = "bp-risk/3";
 // bp-risk/3 (2026-11-05) adds the shape of the name. A live site built from the brand
 // plus a word like -wallet or -airdrop is +15, whatever its page says, unless it
 // is parked or the brand's own. Picked from 143 such names on Beta: +10 misses most
-// of them and +20 sweeps in far too many.
+// of them and +20 sweeps in far too many. The name alone can't make a finding high:
+// that needs page evidence too (a wallet prompt, or a copied icon or title).
 
 // bp-risk/2 (2026-11-04), tuned on 1,446 real Beta findings:
 //  - A title that only repeats the site's own hostname ("alchemix.me",
@@ -123,11 +124,11 @@ function riskScore({ dns, rdap, cert, page, official, ct, fuzzer }) {
     if (walletPrompt) add(20, "page asks to connect a wallet or enter a recovery phrase");
   }
 
-  if (fuzzer === "added-word" && dns.resolves && !toOfficial && !sameOwner && !(page && page.parked)) {
-    add(ADDED_WORD_POINTS, "name adds a phishing-style word to the brand");
-  }
+  const shapeCounts = fuzzer === "added-word" && dns.resolves && !toOfficial && !sameOwner && !(page && page.parked);
+  if (shapeCounts) add(ADDED_WORD_POINTS, "name adds a phishing-style word to the brand");
 
   score = Math.max(0, Math.min(100, score));
+  if (shapeCounts && !walletPrompt && !sameIcon && !sameTitle) score = Math.min(score, 69);
   // The brand's own site never reads as a medium or high risk, however much it "copies the brand".
   if (toOfficial || sameOwner) score = Math.min(score, 20);
   const level = score >= 70 ? "high" : score >= 40 ? "medium" : "low";

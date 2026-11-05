@@ -133,6 +133,23 @@ test("bp-risk/3: a live name built on a phishing word is flagged, not a parked o
   assert.ok(!noAddress.reasons.some((r) => r.startsWith("name adds")));
 });
 
+test("bp-risk/3: the name alone can't make a finding high", () => {
+  const dns = { exists: true, resolves: true, mx: ["mx.example"], ns: ["ns1.example.net"] };
+  const official = { domains: ["official.example"], title: "Official", icon_sha256: "i", ns_sets: [] };
+  const page = { reachable: true, title: "Compound", brand_in_title: true, brand_terms_in_title: ["compound"], brand_in_page: true };
+  const recent = { registered: true, age_days: 5 };
+  const fresh = { currently_valid: true, issued_days_ago: 5 };
+  const noEvidence = riskScore({ dns, rdap: recent, cert: fresh, page, official, fuzzer: "added-word" });
+  assert.strictEqual(noEvidence.score, 69);
+  assert.strictEqual(noEvidence.level, "medium");
+  const wallet = riskScore({ dns, rdap: recent, cert: fresh, page: { ...page, wallet_prompt: true }, official, fuzzer: "added-word" });
+  assert.strictEqual(wallet.level, "high");
+  const icon = riskScore({ dns, rdap: recent, cert: fresh, page: { ...page, icon_sha256: "i" }, official, fuzzer: "added-word" });
+  assert.strictEqual(icon.level, "high");
+  const typo = riskScore({ dns, rdap: recent, cert: fresh, page: { ...page, wallet_prompt: true }, official });
+  assert.strictEqual(typo.score, 90, "other names are not capped");
+});
+
 test("analyzeHtml says which brand terms the title used", () => {
   const s = fingerprint.analyzeHtml(Buffer.from("<title>Pocket and POKT tools</title>"), ["pocket", "pokt", "other"]);
   assert.deepStrictEqual(s.brand_terms_in_title, ["pocket", "pokt"]);

@@ -57,7 +57,8 @@ Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
    count as distinctive, so the list can miss a false alarm but can't hide a finding by accident.
 
    `bp-risk/3` (from 0.1.5) adds the shape of the name: a live site named with the brand plus a word like `-wallet` or
-   `-airdrop` is +15, unless it's parked or the brand's own.
+   `-airdrop` is +15, unless it's parked or the brand's own. The name alone can't make a finding high: that needs a wallet
+   prompt or a copied icon or title as well.
 
 Statuses: `copies_brand`, `live`, `resolves`, `parked`, `registered_not_live`,
 `redirects_to_official`, `likely_brand_owned`, `refused_private_address`,
