@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Brand Protection Monitor",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "description": "Lookalike domains, certificates and copied homepages for a brand, with deterministic risk scores and evidence hashes. Detection and evidence only."
   },
   "paths": {
@@ -99,7 +99,7 @@
           "fuzzer": { "type": "string", "enum": ["ct-log", "tld-swap", "added-word", "homoglyph", "idn-homoglyph", "omission", "transposition", "replacement", "repetition", "hyphenation", "insertion", "vowel-swap"] },
           "risk": { "type": "number", "minimum": 0, "maximum": 100 },
           "risk_level": { "type": "string", "enum": ["none", "low", "medium", "high", "unchecked"] },
-          "status": { "type": "string", "enum": ["copies_brand", "live", "resolves", "parked", "registered_not_live", "redirects_to_official", "refused_private_address", "no_longer_seen"] },
+          "status": { "type": "string", "enum": ["copies_brand", "live", "resolves", "taken_down", "parked", "registered_not_live", "redirects_to_official", "refused_private_address", "no_longer_seen"] },
           "reasons": { "type": "array", "items": { "type": "string" } },
           "registered_at": { "type": "string", "nullable": true },
           "certificate_issuer": { "type": "string", "nullable": true },

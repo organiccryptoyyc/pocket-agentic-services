@@ -18,6 +18,10 @@ const { brandIdFor } = require("./scan");
 
 const MAX_RESULTS = 50;
 const MAX_FINDINGS = 3000;
+// Fields holding what third parties published: page titles, redirect URLs, certificates,
+// registry and DNS answers. A random ID there isn't our key, and scanning them would let
+// any lookalike block a brand's whole report just by redirecting through such an ID.
+const THIRD_PARTY_FIELDS = new Set(["title", "reasons", "certificate_issuer", "homepage", "rdap", "certificate", "dns", "ct_log_entry", "official_fingerprint"]);
 const SECRET_RES = [/CG-[A-Za-z0-9]{20,}/, /\b[0-9a-f]{64}\b/, /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/];
 
 function tokenOk(header, token) {
@@ -39,8 +43,8 @@ function checkBrandEntry(b) {
   return problems;
 }
 
-// Shape check plus a secret scan. Certificate fingerprints are colon-separated
-// hex, and page/icon hashes are 64-hex by design, so those fields are skipped.
+// Shape check plus a secret scan. The patterns cover our own fields; our ingest token
+// is looked for everywhere, since it should never appear anywhere in a result.
 function checkResult(r, watch) {
   const problems = [];
   if (!r || typeof r !== "object") return ["result must be an object"];
@@ -56,8 +60,9 @@ function checkResult(r, watch) {
     if (!(f.risk >= 0 && f.risk <= 100)) problems.push(`findings[${i}].risk must be 0-100`);
     if (!ids.has(f.evidence_id)) problems.push(`findings[${i}].evidence_id has no evidence record`);
   });
-  const text = JSON.stringify(r, (k, v) => (k === "sha256" || k === "icon_sha256" || k === "sha256_fingerprint" ? undefined : v));
-  if (SECRET_RES.some((re) => re.test(text))) problems.push("result contains a key-like string; not stored");
+  const text = JSON.stringify(r, (k, v) => (THIRD_PARTY_FIELDS.has(k) ? undefined : v));
+  const token = process.env.BP_INGEST_TOKEN;
+  if (SECRET_RES.some((re) => re.test(text)) || (token && JSON.stringify(r).includes(token))) problems.push("result contains a key-like string; not stored");
   return problems;
 }
 

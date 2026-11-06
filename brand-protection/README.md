@@ -31,7 +31,7 @@ whether a page's claims are true. Raw page content is never kept.
 
 Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
 
-## How a finding is made (`bp-risk/3`)
+## How a finding is made (`bp-risk/4`)
 
 1. **Candidates:** our own permutations in priority order: TLD swap,
    added word (`-claim`, `-airdrop`, `-wallet` …), ASCII and IDN homoglyphs,
@@ -60,8 +60,14 @@ Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
    `-airdrop` is +15, unless it's parked or the brand's own. The name alone can't make a finding high: that needs a wallet
    prompt or a copied icon or title as well.
 
+   `bp-risk/4` (from 0.1.7) reads non-crypto phishing, from a hand check of fintech and login brands. A password field
+   under the brand's name is +30 and counts as page evidence. A page claiming to be a bank or regulated service is +15
+   with support. A host's own suspected-phishing warning is +40 and counts as page evidence. A site its host has pulled
+   is at most 30 (`taken_down`), unless the page still asks for a password or a wallet. The name's shape doesn't count on
+   a domain over 3 years old. Added words now include `account`, `billing`, `invoice`, `payment`, `pay`, `bank`, `signin`, `auth`.
+
 Statuses: `copies_brand`, `live`, `resolves`, `parked`, `registered_not_live`,
-`redirects_to_official`, `likely_brand_owned`, `refused_private_address`,
+`redirects_to_official`, `likely_brand_owned`, `taken_down`, `refused_private_address`,
 `no_longer_seen` (kept 30 days so `since` callers learn about it).
 
 ## Data sources (phase 0 terms check, 2026-11-02)

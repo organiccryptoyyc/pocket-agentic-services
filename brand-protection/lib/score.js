@@ -3,7 +3,17 @@
 // what was observed ("copies the brand, wallet prompt"), not "fraud".
 "use strict";
 
-const METHOD = "bp-risk/3";
+const METHOD = "bp-risk/4";
+
+// bp-risk/4 (2026-11-05) reads pages the way non-crypto phishing works, from a hand check of
+// 10 fintech and login brands on Beta:
+//  - A password field under the brand's name is +30, not +10, and counts as page evidence.
+//    transferwises.com (a "TransferWise" bank login) scored only 50.
+//  - A page claiming to be a bank or regulated service is +15 when something else supports it.
+//  - A host's own phishing warning is +40 and counts as page evidence: an independent party flagged it.
+//  - A site the host has pulled is at most low (taken_down), unless its page still asks for
+//    a password or a wallet. A dead site shouldn't outrank a live fake.
+//  - The name's shape no longer counts on a domain over 3 years old (connectwise.com, 28 years).
 
 // bp-risk/3 (2026-11-05) adds the shape of the name. A live site built from the brand
 // plus a word like -wallet or -airdrop is +15, whatever its page says, unless it
@@ -30,9 +40,11 @@ const COMMON_BRAND_WORDS = new Set([
   "nexus", "nova", "oasis", "orbit", "peak", "pilot", "pine", "pivot", "pulse", "quest", "radar", "rain", "ridge",
   "river", "rocket", "safe", "scale", "shield", "signal", "solid", "spark", "spring", "stream", "summit", "sun", "swap",
   "terra", "tide", "token", "trust", "union", "unity", "vault", "venture", "wallet", "wave", "zero",
+  "wise", "chime", "square", "stripe", "chase", "gap",
 ]);
 const YOUNG_DOMAIN_DAYS = 180;
 const ADDED_WORD_POINTS = 15;
+const SHAPE_MAX_AGE_DAYS = 1095;
 
 // What the page title says about the brand, once the site's own hostname is taken
 // out: "none", "common" (only ordinary words) or "distinctive". A page without
@@ -98,6 +110,8 @@ function riskScore({ dns, rdap, cert, page, official, ct, fuzzer }) {
   if (freshCert && renewalNeedsNoSupport) add(10, `TLS certificate issued ${cert.issued_days_ago} days ago`);
   if (ct && ct.seen) add(5, "new certificate seen in Certificate Transparency logs");
 
+  const brandedLogin = !!(pageRead && page.has_password_form && (title.kind === "distinctive" || (title.kind === "common" && supported)));
+  const hostWarning = !!(pageRead && page.host_phishing_warning);
   let copiesBrand = false;
   let toOfficial = false;
   const sameOwner = !!(official && sharesOfficialDns(dns.ns, official.ns_sets));
@@ -120,21 +134,34 @@ function riskScore({ dns, rdap, cert, page, official, ct, fuzzer }) {
       add(10, "page title is identical to the official site's");
       copiesBrand = true;
     }
-    if (page.has_password_form && renewalNeedsNoSupport) add(10, "page has a password field");
+    if (brandedLogin) add(30, "page asks for a password under the brand's name");
+    else if (page.has_password_form && renewalNeedsNoSupport) add(10, "page has a password field");
     if (walletPrompt) add(20, "page asks to connect a wallet or enter a recovery phrase");
+    if (page.bank_claim && (title.kind !== "none" || page.brand_in_page) && supported) add(15, "page presents itself as a bank or regulated service");
+    if (hostWarning) add(40, "the site's host shows a suspected-phishing or misleading-site warning");
   }
 
-  const shapeCounts = fuzzer === "added-word" && dns.resolves && !toOfficial && !sameOwner && !(page && page.parked);
+  const oldDomain = !!(rdap && rdap.registered && rdap.age_days != null && rdap.age_days > SHAPE_MAX_AGE_DAYS);
+  const shapeCounts = fuzzer === "added-word" && dns.resolves && !toOfficial && !sameOwner && !(page && page.parked) && !oldDomain;
   if (shapeCounts) add(ADDED_WORD_POINTS, "name adds a phishing-style word to the brand");
 
   score = Math.max(0, Math.min(100, score));
-  if (shapeCounts && !walletPrompt && !sameIcon && !sameTitle) score = Math.min(score, 69);
+  if (shapeCounts && score > 69 && !walletPrompt && !sameIcon && !sameTitle && !brandedLogin && !hostWarning) {
+    score = 69;
+    reasons.push("held at 69: the page itself shows no wallet prompt, branded login or copied icon or title");
+  }
+  const takenDown = !!(pageRead && page.taken_down && !walletPrompt && !page.has_password_form && !hostWarning);
+  if (takenDown && !toOfficial && !sameOwner) {
+    score = Math.min(score, 30);
+    reasons.push("the site's host has taken it down");
+  }
   // The brand's own site never reads as a medium or high risk, however much it "copies the brand".
   if (toOfficial || sameOwner) score = Math.min(score, 20);
   const level = score >= 70 ? "high" : score >= 40 ? "medium" : "low";
   let status;
   if (toOfficial) status = "redirects_to_official";
   else if (sameOwner) status = "likely_brand_owned";
+  else if (takenDown) status = "taken_down";
   else if (page && page.parked) status = "parked";
   else if (copiesBrand) status = "copies_brand";
   else if (dns.resolves) status = page && page.reachable ? "live" : "resolves";

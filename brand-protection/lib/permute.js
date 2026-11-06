@@ -1,6 +1,6 @@
 // Lookalike domain generation. Our own implementation of the usual fuzzers
 // (the dnstwist approach: omission, transposition, keyboard replacement,
-// homoglyphs, TLD swap, added words), tuned for crypto brands. Pure and
+// homoglyphs, TLD swap, added words), tuned for crypto and fintech brands. Pure and
 // deterministic: the same domain always yields the same list in the same order.
 "use strict";
 
@@ -15,11 +15,12 @@ const TLDS = [
   "foundation", "capital", "digital", "tech", "world", "global", "services", "support",
 ];
 
-// Words phishing kits put next to a crypto brand.
+// Words phishing kits put next to a brand: crypto first, then accounts and payments.
 const WORDS = [
   "app", "claim", "airdrop", "wallet", "login", "secure", "connect", "rewards", "defi", "dapp", "v2", "v3",
   "v4", "staking", "stake", "migrate", "migration", "support", "official", "token", "bridge", "swap", "verify",
   "help", "portal", "drop", "bonus", "gov", "dao", "finance", "protocol", "labs",
+  "account", "billing", "invoice", "payment", "pay", "bank", "signin", "auth",
 ];
 
 const KEYBOARD = {

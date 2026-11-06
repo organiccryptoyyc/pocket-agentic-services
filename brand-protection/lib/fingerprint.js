@@ -10,6 +10,14 @@ const PASSWORD_RE = /<input[^>]+type\s*=\s*["']?password/i;
 const PARKED_RE = /domain\s+(?:is\s+)?for\s+sale|buy\s+this\s+domain|this\s+domain\s+(?:may\s+be|is)\s+for\s+sale|parked\s+(?:free|domain)|sedoparking|dan\.com|afternic|parkingcrew|bodis\.com|domain\s+parking/i;
 // A lookalike that redirects to a domain marketplace is for sale, i.e. parked.
 const MARKETPLACE_HOSTS = ["atom.com", "dan.com", "afternic.com", "sedo.com", "hugedomains.com", "squadhelp.com", "undeveloped.com", "godaddy.com", "brandbucket.com", "spaceship.com", "efty.com", "sav.com", "bodis.com", "parkingcrew.net"];
+// Pages that claim to be a bank or a regulated money service.
+const BANK_CLAIM_RE = /online\s*banking|digital\s*bank|secure\s*banking|fca[\s-]*regulated|fdic[\s-]*insured/i;
+// The host's own phishing interstitial (Cloudflare), matched on the page's machinery, not its words.
+const HOST_WARNING_RE = /cdn-cgi\/phish-bypass/i;
+// The host has pulled the site. A phishing lure can say "account suspended" in its text, so
+// only the title and a host's own error code count.
+const TAKEN_DOWN_TITLE_RE = /^(?:deployment unavailable|account suspended|website suspended|site suspended|suspended (?:domain|page|website)|this account has been suspended)\b/i;
+const TAKEN_DOWN_BODY_RE = /DEPLOYMENT_DISABLED/;
 const TITLE_RE = /<title[^>]*>([\s\S]{0,300}?)<\/title>/i;
 const ICON_RE = /<link\b[^>]*\brel\s*=\s*["'][^"']*\bicon\b[^"']*["'][^>]*>/i;
 const HREF_RE = /\bhref\s*=\s*["']([^"']+)["']/i;
@@ -45,7 +53,10 @@ function analyzeHtml(body, keywords) {
     brand_in_page: keywords.some((k) => lower.includes(k)),
     has_password_form: PASSWORD_RE.test(text),
     wallet_prompt: WALLET_RE.test(text),
-    parked: PARKED_RE.test(text) || (!!title && /\bfor\s+sale\b|\bdomain\s+(?:sale|auction)\b|make\s+an\s+offer/i.test(title)),
+    bank_claim: BANK_CLAIM_RE.test(text),
+    host_phishing_warning: HOST_WARNING_RE.test(text),
+    taken_down: TAKEN_DOWN_BODY_RE.test(text) || (!!title && TAKEN_DOWN_TITLE_RE.test(title)),
+    parked: PARKED_RE.test(text) || (!!title && /\bfor\s+sale\b|\bdomain\s+(?:sale|auction)\b|make\s+an\s+offer|parking\s+page/i.test(title)),
     icon_href: iconHref,
   };
 }
@@ -84,6 +95,7 @@ async function homepage(domain, keywords, opts = {}) {
   const { icon_href, ...rest } = signals;
   const finalHost = new URL(page.final_url).hostname.toLowerCase();
   if (MARKETPLACE_HOSTS.some((h) => finalHost === h || finalHost.endsWith(`.${h}`))) rest.parked = true;
+  if (page.status === 451) rest.taken_down = true;
   return {
     fetched_at,
     reachable: true,

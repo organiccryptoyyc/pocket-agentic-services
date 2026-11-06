@@ -150,6 +150,66 @@ test("bp-risk/3: the name alone can't make a finding high", () => {
   assert.strictEqual(typo.score, 90, "other names are not capped");
 });
 
+test("bp-risk/4: a password field under the brand's name reaches high", () => {
+  const dns = { exists: true, resolves: true, mx: [], ns: ["ns1.example.net"] };
+  const official = { domains: ["wise.com"], title: "Wise", icon_sha256: "i", ns_sets: [] };
+  const page = { reachable: true, title: "TransferWise - Secure Online Banking", brand_in_title: true, brand_terms_in_title: ["transferwise", "wise"], brand_in_page: true, has_password_form: true };
+  const fake = riskScore({ dns, rdap: { registered: true, age_days: 166 }, page, official, fuzzer: "insertion" });
+  assert.strictEqual(fake.score, 70);
+  assert.strictEqual(fake.level, "high");
+  const shop = { ...page, title: "Wise Shop", brand_terms_in_title: ["wise"] };
+  assert.strictEqual(riskScore({ dns, rdap: { registered: true, age_days: 4000 }, page: shop, official }).level, "low", "an old shop with an ordinary word stays low");
+  const named = riskScore({ dns, rdap: { registered: true, age_days: 100 }, page, official, fuzzer: "added-word" });
+  assert.strictEqual(named.level, "high", "a branded login is page evidence, so the name cap doesn't apply");
+});
+
+test("bp-risk/4: bank claims need support and a brand link", () => {
+  const dns = { exists: true, resolves: true, mx: ["mx.example"], ns: ["ns1.example.net"] };
+  const official = { domains: ["revolut.com"], title: "Revolut", icon_sha256: "i", ns_sets: [] };
+  const page = { reachable: true, title: "Ravolut Banking", brand_in_title: false, brand_terms_in_title: [], brand_in_page: true, bank_claim: true };
+  const cert = { currently_valid: true, issued_days_ago: 25 };
+  assert.strictEqual(riskScore({ dns, rdap: { registered: true, age_days: 26 }, cert, page, official, fuzzer: "vowel-swap" }).score, 75);
+  const noReason = riskScore({ dns, rdap: { registered: true, age_days: 4000 }, page, official });
+  assert.ok(!noReason.reasons.some((r) => r.includes("bank")));
+  const noBrand = riskScore({ dns, rdap: { registered: true, age_days: 26 }, page: { ...page, brand_in_page: false }, official });
+  assert.ok(!noBrand.reasons.some((r) => r.includes("bank")));
+});
+
+test("bp-risk/4: a host's phishing warning counts as page evidence", () => {
+  const dns = { exists: true, resolves: true, mx: [], ns: ["ns1.example.net"] };
+  const official = { domains: ["robinhood.com"], title: "Robinhood", icon_sha256: "i", ns_sets: [] };
+  const signals = fingerprint.analyzeHtml(Buffer.from('<title>Suspected Phishing | Cloudflare</title><form action="/cdn-cgi/phish-bypass">'), ["robinhood"]);
+  assert.strictEqual(signals.host_phishing_warning, true);
+  const r = riskScore({ dns, rdap: { registered: true, age_days: 97 }, page: { reachable: true, ...signals }, official, fuzzer: "added-word" });
+  assert.strictEqual(r.score, 80);
+  assert.strictEqual(r.level, "high");
+  assert.strictEqual(fingerprint.analyzeHtml(Buffer.from("<title>Suspected Phishing</title>"), ["x"]).host_phishing_warning, false, "words alone don't count");
+});
+
+test("bp-risk/4: a pulled site is low, unless it still asks for something", () => {
+  const dns = { exists: true, resolves: true, mx: [], ns: ["ns1.example.net"] };
+  const official = { domains: ["wise.com"], title: "Wise", icon_sha256: "i", ns_sets: [] };
+  const signals = fingerprint.analyzeHtml(Buffer.from("<title>Deployment Unavailable</title>"), ["wise"]);
+  assert.strictEqual(signals.taken_down, true);
+  const args = { dns, rdap: { registered: true, age_days: 18 }, cert: { currently_valid: true, issued_days_ago: 18 }, official, fuzzer: "added-word" };
+  const r = riskScore({ ...args, page: { reachable: true, ...signals } });
+  assert.strictEqual(r.status, "taken_down");
+  assert.strictEqual(r.level, "low");
+  const lure = riskScore({ ...args, page: { reachable: true, ...signals, wallet_prompt: true } });
+  assert.notStrictEqual(lure.status, "taken_down");
+  assert.strictEqual(fingerprint.analyzeHtml(Buffer.from("<title>Log in</title>Your account suspended, verify now"), ["wise"]).taken_down, false, "lure text doesn't count");
+});
+
+test("bp-risk/4: the name's shape doesn't count on an old domain, and a parking page is parked", () => {
+  const dns = { exists: true, resolves: true, mx: [], ns: ["ns1.example.net"] };
+  const official = { domains: ["wise.com"], title: "Wise", icon_sha256: "i", ns_sets: [] };
+  const page = { reachable: true, title: "Connect", brand_in_title: false, brand_terms_in_title: [] };
+  const shaped = (age) => riskScore({ dns, rdap: { registered: true, age_days: age }, page, official, fuzzer: "added-word" }).reasons.some((x) => x.startsWith("name adds"));
+  assert.strictEqual(shaped(1000), true);
+  assert.strictEqual(shaped(1100), false);
+  assert.strictEqual(fingerprint.analyzeHtml(Buffer.from("<title>Namecheap Parking Page</title>"), ["x"]).parked, true);
+});
+
 test("analyzeHtml says which brand terms the title used", () => {
   const s = fingerprint.analyzeHtml(Buffer.from("<title>Pocket and POKT tools</title>"), ["pocket", "pokt", "other"]);
   assert.deepStrictEqual(s.brand_terms_in_title, ["pocket", "pokt"]);
@@ -219,7 +279,7 @@ test("risk score: not registered, full impersonation, parked", () => {
 test("homepage analysis and robots.txt", () => {
   const html = Buffer.from('<html><head><title>Uniswap | Claim</title><link rel="shortcut icon" href="/i.png"></head><body><input type="password"> Connect Wallet</body></html>');
   const s = fingerprint.analyzeHtml(html, ["uniswap"]);
-  assert.deepStrictEqual(s, { title: "Uniswap | Claim", brand_in_title: true, brand_terms_in_title: ["uniswap"], brand_in_page: true, has_password_form: true, wallet_prompt: true, parked: false, icon_href: "/i.png" });
+  assert.deepStrictEqual(s, { title: "Uniswap | Claim", brand_in_title: true, brand_terms_in_title: ["uniswap"], brand_in_page: true, has_password_form: true, wallet_prompt: true, bank_claim: false, host_phishing_warning: false, taken_down: false, parked: false, icon_href: "/i.png" });
   assert.strictEqual(fingerprint.analyzeHtml(Buffer.from("<title>For Sale Domain: uniswap.pro</title>"), ["uniswap"]).parked, true);
   assert.strictEqual(checks.robotsDisallowsRoot("User-agent: *\nDisallow: /"), true);
   assert.strictEqual(checks.robotsDisallowsRoot("User-agent: Googlebot\nDisallow: /\nUser-agent: *\nDisallow: /admin"), false);
@@ -286,6 +346,22 @@ test("a domain made official leaves the stored report at once", () => {
   store.saveResult({ ...base, official_domains: ["alchemix.fi"], as_of: "2026-11-03T09:53:04Z", findings: [f("alchemix.finance", 80), f("alchemix.dev", 35)] });
   store.saveResult({ ...base, official_domains: ["alchemix.fi", "alchemix.finance"], as_of: "2026-11-03T13:35:20Z", findings: [f("alchemix.dev", 35)] });
   assert.deepStrictEqual(store.loadBrand("alchemix.fi").findings.map((x) => x.domain), ["alchemix.dev"]);
+});
+
+test("ingest: third-party text can't block a report; our own fields and the token still can", () => {
+  const id = "014e83aa-1111-4222-8333-444455556666";
+  const base = { brand_id: "x.com", as_of: "2026-01-01T00:00:00Z", findings: [], evidence: [] };
+  const watch = { brands: { "x.com": {} } };
+  const third = { ...base, official_fingerprint: { title: id }, evidence: [{ evidence_id: "a".repeat(24), homepage: { title: id, final_url: `https://t.example/visit/${id}`, redirect_chain: [{ url: `https://t.example/${id}` }], sha256: "a".repeat(64) }, rdap: { registrar: id }, certificate: { issuer_org: id }, dns: { ns: [id] } }] };
+  assert.deepStrictEqual(checkResult(third, watch), []);
+  assert.match(checkResult({ ...base, collector_warnings: [id] }, watch).join(), /key-like/);
+  const before = process.env.BP_INGEST_TOKEN;
+  process.env.BP_INGEST_TOKEN = "our-own-ingest-token-value";
+  try {
+    assert.match(checkResult({ ...third, evidence: [{ ...third.evidence[0], homepage: { title: "our-own-ingest-token-value" } }] }, watch).join(), /key-like/);
+  } finally {
+    if (before === undefined) delete process.env.BP_INGEST_TOKEN; else process.env.BP_INGEST_TOKEN = before;
+  }
 });
 
 test("ingest rejects unknown brands and key-like strings; token check", () => {
