@@ -39,7 +39,7 @@
       "source": { "type": "string", "description": "quick only: live_dns_only." },
       "next_step": { "type": "string", "description": "quick only: how to get a full report." },
       "collector_warnings": { "type": "array", "items": { "type": "string" } },
-      "method": { "type": "string", "enum": ["bp-risk/3"] },
+      "method": { "type": "string", "enum": ["bp-risk/4"] },
       "coverage": {
         "type": "object",
         "properties": {
