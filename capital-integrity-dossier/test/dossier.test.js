@@ -121,6 +121,19 @@ test("each section call counts, the remainder falls to zero, and a repeat is cou
   assert.match(again.note, /already returned/);
 });
 
+test("holdings_map carries TCS-6's stablecoin exposure unchanged, only when the report has it", () => {
+  const exposure = { policy_id: "tcs6-stablecoin-exposure/1.0", stablecoin_usd: 1000000, stablecoins: [{ stablecoin: "GHO", pmic_crypto_note: "Ethereum only" }] };
+  const withIt = D.section({ dossier_id: D.plan({ entity_id: fresh({}, { stablecoin_exposure: exposure }) }).dossier_id, section: "holdings_map" });
+  assert.deepStrictEqual(withIt.data.stablecoin_exposure, exposure);
+  const without = D.section({ dossier_id: D.plan({ entity_id: fresh() }).dossier_id, section: "holdings_map" });
+  assert.equal(without.data.stablecoin_exposure, undefined);
+});
+
+test("obligations_register lists each obligation item", () => {
+  const r = D.section({ dossier_id: D.plan({ entity_id: fresh() }).dossier_id, section: "obligations_register" });
+  assert.deepStrictEqual(r.data.items.map((i) => [i.id, i.usd]), [["LOAN", 250000]]);
+});
+
 test("holdings_map uses TCS-6's own haircuts, counts unverified control at 0, and cites sources without raw payloads", () => {
   const p = D.plan({ entity_id: fresh() });
   const h = D.section({ dossier_id: p.dossier_id, section: "holdings_map" });

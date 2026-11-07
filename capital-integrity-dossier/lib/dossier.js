@@ -18,7 +18,7 @@ const SCHEMA = "capital-integrity-dossier/1.0";
 const PRICE_PER_CALL_USD = 0.005; // agent.pocket.network: "Every service costs $0.005 per call" (owner 2026-10-25)
 
 const SECTIONS = [
-  ["holdings_map", "Every counted position by wallet and chain: value, haircut, value after haircut, flags and price source; plus what was left out and why"],
+  ["holdings_map", "Every counted position by wallet and chain: value, haircut, value after haircut, flags and price source; what was left out and why; and stablecoin exposure by issuer"],
   ["authority_graph", "Who can move the money: each wallet's Safe threshold and signers (or contract/account), signers shared across wallets, governance controls"],
   ["obligations_register", "Every obligation and disclosed commitment, how it is read (curated or on chain), the visibility checklist and its score effect"],
   ["exit_liquidity", "What could be withdrawn or sold now: locked and encumbered positions, loan health, the liquid remainder"],
@@ -133,6 +133,7 @@ function holdingsMap(report, bundle) {
   for (const r of rows) byClass.set(r.asset_class, (byClass.get(r.asset_class) || 0) + r.value_after_haircut_usd);
   return {
     data: {
+      ...(report.stablecoin_exposure ? { stablecoin_exposure: report.stablecoin_exposure } : {}),
       wallets,
       totals: { value_usd: round2(rows.reduce((s, r) => s + r.value_usd, 0)), value_after_haircut_usd: round2(rows.reduce((s, r) => s + r.value_after_haircut_usd, 0)), positions: rows.length },
       left_out: (bundle.gaps || []).filter((g) => g.field.startsWith("holdings.prices") || g.field === "holdings.dust").map((g) => g.reason),

@@ -34,6 +34,16 @@ const report = (bundle, verdict = VALID) => {
   return buildReport(golden.input.entity, bundle, base, [base.nrt], { attestation: verdict });
 };
 
+test("stablecoins tracked on Ethereum only say so", () => {
+  for (const sym of ["USDS", "DAI", "GHO"]) assert.match(SC.POLICY.underlyings[sym].pmic_crypto_note, /Ethereum token contract only/);
+  assert.equal(SC.POLICY.underlyings.USDC.pmic_crypto_note, undefined);
+  const r = report(bundleWith([h(1, "GHO", 500000), h(2, "USDC", 500000)]));
+  assert.deepEqual(validateReport(r).errors, []);
+  const list = r.stablecoin_exposure.stablecoins;
+  assert.match(list.find((u) => u.stablecoin === "GHO").pmic_crypto_note, /Ethereum token contract only/);
+  assert.equal(list.find((u) => u.stablecoin === "USDC").pmic_crypto_note, undefined);
+});
+
 test("wrappers resolve to the stablecoin they hold", () => {
   const cases = { USDC: "USDC", aEthLidoGHO: "GHO", AUSDT: "USDT", aPlaUSDT0: "USDT", aArbUSDCn: "USDC", aGnoUSDCe: "USDC", aHorRwaRLUSD: "RLUSD",
     aEthsUSDe: "USDE", SDAI: "DAI", SUSDS: "USDS", sDOLA: "DOLA", cUSDCv3: "USDC", ciUSDCv3: "USDC", yvUSD: "USDC", "yvcrvUSD-2": "CRVUSD",

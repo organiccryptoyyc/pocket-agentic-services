@@ -173,7 +173,7 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
     penalties = [...(bundle.penalties || []), ...g.penalty];
     overallScore = M.applyEffect(S.overall(dims, gateList, penalties, g.bounded), { score: 0 }, mat, S.confidenceLabel).overallScore;
     cov.obligation_visibility_status = g.status;
-    obligationsPolicy = O.block(g, pre, overallScore, O.disclosed(bundle));
+    obligationsPolicy = O.block(g, pre, overallScore, O.disclosed(bundle), O.listed(bundle));
   }
 
   for (const d of dims) {

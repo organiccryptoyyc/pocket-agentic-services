@@ -107,8 +107,24 @@ function disclosed(bundle) {
   }));
 }
 
+// The obligations the score counts, itemized so a buyer sees each one. An item with usd 0 is recorded but counts
+// nothing (for example a debt already netted in a position's value). Display only: the total comes from scoring.
+function listed(bundle) {
+  const items = (bundle.obligations || {}).items;
+  if (!Array.isArray(items)) return [];
+  return items.filter((i) => i && typeof i === "object").map((i) => ({
+    id: typeof i.id === "string" ? i.id : null,
+    type: typeof i.type === "string" ? i.type : null,
+    what: typeof i.what === "string" ? i.what.slice(0, 400) : null,
+    usd: Number.isFinite(i.usd) ? i.usd : null,
+    amount: Number.isFinite(i.amount) ? i.amount : null,
+    unit: typeof i.unit === "string" ? i.unit.slice(0, 20) : null,
+    source_refs: Array.isArray(i.source_refs) ? i.source_refs.filter((r) => typeof r === "string") : [],
+  }));
+}
+
 // The report block: pre-policy and policy scores side by side (owner: the effect must be auditable).
-function block(g, pre, post, discl) {
+function block(g, pre, post, discl, items = []) {
   return {
     policy_id: POLICY_ID,
     obligations_status: g.status,
@@ -125,7 +141,8 @@ function block(g, pre, post, discl) {
     score: post.score,
     score_effect_points: Number.isFinite(pre.score) && Number.isFinite(post.score) ? post.score - pre.score : null,
     disclosed_commitments: discl,
+    listed_items: items,
   };
 }
 
-module.exports = { POLICY, POLICY_ID, applies, grade, gapMateriality, disclosed, block };
+module.exports = { POLICY, POLICY_ID, applies, grade, gapMateriality, disclosed, listed, block };

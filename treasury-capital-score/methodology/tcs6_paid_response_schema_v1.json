@@ -1453,6 +1453,24 @@
             "null"
           ]
         },
+        "listed_items": {
+          "type": "array",
+          "description": "The obligations the score counts, itemized. An item with usd 0 is recorded but counts nothing, for example a debt already netted in a position's value. Display only.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "type", "what", "usd", "amount", "unit", "source_refs"],
+            "properties": {
+              "id": { "type": ["string", "null"] },
+              "type": { "type": ["string", "null"] },
+              "what": { "type": ["string", "null"] },
+              "usd": { "type": ["number", "null"] },
+              "amount": { "type": ["number", "null"] },
+              "unit": { "type": ["string", "null"] },
+              "source_refs": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
         "disclosed_commitments": {
           "type": "array",
           "items": {

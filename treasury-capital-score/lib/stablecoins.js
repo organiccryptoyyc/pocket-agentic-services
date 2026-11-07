@@ -65,7 +65,8 @@ function assess(base, policy = POLICY) {
     return { stablecoin: sym, issuer: meta.issuer, design: meta.design, freezable: isFreezable({ symbol: sym }),
       value_usd: round2(u.usd), share_of_stablecoins: share(u.usd, total), share_of_treasury: share(u.usd, treasury),
       plain_usd: round2(u.plain), wrapped_usd: round2(u.wrapped), holdings: u.holdings,
-      symbols: [...u.symbols].sort(), chains: [...u.chains].sort(), pmic_crypto_series: meta.pmic_crypto_series };
+      symbols: [...u.symbols].sort(), chains: [...u.chains].sort(), pmic_crypto_series: meta.pmic_crypto_series,
+      ...(meta.pmic_crypto_note ? { pmic_crypto_note: meta.pmic_crypto_note } : {}) };
   }).sort((a, b) => b.value_usd - a.value_usd);
   const covered = list.filter((u) => u.pmic_crypto_series.length).reduce((s, u) => s + u.value_usd, 0);
   const freezable = list.filter((u) => u.freezable).reduce((s, u) => s + u.value_usd, 0);

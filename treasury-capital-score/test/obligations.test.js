@@ -93,6 +93,18 @@ test("D21a: an old period end counts when published within 90 days and governanc
   assert.equal(checkedBefore.obligations_policy.obligations_status, "unknown", "a check older than the publication proves nothing newer");
 });
 
+test("listed items show each obligation; a usd 0 item counts nothing", () => {
+  const before = run({ obligation_visibility: block({}) });
+  const items = [...G.input.bundle.obligations.items,
+    { id: "NETTED", what: "Debt already netted in a position's value", type: "debt", usd: 0, amount: 180000, unit: "alUSD", source_refs: ["X"] }];
+  const r = run({ items, obligation_visibility: block({}) });
+  const row = r.obligations_policy.listed_items.find((i) => i.id === "NETTED");
+  assert.deepEqual([row.usd, row.amount, row.unit], [0, 180000, "alUSD"]);
+  assert.equal(r.obligations_policy.listed_items.length, items.length);
+  assert.equal(r.headline.obligations_usd, before.headline.obligations_usd);
+  assert.equal(r.overall_score.score, before.overall_score.score);
+});
+
 test("disclosed commitments are reported and never deducted", () => {
   const disclosed = [
     { id: "DU", what: "DeFi United contribution from recovered funds", class: "contingent", amount: 1860, unit: "ETH", source_refs: ["COMP-DEFI-UNITED-2026"] },
