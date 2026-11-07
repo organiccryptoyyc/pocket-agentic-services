@@ -1,18 +1,18 @@
 {
   "serviceId": "capital-integrity-dossier",
   "displayName": "Capital Integrity Dossier",
-  "description": "A deep, section-by-section treasury dossier on the DeFi protocols scored by TCS-6 (treasury-capital-score): where every dollar sits wallet by wallet, who can move it (Safe thresholds and shared signers), what is owed, what could be sold now, how the protocol's own reported total reconciles with what is observed on chain, and every gap we could not verify. Multi-call and disclosed up front: a full dossier takes up to 7 calls (up to $0.035 at $0.005 per call). Call POST /v1/dossier/plan {entity_id} first: it states the sections, the number of calls and the estimated total before you commit, and includes a buyer notice. Then POST /v1/dossier/section {dossier_id, section} once per section, in any order, and stop whenever you like; every response shows calls_used and calls_remaining. A dossier_id pins one snapshot for 24 hours. Every response is one JSON object with the signed TCS-6 attestation reference; charts are JSON series. Research, not investment advice. Pay per request in USDC; no account, no API key.",
+  "description": "A deep, section-by-section treasury dossier on the DeFi protocols scored by TCS-6 (treasury-capital-score): where every dollar sits wallet by wallet, who can move it (Safe thresholds and shared signers), what is owed, what could be sold now, how the protocol's own reported total reconciles with what is observed on chain, and every gap we could not verify. Multi-call and disclosed up front: a full dossier takes up to 7 calls (up to $0.035 at $0.005 per call). Call POST /v1/dossier/plan {entity_id} first: it states the sections, the number of calls and the estimated total before you commit, and includes a buyer notice. Then POST /v1/dossier/section {dossier_id, section} once per section, in any order, and stop whenever you like; every response shows calls_used and calls_remaining. A dossier_id pins one snapshot for 24 hours. Every response is one JSON object with the signed TCS-6 attestation reference; charts are JSON series. One-call option: POST /v1/dossier/availability {entity_id} ($0.005) splits the verified treasury into available now, own token, loan collateral, restricted, illiquid now and unresolved, summing to the observed total. Research, not investment advice. Pay per request in USDC; no account, no API key.",
   "category": "finance",
   "protocols": [
     "rest"
   ],
   "inputSchema": {
     "type": "object",
-    "description": "POST /v1/dossier/plan takes {entity_id}; POST /v1/dossier/section takes {dossier_id, section}; POST /v1/dossier/entities takes {}.",
+    "description": "POST /v1/dossier/plan takes {entity_id}; POST /v1/dossier/section takes {dossier_id, section}; POST /v1/dossier/entities takes {}; POST /v1/dossier/availability takes {entity_id}.",
     "properties": {
       "entity_id": {
         "type": "string",
-        "description": "plan: protocol id from POST /v1/dossier/entities, e.g. inverse-finance, aave, compound."
+        "description": "plan and availability: protocol id from POST /v1/dossier/entities, e.g. inverse-finance, aave, compound."
       },
       "dossier_id": {
         "type": "string",
@@ -28,7 +28,7 @@
   },
   "outputSchema": {
     "type": "object",
-    "description": "plan and section share the envelope below; plan adds sections, calls_required, estimate.total_usd, notice and headline, a section adds section, available and data (plus chart where one applies). Errors return {error: {code, message}} with HTTP 400 (invalid_input, unknown_entity, unknown_dossier). Published schema: https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/capital-integrity-dossier/openapi.json",
+    "description": "plan and section share the envelope below (availability returns summary, reported, buckets and cost instead of data); plan adds sections, calls_required, estimate.total_usd, notice and headline, a section adds section, available and data (plus chart where one applies). Errors return {error: {code, message}} with HTTP 400 (invalid_input, unknown_entity, unknown_dossier). Published schema: https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/capital-integrity-dossier/openapi.json",
     "properties": {
       "schema_version": { "type": "string", "enum": ["capital-integrity-dossier/1.0"] },
       "dossier_id": { "type": "string" },
@@ -111,7 +111,7 @@
     "GET /v1/version": "read",
     "POST /v1/dossier/plan": "read",
     "POST /v1/dossier/section": "read",
-    "POST /v1/dossier/entities": "read"
+    "POST /v1/dossier/entities": "read", "POST /v1/dossier/availability": "read"
   },
   "example": {
     "method": "POST",
