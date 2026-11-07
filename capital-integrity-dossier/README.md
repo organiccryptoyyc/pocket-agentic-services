@@ -16,8 +16,21 @@ the remaining estimate, and the `plan` response carries a buyer `notice` saying 
 POST /v1/dossier/plan      {"entity_id": "inverse-finance"}           -> dossier_id, sections, calls_required, estimate, notice
 POST /v1/dossier/section   {"dossier_id": "dos_…", "section": "…"}    -> one section (any order)
 POST /v1/dossier/entities  {}                                         -> the protocols a dossier can cover
+POST /v1/dossier/availability {"entity_id": "aave"}                    -> one call: how much is usable now (1.6.0)
 GET  /v1/version, /v1/health
 ```
+
+## Treasury Availability (1.6.0, one call)
+
+`POST /v1/dossier/availability {"entity_id"}` answers in a single $0.005 call how much of the treasury verified on
+chain could be used now. Every position lands in exactly one bucket, so the six add up to `observed_usd`:
+`available_now`, `own_token` (the protocol's own token in any wrapper), `encumbered` (loan collateral, counted in full),
+`restricted` (lock-ups, redemption limits, curated restrictions), `illiquid_now` (exit-check shortfall) and
+`unresolved` (checks that could not be read, control not verified). `available_share_pct` is a share, not a score;
+TCS-6 scores do not change. `reported` is the protocol's own cited USD total when it is 90 days old or newer, else
+null with the reason. Unpriced tokens are listed under `not_valued`, never guessed. Each bucket lists its 25 largest
+positions with the reason and, where one exists, the exit check's block and evidence hash. Method
+`tcs6-availability/1.0`, owner decisions of 2026-11-07.
 
 ## Sections
 

@@ -4,6 +4,7 @@
 //   POST /v1/dossier/plan      {"entity_id": "aave"}                  -> dossier_id, sections, calls_required, estimate, notice
 //   POST /v1/dossier/section   {"dossier_id", "section"}              -> one section of the pinned snapshot
 //   POST /v1/dossier/entities  {}                                     -> the protocols a dossier can cover
+//   POST /v1/dossier/availability {"entity_id": "aave"}               -> one call: how much of the treasury is usable now (1.6.0)
 // plus GET /v1/version and /v1/health. Every section is built from TCS-6 data already collected, scored
 // and attested (read-only mount of the TCS-6 data volume); this server never calls a chain or a vendor.
 "use strict";
@@ -11,9 +12,10 @@
 const { createServer } = require("./lib/http");
 const store = require("./lib/store");
 const D = require("./lib/dossier");
+const A = require("./lib/availability");
 
 const SERVICE = "capital-integrity-dossier";
-const VERSION = "1.5.0";
+const VERSION = "1.6.0";
 const PORT = Number(process.env.PORT || 8080);
 const PAIR_REFRESH_MS = 5 * 60 * 1000;
 
@@ -46,6 +48,7 @@ if (require.main === module) {
       ["POST /v1/dossier/plan", async (body) => D.plan(body)],
       ["POST /v1/dossier/section", async (body) => D.section(body)],
       ["POST /v1/dossier/entities", async () => D.entities()],
+      ["POST /v1/dossier/availability", async (body) => A.availability(body)],
     ]),
   });
   server.listen(PORT, () => console.log(JSON.stringify({ service: SERVICE, version: VERSION, port: PORT, tcs6_dir: store.TCS6_DIR, data_dir: store.DATA_DIR })));

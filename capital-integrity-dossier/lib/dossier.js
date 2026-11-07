@@ -455,4 +455,4 @@ function entities() {
   };
 }
 
-module.exports = { plan, section, entities, SECTIONS, SECTION_NAMES, PRICE_PER_CALL_USD, SCHEMA, notice };
+module.exports = { plan, section, entities, SECTIONS, SECTION_NAMES, PRICE_PER_CALL_USD, SCHEMA, notice, attestationRef, exitChecks, classificationConflicts, round2 };
