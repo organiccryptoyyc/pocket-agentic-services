@@ -31,7 +31,7 @@ whether a page's claims are true. Raw page content is never kept.
 
 Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
 
-## How a finding is made (`bp-risk/4`)
+## How a finding is made (`bp-risk/5`)
 
 1. **Candidates:** our own permutations in priority order: TLD swap,
    added word (`-claim`, `-airdrop`, `-wallet` …), ASCII and IDN homoglyphs,
@@ -65,6 +65,13 @@ Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
    with support. A host's own suspected-phishing warning is +40 and counts as page evidence. A site its host has pulled
    is at most 30 (`taken_down`), unless the page still asks for a password or a wallet. The name's shape doesn't count on
    a domain over 3 years old. Added words now include `account`, `billing`, `invoice`, `payment`, `pay`, `bank`, `signin`, `auth`.
+
+   `bp-risk/5` (from 0.1.8) stops ordinary-word brands ("badger", "chime") flagging other businesses. It was checked by
+   rescoring all 2,494 stored MainNet findings: 7 moved from medium to low, all of them other businesses (an invoicing
+   site, a casino review site, a federal-contracts site and others), and no high finding changed. For an ordinary-word
+   brand on a domain over 60 days old, a title naming the brand needs a copied icon or title or a wallet prompt. The
+   name's shape no longer counts when the site shows a real title of its own (not a placeholder, an error page, a bare
+   "Sign in" or its hostname) and nothing points at the brand. Distinctive brands are unchanged.
 
 Statuses: `copies_brand`, `live`, `resolves`, `parked`, `registered_not_live`,
 `redirects_to_official`, `likely_brand_owned`, `taken_down`, `refused_private_address`,

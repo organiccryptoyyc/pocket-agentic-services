@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Brand Protection Monitor",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "description": "Lookalike domains, certificates and copied homepages for a brand, with deterministic risk scores and evidence hashes. Detection and evidence only."
   },
   "paths": {

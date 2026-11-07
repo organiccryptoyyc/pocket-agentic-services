@@ -15,7 +15,7 @@ process.env.BP_INGEST_TOKEN = "test-token-not-secret";
 const checks = require("../lib/checks");
 const fingerprint = require("../lib/fingerprint");
 const { permutations, brandKeywords } = require("../lib/permute");
-const { riskScore, sharesOfficialDns } = require("../lib/score");
+const { riskScore, sharesOfficialDns, hasOwnTitle } = require("../lib/score");
 const { scanBrand } = require("../lib/scan");
 const store = require("../lib/store");
 const { checkResult, tokenOk } = require("../lib/ingest");
@@ -208,6 +208,42 @@ test("bp-risk/4: the name's shape doesn't count on an old domain, and a parking 
   assert.strictEqual(shaped(1000), true);
   assert.strictEqual(shaped(1100), false);
   assert.strictEqual(fingerprint.analyzeHtml(Buffer.from("<title>Namecheap Parking Page</title>"), ["x"]).parked, true);
+});
+
+test("bp-risk/5: an ordinary-word brand doesn't flag another business by name and youth alone", () => {
+  const dns = { exists: true, resolves: true, mx: [], ns: ["ns1.example.net"] };
+  const badger = { domains: ["badger.com"], title: "BadgerDAO | Accelerating Bitcoin Growth Across DeFi", icon_sha256: "i", ns_sets: [] };
+  const invoice = { reachable: true, final_host: "invoicebadger.com", title: "Invoice Badger, invoicing for UK freelancers", brand_in_title: true, brand_terms_in_title: ["badger"], brand_in_page: true };
+  const at = (age, page = invoice, official = badger) => riskScore({ dns, rdap: { registered: true, age_days: age }, page, official, fuzzer: "added-word" });
+  // The real invoicebadger.com at 105 days: was 55 medium "copies_brand", now low.
+  const r = at(105);
+  assert.deepStrictEqual([r.score, r.level, r.status], [30, "low", "live"]);
+  assert.ok(!r.reasons.some((x) => x.startsWith("name adds")));
+  // Up to 60 days the youth still supports the title and the shape.
+  const young = at(45);
+  assert.strictEqual(young.status, "copies_brand");
+  assert.ok(young.reasons.some((x) => x.startsWith("name adds")));
+  // A wallet prompt still counts at any age.
+  assert.strictEqual(at(105, { ...invoice, wallet_prompt: true }).status, "copies_brand");
+  // A placeholder, error or bare action title isn't a business of its own: the shape still counts.
+  for (const title of ["Zoho", "Just a moment...", "invoicebadger.com | 525: SSL handshake failed", "Sign in", ""]) {
+    const p = { ...invoice, title, brand_in_title: false, brand_terms_in_title: [] };
+    assert.ok(at(105, p).reasons.some((x) => x.startsWith("name adds")), title);
+  }
+  // A distinctive brand is unchanged.
+  const robin = { domains: ["robinhood.com"], title: "Robinhood", icon_sha256: "i", ns_sets: [] };
+  const rp = { ...invoice, final_host: "invoicerobinhood.com", title: "Invoice Robinhood", brand_terms_in_title: ["robinhood"] };
+  const d = at(105, rp, robin);
+  assert.strictEqual(d.status, "copies_brand");
+  assert.ok(d.reasons.some((x) => x.startsWith("name adds")));
+});
+
+test("bp-risk/5: hasOwnTitle reads only a real title", () => {
+  const h = (title, final_host = "x-brand.com") => hasOwnTitle({ title, final_host });
+  assert.deepStrictEqual(
+    ["GovChime — Find, Track & Win Federal Contracts", "Zoho", "Home", "Just a moment...", "x-brand.com", "x-brand.com | 404 Not Found", "Connect", ""].map((t) => h(t)),
+    [true, false, false, false, false, false, false, false],
+  );
 });
 
 test("analyzeHtml says which brand terms the title used", () => {

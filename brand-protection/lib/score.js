@@ -3,7 +3,18 @@
 // what was observed ("copies the brand, wallet prompt"), not "fraud".
 "use strict";
 
-const METHOD = "bp-risk/4";
+const METHOD = "bp-risk/5";
+
+// bp-risk/5 (2026-11-07) stops ordinary-word brands ("badger", "chime") flagging other
+// businesses, from a rescore of all 2,494 stored MainNet findings (invoicebadger.com, a UK
+// invoicing site, read as copying Badger DAO):
+//  - An ordinary brand word in the title of a site more than 60 days old needs a copied icon or
+//    title, or a wallet prompt. Youth alone (up to 180 days) used to be enough.
+//  - The name's shape (pay-, invoice-, -app) doesn't count for an ordinary-word brand when the
+//    site is over 60 days old, shows a real title of its own (not a placeholder, an error page or
+//    its hostname) and nothing points at the brand: no wallet prompt, branded login, host
+//    warning, bank claim, or copied icon or title.
+//  Distinctive brands (aave, robinhood) are unchanged.
 
 // bp-risk/4 (2026-11-05) reads pages the way non-crypto phishing works, from a hand check of
 // 10 fintech and login brands on Beta:
@@ -45,6 +56,7 @@ const COMMON_BRAND_WORDS = new Set([
 const YOUNG_DOMAIN_DAYS = 180;
 const ADDED_WORD_POINTS = 15;
 const SHAPE_MAX_AGE_DAYS = 1095;
+const COMMON_FRESH_DAYS = 60;
 
 // What the page title says about the brand, once the site's own hostname is taken
 // out: "none", "common" (only ordinary words) or "distinctive". A page without
@@ -59,6 +71,21 @@ function titleSignal(page) {
   const left = terms.map((t) => String(t).toLowerCase()).filter((t) => title.includes(t));
   if (left.length === 0) return { kind: "none", word: null };
   return { kind: left.every((t) => COMMON_BRAND_WORDS.has(t)) ? "common" : "distinctive", word: left[0] };
+}
+
+// A title that says who runs the site: not empty, not just the site's own hostname, not a
+// hosting placeholder, a browser check, an error page or a bare action ("Connect", "Sign in",
+// what a phishing page shows). Only such a title can show that the site belongs to some other
+// business.
+const PLACEHOLDER_TITLE = /^(home|index|welcome|untitled|loading|default|zoho|fastpanel|just a moment|attention required|access denied|site not found|page not found|not found|forbidden|error|coming soon|under construction|connect|log ?in|sign ?in|sign ?up|verify|verification|account|wallet|claim|support|dashboard|app)\b/i;
+function hasOwnTitle(page) {
+  let t = String((page && page.title) || "").toLowerCase();
+  const host = String((page && page.final_host) || "").toLowerCase();
+  for (const h of [host, host.replace(/^www\./, "")]) if (h) t = t.split(h).join(" ");
+  t = t.replace(/[|·\-—:,.]+/g, " ").replace(/\s+/g, " ").trim();
+  if (t.length < 4) return false;
+  if (/\b[45]\d\d\b/.test(t)) return false;
+  return !PLACEHOLDER_TITLE.test(t);
 }
 
 // Nameservers that millions of unrelated domains share (registrar defaults,
@@ -110,6 +137,8 @@ function riskScore({ dns, rdap, cert, page, official, ct, fuzzer }) {
   if (freshCert && renewalNeedsNoSupport) add(10, `TLS certificate issued ${cert.issued_days_ago} days ago`);
   if (ct && ct.seen) add(5, "new certificate seen in Certificate Transparency logs");
 
+  const fresh = ageKnown && rdap.age_days <= COMMON_FRESH_DAYS;
+  const commonTitleSupported = (supported && (!ageKnown || fresh)) || sameIcon || sameTitle || walletPrompt;
   const brandedLogin = !!(pageRead && page.has_password_form && (title.kind === "distinctive" || (title.kind === "common" && supported)));
   const hostWarning = !!(pageRead && page.host_phishing_warning);
   let copiesBrand = false;
@@ -123,7 +152,7 @@ function riskScore({ dns, rdap, cert, page, official, ct, fuzzer }) {
     add(-40, `redirects to the official site (${page.final_host}), likely the brand's own defensive registration`);
   } else if (page && page.reachable && !page.skipped) {
     if (page.parked) add(-20, "page looks parked or for sale");
-    if (title.kind === "distinctive" || (title.kind === "common" && supported)) { add(15, "page title names the brand"); copiesBrand = true; }
+    if (title.kind === "distinctive" || (title.kind === "common" && commonTitleSupported)) { add(15, "page title names the brand"); copiesBrand = true; }
     else if (title.kind === "common") add(5, `page title contains the common word "${title.word}", with nothing else pointing at the brand`);
     else if (page.brand_in_page) add(5, "page text names the brand");
     if (sameIcon) {
@@ -142,7 +171,11 @@ function riskScore({ dns, rdap, cert, page, official, ct, fuzzer }) {
   }
 
   const oldDomain = !!(rdap && rdap.registered && rdap.age_days != null && rdap.age_days > SHAPE_MAX_AGE_DAYS);
-  const shapeCounts = fuzzer === "added-word" && dns.resolves && !toOfficial && !sameOwner && !(page && page.parked) && !oldDomain;
+  const brandLabels = official && Array.isArray(official.domains) ? official.domains.map((d) => String(d).split(".")[0].toLowerCase()) : [];
+  const commonBrand = brandLabels.length > 0 && brandLabels.every((l) => COMMON_BRAND_WORDS.has(l));
+  const nothingPoints = !walletPrompt && !brandedLogin && !hostWarning && !sameIcon && !sameTitle && !(page && page.bank_claim);
+  const unrelatedSite = commonBrand && ageKnown && !fresh && pageRead && !copiesBrand && hasOwnTitle(page) && nothingPoints;
+  const shapeCounts = fuzzer === "added-word" && dns.resolves && !toOfficial && !sameOwner && !(page && page.parked) && !oldDomain && !unrelatedSite;
   if (shapeCounts) add(ADDED_WORD_POINTS, "name adds a phishing-style word to the brand");
 
   score = Math.max(0, Math.min(100, score));
@@ -169,4 +202,4 @@ function riskScore({ dns, rdap, cert, page, official, ct, fuzzer }) {
   return { score, level, status, reasons, method: METHOD };
 }
 
-module.exports = { riskScore, sharesOfficialDns, titleSignal, METHOD };
+module.exports = { riskScore, sharesOfficialDns, titleSignal, hasOwnTitle, METHOD };
