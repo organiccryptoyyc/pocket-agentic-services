@@ -222,3 +222,28 @@ test("partial obligations deduct the 10-point penalty and show it as a risk", ()
   assert.strictEqual(r.overall_score.status, "provisional");
   assert.ok(r.risks.some((x) => x.id === "penalty_obligation_visibility_partial"));
 });
+
+test("valuation_freshness: stale value under 1% of verified value passes; 1% or more fails (owner 2026-11-08)", () => {
+  const withStale = (usd) => {
+    const b = clone(EXAMPLE);
+    b.holdings.push({ asset_id: "eth:thin-vault", symbol: "TV", chain: "ethereum", address: null, asset_class: "liquid_alt", control: "verified", bucket: "onchain", quantity: 1, holdings_observed_at: "2026-10-01T11:58:00Z", prices: [{ source_ref: b.holdings[0].prices[0].source_ref, usd, observed_at: "2026-10-01T07:00:00Z" }], haircut_flags: [], source_refs: b.holdings[0].source_refs });
+    const base = S.computeBase(b);
+    const r = report(b);
+    return { base, r, gate: r.hard_gates.find((g) => g.id === "valuation_freshness") };
+  };
+  const fresh = report(clone(EXAMPLE)).hard_gates.find((g) => g.id === "valuation_freshness");
+  assert.strictEqual(fresh.status, "pass");
+
+  const small = withStale(100000);
+  assert.ok(small.base.grossVerified * 0.01 > 100000, "fixture: the small position is under 1%");
+  assert.strictEqual(small.gate.status, "pass");
+  assert.match(small.gate.effect, /below the 1% materiality threshold/);
+  assert.ok(small.r.confidence.recency_fit < 100, "the stale position still lowers recency");
+  assert.ok(small.r.dimensions.every((d) => d.primary_metrics.every((m) => m.status !== "stale")));
+
+  const big = withStale(5000000);
+  assert.ok(big.base.grossVerified * 0.01 <= 5000000, "fixture: the large position is 1% or more");
+  assert.strictEqual(big.gate.status, "fail");
+  assert.match(big.gate.effect, /marked stale/);
+  assert.ok(big.r.dimensions.some((d) => d.primary_metrics.some((m) => m.status === "stale")));
+});

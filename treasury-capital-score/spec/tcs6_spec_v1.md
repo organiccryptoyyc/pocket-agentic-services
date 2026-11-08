@@ -94,7 +94,9 @@ major 50 · liquid_alt 70 · LP 60 · native 80 · locked 80 (percent).
 ## 6. Hard gates
 
 `entity_identity`, `control_coverage` (≥ 60% verified; below → provisional, confidence ≤ 59),
-`valuation_freshness` (prices ≤ 60 min, holdings ≤ 90 days before `as_of`), `obligation_visibility`,
+`valuation_freshness` (prices ≤ 60 min, holdings ≤ 90 days before `as_of`; from 1.9.3 it fails only when
+the stale positions are worth 1% or more of verified value, and smaller stale positions still lower
+`recency_fit`), `obligation_visibility`,
 `source_rights` (`internal_only` / `pending_review` sources are dropped from the report with every
 reference to them).
 
