@@ -167,6 +167,46 @@ async function handleValidators(body) {
   return withMeta(value, { stale, ageMs });
 }
 
+// --- indexer helpers (2026-11 schema) --------------------------------------
+// Pocket's indexer dropped the nested relations (supplier.serviceConfigs,
+// application.applicationServices, relation filters, blocks.aggregates.sum,
+// eventClaimSettleds) and caps query depth at 4. Counts and window totals now
+// come from its own report functions (get*List), each one flat query.
+
+const SHANNON_START = "2025-01-01T00:00:00Z"; // before MainNet genesis: "all time" for penalty history
+const TRUST_PROOF_WINDOW_DAYS = 30;
+
+const toNum = (v) => (v === null || v === undefined ? 0 : Number(v));
+
+/** Live service-config count per supplier, for up to 200 supplier ids. */
+async function supplierServiceCounts(ids) {
+  if (!ids.length) return new Map();
+  const data = await pocket.graphql(
+    `query($ids:[String!]) { getSupplierFleetList(suppliers:$ids, bySupplier:true, rowLimit:200) { supplierId serviceCount } }`,
+    { ids }
+  );
+  return new Map((data.getSupplierFleetList || []).map((r) => [r.supplierId, toNum(r.serviceCount)]));
+}
+
+/** Live service count per application, for up to 200 application ids. */
+async function applicationServiceCounts(ids) {
+  if (!ids.length) return new Map();
+  const data = await pocket.graphql(
+    `query($ids:[String!]) { getApplicationFleetList(applications:$ids, byApplication:true, rowLimit:200) { applicationId serviceCount } }`,
+    { ids }
+  );
+  return new Map((data.getApplicationFleetList || []).map((r) => [r.applicationId, toNum(r.serviceCount)]));
+}
+
+/** Staked supplier and application counts per service, now. */
+async function serviceSummary(ids) {
+  const data = await pocket.graphql(
+    `query($ids:[String!]) { getServiceSummaryList(services:$ids) { serviceId stakedSuppliers stakedApplications } }`,
+    { ids }
+  );
+  return new Map((data.getServiceSummaryList || []).map((r) => [r.serviceId, r]));
+}
+
 // --- /v1/suppliers: indexer suppliers, network-wide or per-service --------
 
 async function handleSuppliers(body) {
@@ -177,31 +217,41 @@ async function handleSuppliers(body) {
   const cacheKey = `suppliers:${serviceId || "*"}:${limit}:${offset}`;
   const { value, stale, ageMs } = await pocket.cached(cacheKey, 30_000, async () => {
     if (serviceId) {
-      const data = await pocket.graphql(
-        `query($sid:String!, $first:Int!, $off:Int!) {
-          supplierServiceConfigs(
-            filter:{ serviceId:{equalTo:$sid}, supplier:{stakeStatus:{equalTo:Staked}} }
-            first:$first offset:$off
-          ) {
-            totalCount
-            nodes { supplierId activatedAtId supplier { stakeAmount stakeStatus serviceConfigs { totalCount } } }
-          }
-        }`,
-        { sid: serviceId, first: limit, off: offset }
-      );
-      const c = data.supplierServiceConfigs;
+      // One row per Staked supplier with a live config for the service, ordered by supplier id.
+      // The function pages by key (at most 1,000 rows a call), so walk to offset+limit.
+      const summary = await serviceSummary([serviceId]);
+      const want = offset + limit;
+      const rows = [];
+      let after = null;
+      while (rows.length < want) {
+        const n = Math.min(1000, want - rows.length);
+        const data = await pocket.graphql(
+          `query($sid:[String!], $n:Int!, $after:String, $afterSvc:String) {
+            getStakedSupplierServicesList(services:$sid, rowLimit:$n, afterSupplierId:$after, afterServiceId:$afterSvc) {
+              supplierId serviceId stakeUpokt activatedAtHeight
+            }
+          }`,
+          { sid: [serviceId], n, after: after?.supplierId ?? null, afterSvc: after?.serviceId ?? null }
+        );
+        const page = data.getStakedSupplierServicesList || [];
+        rows.push(...page);
+        if (page.length < n) break;
+        after = page[page.length - 1];
+      }
+      const slice = rows.slice(offset, offset + limit);
+      const counts = await supplierServiceCounts(slice.map((r) => r.supplierId));
       return {
         service_id: serviceId,
-        total_count: c.totalCount,
+        total_count: toNum(summary.get(serviceId)?.stakedSuppliers),
         limit,
         offset,
-        suppliers: c.nodes.map((n) => ({
-          operator_id: n.supplierId,
-          activated_at_height: n.activatedAtId,
-          stake_upokt: n.supplier?.stakeAmount,
-          stake_pokt: pocket.upoktToPokt(n.supplier?.stakeAmount),
-          stake_status: n.supplier?.stakeStatus,
-          active_service_configs: n.supplier?.serviceConfigs?.totalCount,
+        suppliers: slice.map((r) => ({
+          operator_id: r.supplierId,
+          activated_at_height: r.activatedAtHeight,
+          stake_upokt: r.stakeUpokt,
+          stake_pokt: pocket.upoktToPokt(r.stakeUpokt),
+          stake_status: "Staked",
+          active_service_configs: counts.get(r.supplierId) ?? null,
         })),
       };
     }
@@ -209,12 +259,13 @@ async function handleSuppliers(body) {
       `query($first:Int!, $off:Int!) {
         suppliers(filter:{stakeStatus:{equalTo:Staked}}, first:$first, offset:$off, orderBy: STAKE_AMOUNT_DESC) {
           totalCount
-          nodes { operatorId stakeAmount stakeStatus serviceConfigs { totalCount } }
+          nodes { operatorId stakeAmount stakeStatus }
         }
       }`,
       { first: limit, off: offset }
     );
     const c = data.suppliers;
+    const counts = await supplierServiceCounts(c.nodes.map((n) => n.operatorId));
     return {
       service_id: null,
       total_count: c.totalCount,
@@ -225,7 +276,7 @@ async function handleSuppliers(body) {
         stake_upokt: n.stakeAmount,
         stake_pokt: pocket.upoktToPokt(n.stakeAmount),
         stake_status: n.stakeStatus,
-        active_service_configs: n.serviceConfigs?.totalCount,
+        active_service_configs: counts.get(n.operatorId) ?? null,
       })),
     };
   });
@@ -238,31 +289,32 @@ async function handleThroughput(body) {
   const windowHours = clampInt(body?.window_hours, { min: 1, max: 168, def: 24 });
   const cacheKey = `throughput:${windowHours}`;
   const { value, stale, ageMs } = await pocket.cached(cacheKey, 60_000, async () => {
-    const since = new Date(Date.now() - windowHours * 3_600_000).toISOString();
+    const now = new Date();
+    const since = new Date(now.getTime() - windowHours * 3_600_000).toISOString();
+    // The indexer clips the buckets to [since, now], so the sum covers exactly the window.
     const data = await pocket.graphql(
-      `query($since: Datetime!) {
-        blocks(filter: { timestamp: { greaterThan: $since } }) {
-          totalCount
-          aggregates { sum { totalTxs totalRelays totalEstimatedRelays totalComputedUnits totalEstimatedComputedUnits } }
+      `query($since: Datetime!, $until: Datetime!, $bucket: String!) {
+        getBlockStatsList(rangeStart:$since, rangeEnd:$until, bucket:$bucket) {
+          blocks totalTxs relays estimatedRelays computeUnits estimatedComputeUnits
         }
       }`,
-      { since }
+      { since, until: now.toISOString(), bucket: windowHours > 48 ? "day" : "hour" }
     );
-    const b = data.blocks;
-    const sum = b.aggregates?.sum || {};
+    const sum = { blocks: 0, totalTxs: 0, relays: 0, estimatedRelays: 0, computeUnits: 0, estimatedComputeUnits: 0 };
+    for (const b of data.getBlockStatsList || []) for (const k of Object.keys(sum)) sum[k] += toNum(b[k]);
     return {
       window_hours: windowHours,
       since,
-      blocks_observed: b.totalCount,
+      blocks_observed: sum.blocks,
       claimed: {
-        relays: Number(sum.totalRelays || 0),
-        compute_units: Number(sum.totalComputedUnits || 0),
+        relays: sum.relays,
+        compute_units: sum.computeUnits,
       },
       estimated_true_throughput: {
-        relays: Number(sum.totalEstimatedRelays || 0),
-        compute_units: Number(sum.totalEstimatedComputedUnits || 0),
+        relays: sum.estimatedRelays,
+        compute_units: sum.estimatedComputeUnits,
       },
-      transactions: Number(sum.totalTxs || 0),
+      transactions: sum.totalTxs,
       note: "claimed = on-chain volume-applicable relays that beat the per-service relay-mining " +
         "difficulty target; estimated_true_throughput scales that back up by the difficulty EMA " +
         "and approximates actual off-chain request volume (what the ecosystem usually quotes).",
@@ -281,29 +333,25 @@ async function handleApplications(body) {
   const cacheKey = `applications:${serviceId || "*"}:${limit}:${offset}`;
   const { value, stale, ageMs } = await pocket.cached(cacheKey, 30_000, async () => {
     if (serviceId) {
-      const data = await pocket.graphql(
-        `query($sid:String!, $first:Int!, $off:Int!) {
-          applicationServices(
-            filter:{ serviceId:{equalTo:$sid}, application:{stakeStatus:{equalTo:Staked}} }
-            first:$first offset:$off
-          ) {
-            totalCount
-            nodes { applicationId application { stakeAmount stakeStatus } }
-          }
-        }`,
-        { sid: serviceId, first: limit, off: offset }
-      );
-      const c = data.applicationServices;
+      const [summary, data] = await Promise.all([
+        serviceSummary([serviceId]),
+        pocket.graphql(
+          `query($sid:[String!], $n:Int!, $off:Int!) {
+            getApplicationFleetList(services:$sid, rowLimit:$n, rowOffset:$off) { applicationId stakeStatus stakeUpokt }
+          }`,
+          { sid: [serviceId], n: limit, off: offset }
+        ),
+      ]);
       return {
         service_id: serviceId,
-        total_count: c.totalCount,
+        total_count: toNum(summary.get(serviceId)?.stakedApplications),
         limit,
         offset,
-        applications: c.nodes.map((n) => ({
+        applications: (data.getApplicationFleetList || []).map((n) => ({
           account_id: n.applicationId,
-          stake_upokt: n.application?.stakeAmount,
-          stake_pokt: pocket.upoktToPokt(n.application?.stakeAmount),
-          stake_status: n.application?.stakeStatus,
+          stake_upokt: n.stakeUpokt,
+          stake_pokt: pocket.upoktToPokt(n.stakeUpokt),
+          stake_status: n.stakeStatus,
         })),
       };
     }
@@ -311,12 +359,13 @@ async function handleApplications(body) {
       `query($first:Int!, $off:Int!) {
         applications(filter:{stakeStatus:{equalTo:Staked}}, first:$first, offset:$off, orderBy: STAKE_AMOUNT_DESC) {
           totalCount
-          nodes { accountId stakeAmount stakeStatus applicationServices { totalCount } }
+          nodes { accountId stakeAmount stakeStatus }
         }
       }`,
       { first: limit, off: offset }
     );
     const c = data.applications;
+    const counts = await applicationServiceCounts(c.nodes.map((n) => n.accountId));
     return {
       service_id: null,
       total_count: c.totalCount,
@@ -327,7 +376,7 @@ async function handleApplications(body) {
         stake_upokt: n.stakeAmount,
         stake_pokt: pocket.upoktToPokt(n.stakeAmount),
         stake_status: n.stakeStatus,
-        subscribed_services: n.applicationServices?.totalCount,
+        subscribed_services: counts.get(n.accountId) ?? null,
       })),
     };
   });
@@ -350,25 +399,24 @@ async function handleServiceDemand(body) {
   const { value, stale, ageMs } = await pocket.cached(cacheKey, 60_000, async () => {
     let ids = serviceIds;
     if (!ids) {
-      // No services named: rank by active supplier count using the same
-      // aliased-batch pattern, over the first page of registered services.
-      const listing = await pocket.graphql(`query {
-        services(first:30) { nodes { id name computeUnitsPerRelay } }
-      }`);
+      // No services named: rank the first page of registered services by active supplier count.
+      const listing = await pocket.graphql(`query { services(first:30) { nodes { id } } }`);
       ids = listing.services.nodes.map((s) => s.id);
     }
-    const aliasParts = ids.map((id, i) => `
-      s${i}: service(id:${JSON.stringify(id)}) { id name computeUnitsPerRelay }
-      sup${i}: supplierServiceConfigs(filter:{serviceId:{equalTo:${JSON.stringify(id)}}, supplier:{stakeStatus:{equalTo:Staked}}}) { totalCount }
-      app${i}: applicationServices(filter:{serviceId:{equalTo:${JSON.stringify(id)}}, application:{stakeStatus:{equalTo:Staked}}}) { totalCount }
-    `).join("\n");
-    const data = await pocket.graphql(`query { ${aliasParts} }`);
-    const rows = ids.map((id, i) => ({
+    const [summary, named] = await Promise.all([
+      serviceSummary(ids),
+      pocket.graphql(
+        `query($ids:[String!]) { services(filter:{id:{in:$ids}}) { nodes { id name computeUnitsPerRelay } } }`,
+        { ids }
+      ),
+    ]);
+    const meta = new Map((named.services?.nodes || []).map((s) => [s.id, s]));
+    const rows = ids.map((id) => ({
       service_id: id,
-      name: data[`s${i}`]?.name ?? null,
-      compute_units_per_relay: data[`s${i}`]?.computeUnitsPerRelay ?? null,
-      active_suppliers: data[`sup${i}`]?.totalCount ?? 0,
-      active_applications: data[`app${i}`]?.totalCount ?? 0,
+      name: meta.get(id)?.name ?? null,
+      compute_units_per_relay: meta.get(id)?.computeUnitsPerRelay ?? null,
+      active_suppliers: toNum(summary.get(id)?.stakedSuppliers),
+      active_applications: toNum(summary.get(id)?.stakedApplications),
     }));
     rows.sort((a, b) => (b.active_suppliers - a.active_suppliers) || (b.active_applications - a.active_applications));
     return {
@@ -384,22 +432,14 @@ async function handleServiceDemand(body) {
 
 // --- /v1/supplier-trust: composite, deterministic trust signal ------------
 
-function scoreSupplier(supplier) {
+function scoreSupplier(supplier, activeServiceConfigs, proofs, slashes) {
   const stakeUpokt = Number(supplier.stakeAmount || 0);
   const isStaked = supplier.stakeStatus === "Staked";
   const isUnstaking = supplier.stakeStatus === "Unstaking" || !!supplier.unstakingEndHeight;
-  const activeServiceConfigs = supplier.serviceConfigs?.totalCount || 0;
-  const settlements = supplier.eventClaimSettleds?.nodes || [];
-  const slashes = supplier.eventSupplierSlasheds?.totalCount || 0;
 
-  const requiredProofs = settlements.filter((s) => s.proofRequirement && s.proofRequirement !== "NOT_REQUIRED");
-  // ClaimProofStatus is PENDING_VALIDATION | VALIDATED | INVALID. A still-pending
-  // proof is excluded from the rate (neither a pass nor a fail yet) rather than
-  // counted against the supplier.
-  const validatedProofs = requiredProofs.filter((s) => s.proofValidationStatus === "VALIDATED");
-  const invalidProofs = requiredProofs.filter((s) => s.proofValidationStatus === "INVALID");
-  const resolvedProofs = validatedProofs.length + invalidProofs.length;
-  const proofSuccessRate = resolvedProofs > 0 ? validatedProofs.length / resolvedProofs : null;
+  // A proof still awaiting validation counts as neither a pass nor a fail.
+  const resolvedProofs = proofs.validated + proofs.invalid;
+  const proofSuccessRate = resolvedProofs > 0 ? proofs.validated / resolvedProofs : null;
 
   // Deterministic 0-100 composite. Same on-chain inputs -> same output on
   // every supplier that serves this backend, per the card's "deterministic"
@@ -422,8 +462,8 @@ function scoreSupplier(supplier) {
       active_service_configs: activeServiceConfigs,
       unstaking: isUnstaking,
       unstaking_end_height: supplier.unstakingEndHeight || null,
-      settlements_observed: settlements.length,
-      proof_required_settlements_observed: requiredProofs.length,
+      settlements_observed: proofs.settled,
+      proof_required_settlements_observed: proofs.submitted,
       proof_resolved_settlements_observed: resolvedProofs,
       proof_success_rate: proofSuccessRate,
       slash_events_total: slashes,
@@ -435,32 +475,43 @@ async function handleSupplierTrust(body) {
   const operatorId = requireString(body?.operator_id, "operator_id");
   const cacheKey = `supplier-trust:${operatorId}`;
   const { value, stale, ageMs } = await pocket.cached(cacheKey, 60_000, async () => {
+    const now = new Date();
+    const proofSince = new Date(now.getTime() - TRUST_PROOF_WINDOW_DAYS * 86_400_000).toISOString();
     const data = await pocket.graphql(
-      `query($id:String!) {
-        supplier(id:$id) {
-          id operatorId stakeAmount stakeStatus unstakingReason unstakingEndHeight
-          serviceConfigs { totalCount }
-          eventClaimSettleds(first:100, orderBy: SESSION_END_HEIGHT_DESC) {
-            nodes { proofRequirement proofValidationStatus sessionEndHeight }
-          }
-          eventSupplierSlasheds { totalCount }
+      `query($id:String!, $ids:[String!], $proofSince:Datetime!, $allSince:Datetime!, $until:Datetime!) {
+        supplier(id:$id) { id operatorId stakeAmount stakeStatus unstakingReason unstakingEndHeight }
+        getSupplierFleetList(suppliers:$ids, bySupplier:true) { supplierId serviceCount }
+        getSupplierProofsList(suppliers:$ids, rangeStart:$proofSince, rangeEnd:$until, bucket:"month") {
+          claimsSettledWithProof claimsSettledWithoutProof proofsSubmitted proofsValidated proofsInvalid
         }
+        getSupplierPenaltiesList(suppliers:$ids, rangeStart:$allSince, rangeEnd:$until, bucket:"year") { kind events }
       }`,
-      { id: operatorId }
+      { id: operatorId, ids: [operatorId], proofSince, allSince: SHANNON_START, until: now.toISOString() }
     );
     if (!data.supplier) {
       throw new ClientError(404, "not_found", `no supplier with operator id '${operatorId}' on ${pocket.NETWORK}`);
     }
-    const { score, signals } = scoreSupplier(data.supplier);
+    const proofs = { settled: 0, submitted: 0, validated: 0, invalid: 0 };
+    for (const p of data.getSupplierProofsList || []) {
+      proofs.settled += toNum(p.claimsSettledWithProof) + toNum(p.claimsSettledWithoutProof);
+      proofs.submitted += toNum(p.proofsSubmitted);
+      proofs.validated += toNum(p.proofsValidated);
+      proofs.invalid += toNum(p.proofsInvalid);
+    }
+    const slashes = (data.getSupplierPenaltiesList || [])
+      .filter((r) => r.kind === "slashed").reduce((s, r) => s + toNum(r.events), 0);
+    const services = toNum((data.getSupplierFleetList || [])[0]?.serviceCount);
+    const { score, signals } = scoreSupplier(data.supplier, services, proofs, slashes);
     return {
       operator_id: operatorId,
       trust_score: score,
       trust_score_scale: "0-100, higher is more trustworthy",
       ...signals,
       methodology: "40pt staked-and-active baseline + log-scaled stake size (<=20pt) + service-config " +
-        "breadth (<=15pt) + recent required-proof success rate (<=15pt, neutral if no required-proof " +
-        "sample yet) - slash-event penalty (<=30pt) - unstaking penalty (15pt). Computed fresh from " +
-        "on-chain state each cache window; identical for every supplier serving this backend.",
+        `breadth (<=15pt) + required-proof success rate over the trailing ${TRUST_PROOF_WINDOW_DAYS} days ` +
+        "(<=15pt, neutral if no resolved proof in the window) - slash-event penalty (<=30pt, all slashes " +
+        "since genesis) - unstaking penalty (15pt). Computed fresh from on-chain state each cache window; " +
+        "identical for every supplier serving this backend.",
     };
   });
   return withMeta(value, { stale, ageMs });
