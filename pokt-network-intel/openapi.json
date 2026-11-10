@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "POKT Network Intelligence API",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "pokt-network-intel on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body (query params and headers are not read). Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every field is fetched live from Pocket's own GraphQL indexer (https://data.pocket.network/graphql) and Cosmos LCD (https://sauron-api.infra.pocket.network) at request time; nothing is a hardcoded constant. Every POST response carries the Meta envelope (service, network, fetched_at, cache). Cache lifetimes: pulse 15s; suppliers and applications 30s; validators, throughput, service-demand and supplier-trust 60s; tokenomics 1h. If a live refresh fails, the last good value is served with cache.stale=true and cache.age_ms set, for at most POCKET_MAX_STALE_MS (default 1 hour, reported by /v1/version as max_stale_ms); beyond that the call returns 422. Two suppliers can therefore return different bytes for the same request.",
     "license": {
       "name": "Apache-2.0",
@@ -37,7 +37,7 @@
                     },
                     "version": {
                       "type": "string",
-                      "example": "1.1.0"
+                      "example": "1.1.1"
                     },
                     "network": {
                       "type": "string",
@@ -661,19 +661,23 @@
                           "type": "boolean"
                         },
                         "settlements_observed": {
-                          "type": "integer"
+                          "type": "integer",
+                          "description": "Claims settled for this supplier over the trailing 30 days, with or without a proof"
                         },
                         "proof_required_settlements_observed": {
-                          "type": "integer"
+                          "type": "integer",
+                          "description": "Proofs submitted over the trailing 30 days"
                         },
                         "proof_success_rate": {
                           "type": [
                             "number",
                             "null"
-                          ]
+                          ],
+                          "description": "Validated / (validated + invalid) proofs over the trailing 30 days; null when none resolved in the window"
                         },
                         "slash_events_total": {
-                          "type": "integer"
+                          "type": "integer",
+                          "description": "Slash events for this supplier since genesis"
                         },
                         "methodology": {
                           "type": "string"

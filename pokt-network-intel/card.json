@@ -16,16 +16,16 @@
     {
       "kind": "openapi",
       "api": "pokt-network-intel",
-      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/pokt-network-intel-v1.1.0/pokt-network-intel/openapi.json",
-      "sha256": "29eb11e1e8b46be6566a2437e31f4704c8343d25f4eb48b0bea3be2615e192d5"
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/pokt-network-intel-v1.1.1/pokt-network-intel/openapi.json",
+      "sha256": "a3ea236f7c37e2e5f7b8be26bb9cea3a6d6b83d4928cb1878e33e6768c8b229e"
     }
   ],
   "access": "public",
   "results": "variable",
   "serving": {
-    "backend": "Image ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.0 (Node, no dependencies, no keys, no state) behind a RelayMiner at http://<container>:8080. One container per network: set POCKET_NETWORK=main. Needs outbound HTTPS to Pocket's public indexer and LCD, or your own via POCKET_LCD_URL, POCKET_RPC_URL, POCKET_INDEXER_URL.",
+    "backend": "Image ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.1 (Node, no dependencies, no keys, no state) behind a RelayMiner at http://<container>:8080. One container per network: set POCKET_NETWORK=main. Needs outbound HTTPS to Pocket's public indexer and LCD, or your own via POCKET_LCD_URL, POCKET_RPC_URL, POCKET_INDEXER_URL.",
     "implementations": [
-      "ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.0"
+      "ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.1"
     ],
     "min_disk_gb": 1,
     "min_ram_gb": 1,
@@ -82,6 +82,6 @@
     ],
     "notes": "Responses are cached 15s to 1h per endpoint; a failed refresh serves the last good value tagged cache.stale for at most 1 hour (POCKET_MAX_STALE_MS), then returns 422. Gateways: passthrough, rpc_types [\"rest\"]."
   },
-  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/pokt-network-intel-v1.1.0/pokt-network-intel/SUPPLIERS.md",
-  "updated": "2026-11-01"
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/pokt-network-intel-v1.1.1/pokt-network-intel/SUPPLIERS.md",
+  "updated": "2026-11-10"
 }

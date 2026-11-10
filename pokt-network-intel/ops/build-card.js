@@ -16,7 +16,7 @@ const { version } = require("../package.json");
 const REPO = "organiccryptoyyc/pocket-agentic-services";
 const TAG = `pokt-network-intel-v${version}`;
 const IMAGE = `ghcr.io/organiccryptoyyc/pokt-network-intel:${version}`;
-const UPDATED = "2026-11-01";
+const UPDATED = "2026-11-10";
 
 const spec = fs.readFileSync(path.join(ROOT, "openapi.json"));
 const sha256 = crypto.createHash("sha256").update(spec).digest("hex");

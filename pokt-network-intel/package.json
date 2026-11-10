@@ -1,6 +1,6 @@
 {
   "name": "pokt-network-intel",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "POKT Network Intelligence — a Pocket Network service backend. Live Shannon-protocol chain data over REST.",
   "main": "server.js",

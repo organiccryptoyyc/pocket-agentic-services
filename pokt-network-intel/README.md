@@ -47,11 +47,11 @@ over from that project's prior work, disclosed here per project convention:
 | `/v1/pulse` | Tendermint RPC `/status` (chain tip) + GraphQL indexer (staked-actor counts, `_metadata`) |
 | `/v1/tokenomics` | Cosmos LCD `shared/params`, `tokenomics/params` |
 | `/v1/validators` | Cosmos LCD `/cosmos/staking/v1beta1/validators` (total bonded `tokens`, the true voting-power figure — not the indexer's self-stake-only field) |
-| `/v1/suppliers` | GraphQL indexer `suppliers` / `supplierServiceConfigs` |
-| `/v1/throughput` | GraphQL indexer `blocks` aggregates (claimed vs. difficulty-estimated relays) |
-| `/v1/applications` | GraphQL indexer `applications` / `applicationServices` |
-| `/v1/service-demand` | GraphQL indexer, aliased batch query per service |
-| `/v1/supplier-trust` | GraphQL indexer `supplier` (stake, service configs, `eventClaimSettleds`, `eventSupplierSlasheds`) |
+| `/v1/suppliers` | GraphQL indexer `suppliers`, `getStakedSupplierServicesList`, `getSupplierFleetList` (service counts), `getServiceSummaryList` (per-service total) |
+| `/v1/throughput` | GraphQL indexer `getBlockStatsList` over the window (claimed vs. difficulty-estimated relays) |
+| `/v1/applications` | GraphQL indexer `applications`, `getApplicationFleetList`, `getServiceSummaryList` |
+| `/v1/service-demand` | GraphQL indexer `services` + `getServiceSummaryList` (staked suppliers and applications per service) |
+| `/v1/supplier-trust` | GraphQL indexer `supplier` (stake), `getSupplierFleetList` (service configs), `getSupplierProofsList` (trailing 30 days), `getSupplierPenaltiesList` (slashes since genesis) |
 
 Network is selected by `POCKET_NETWORK=main|beta` (default `main`); see
 `lib/pocket.js` for both networks' endpoint URLs. Nothing here hardcodes a

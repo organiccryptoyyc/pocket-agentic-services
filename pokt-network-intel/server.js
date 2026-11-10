@@ -17,7 +17,7 @@ const { createServer, ClientError } = require("./lib/http");
 const pocket = require("./lib/pocket");
 
 const SERVICE = "pokt-network-intel";
-const VERSION = "1.1.0";
+const VERSION = "1.1.1";
 const VERSION_PATH = "/v1/version";
 const HEALTH_PATH = "/v1/health";
 

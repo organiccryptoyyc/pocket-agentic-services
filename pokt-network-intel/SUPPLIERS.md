@@ -1,7 +1,7 @@
 # pokt-network-intel: running and calling it
 
 This page is for any supplier who wants to serve the Pocket service `pokt-network-intel`, and for anyone calling it.
-It covers one release: `1.1.0` (tag `pokt-network-intel-v1.1.0`). Pocket services are permissionless. You
+It covers one release: `1.1.1` (tag `pokt-network-intel-v1.1.1`). **Run 1.1.1 or later:** in November 2026 Pocket's indexer changed its GraphQL schema, and on 1.1.0 the suppliers, throughput, applications, service-demand and supplier-trust routes fail. Pocket services are permissionless. You
 don't need anyone's permission to stake a supplier for this service.
 
 The service is a small read-only API over Pocket Network's own chain state: network pulse, governance and
@@ -11,7 +11,7 @@ and outbound HTTPS only.
 
 ## 1. Run it
 
-**Image:** `ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.0` (linux/amd64 and linux/arm64). It listens on
+**Image:** `ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.1` (linux/amd64 and linux/arm64). It listens on
 port `8080`.
 
 **One container per network.** The backend reads one network's chain, chosen at startup. If you supply both
@@ -26,7 +26,7 @@ container: it would serve the wrong network's data on one of them, and the card'
 | `POCKET_MAX_STALE_MS` | `3600000` | Longest a cached value is served after a failed refresh (see section 4). |
 | `POCKET_LCD_URL` | Pocket's public LCD for the network | Your own Cosmos LCD, if you run a node. |
 | `POCKET_RPC_URL` | Pocket's public Tendermint RPC for the network | Your own RPC. |
-| `POCKET_INDEXER_URL` | Pocket's public GraphQL indexer for the network | Your own indexer (Pocketdex/PostGraphile). |
+| `POCKET_INDEXER_URL` | Pocket's public GraphQL indexer for the network | Your own indexer (Pocketdex/PostGraphile). It must expose the report functions the public indexer has had since November 2026 (`getSupplierFleetList`, `getServiceSummaryList`, `getBlockStatsList`, and so on). |
 
 Public defaults: MainNet `https://sauron-api.infra.pocket.network`, `https://sauron-rpc.infra.pocket.network`,
 `https://data.pocket.network/graphql`. Beta: the same hosts with `.beta.` (`sauron-api.beta.infra.pocket.network`,
@@ -37,7 +37,7 @@ Plain Docker:
 ```
 docker run -d --name pokt-network-intel-main --restart unless-stopped \
   -e POCKET_NETWORK=main --network <your-relayminer-network> \
-  ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.0
+  ghcr.io/organiccryptoyyc/pokt-network-intel:1.1.1
 ```
 
 Compose: [`examples/docker-compose.yaml`](examples/docker-compose.yaml) runs one container per network.
@@ -85,7 +85,7 @@ These are the card's four healthchecks. Run them from a container on the same Do
 
 ```
 curl -s http://pokt-network-intel-main:8080/v1/version
-# {"service":"pokt-network-intel","version":"1.1.0","network":"main","max_stale_ms":3600000}
+# {"service":"pokt-network-intel","version":"1.1.1","network":"main","max_stale_ms":3600000}
 #   probes: $.service is "pokt-network-intel", and $.network is "main" (MainNet card) or "beta" (Beta card)
 
 curl -s http://pokt-network-intel-main:8080/v1/health
@@ -103,7 +103,7 @@ the default (`main`) fails the network probe.
 
 All calls are `POST` with a JSON body (send `{}` when there are no fields). Inputs are read from the body
 only; query parameters and headers are ignored. The full contract is the OpenAPI document:
-[`openapi.json`](https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/pokt-network-intel-v1.1.0/pokt-network-intel/openapi.json)
+[`openapi.json`](https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/pokt-network-intel-v1.1.1/pokt-network-intel/openapi.json)
 (sha256 is in the service card).
 
 | Endpoint | Body fields | Returns |
