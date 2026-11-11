@@ -5,6 +5,7 @@
 //   POST /v1/dossier/section   {"dossier_id", "section"}              -> one section of the pinned snapshot
 //   POST /v1/dossier/entities  {}                                     -> the protocols a dossier can cover
 //   POST /v1/dossier/availability {"entity_id": "aave"}               -> one call: how much of the treasury is usable now (1.6.0)
+// Since 1.7.0 every plan, section and availability response also carries `verified` (pocket-agentic-envelope/1).
 // plus GET /v1/version and /v1/health. Every section is built from TCS-6 data already collected, scored
 // and attested (read-only mount of the TCS-6 data volume); this server never calls a chain or a vendor.
 "use strict";
@@ -15,7 +16,7 @@ const D = require("./lib/dossier");
 const A = require("./lib/availability");
 
 const SERVICE = "capital-integrity-dossier";
-const VERSION = "1.6.0";
+const VERSION = require("./package.json").version;
 const PORT = Number(process.env.PORT || 8080);
 const PAIR_REFRESH_MS = 5 * 60 * 1000;
 

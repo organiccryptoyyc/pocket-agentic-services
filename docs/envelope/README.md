@@ -1,6 +1,6 @@
 # pocket-agentic-envelope/1 — one entity and evidence schema for every service
 
-Status: **step 1 of 4 done (spec and mapping); owner decisions recorded 2026-11-11.** Nothing here is deployed, and no service response
+Status: **step 1 done (spec and mapping, owner decisions 2026-11-11); step 2 (dossier pilot, 1.7.0) built, Beta next.** Nothing here is deployed, and no service response
 changes until a service's own Beta release adds the field (see [Rollout](#rollout)).
 
 ## What it is
@@ -93,14 +93,23 @@ strictest model; the others map into it). **attestation_ref** reuses the dossier
 
 Phase in brackets: the [rollout](#rollout) step in which the service gets the field.
 
-### capital-integrity-dossier [pilot]
-All routes. Best fit: it already has `entity {entity_id, name}` and `attestation_ref`.
-- `subject`: `protocol:tcs6:<entity.entity_id>`, name `entity.name`. Links: the registry wallets of the entity (`treasury_wallet`).
-- `as_of`: `as_of`. `generated_at`: response time.
-- `assessment`: `not_scored` for `plan`, `section`, `entities` and `availability` (`available_share_pct` is a share, not a score).
-- `evidence`: from the snapshot report's `source_manifest` (first 50); `evidence_more` → `/v1/dossier/section`.
-- `gaps`: `availability.not_valued[]` → `{field: <asset>, reason: "not valued", impact: "excluded from buckets"}`.
-- `attestation_ref`: `attestation_ref` (rename `evidence_manifest_hash` → `payload_hash`).
+### capital-integrity-dossier [pilot: 1.7.0, `lib/verified.js`]
+`plan`, `section` and `availability` (not `entities`, which lists many protocols). Best fit: it already has
+`entity {entity_id, name}` and `attestation_ref`, and it is how protocols get the block (TCS-6 stays frozen).
+- `subject`: `protocol:tcs6:<entity.entity_id>`, name `entity.name`, identifiers `entity_type`, `peer_cohort`. Links:
+  the snapshot's `governance.wallet_controls` with `perimeter: "include"` on an EVM chain the collector knows, as
+  `treasury_wallet` CAIP-10 ids (`service: null` until agent-trust confirms coverage per chain).
+- `as_of`: the TCS-6 report's `as_of`. `generated_at`: response time.
+- `assessment`: **plan** carries the TCS-6 judgement the dossier is pinned to (status per the table, `score`,
+  `decision_band` as `label`, `confidence`, `coverage_pct`); **section** and **availability** are `not_scored`
+  (`available_share_pct` is a share, not a score).
+- `evidence`: the report's `source_manifest` (first 50, `internal_only` dropped); older snapshots fall back to the
+  bundle's `sources` with null tier and times. A section that cites sources lists only those; a section that cites
+  none lists no evidence and points to the plan (`evidence_more` → `/v1/dossier/plan`), so the same list is not
+  repeated on every paid call. `evidence_more` → `/v1/dossier/section` when the plan has more than 50.
+- `gaps`: the report's `data_gaps`; availability adds each unpriced token (`not_valued`) as a `holdings.prices` gap.
+- `attestation_ref`: the dossier's `attestation_ref` (`evidence_manifest_hash` → `payload_hash`; a status outside
+  valid/invalid/missing/stale becomes `missing`; no attestation → null).
 
 ### pmic-company-signals, pmic-pharma-signals [phase 2]
 `/v1/brief`, `/v1/overview`, `/v1/events`.

@@ -20,6 +20,22 @@ POST /v1/dossier/availability {"entity_id": "aave"}                    -> one ca
 GET  /v1/version, /v1/health
 ```
 
+## `verified`: the shared who / when / what / evidence block (1.7.0)
+
+Plan, section and availability responses carry one extra field, `verified` (`pocket-agentic-envelope/1`, spec in
+[`docs/envelope`](../docs/envelope/README.md)). It says the same things the rest of the response says, in the
+spelling every service in this family uses, so results can be joined across services by `subject.id`:
+
+- `subject`: `protocol:tcs6:<entity_id>`, with the protocol's included treasury wallets as CAIP-10 `links`
+  (`wallet:caip10:eip155:<chain id>:<address>`).
+- `as_of` (the TCS-6 snapshot time) and `generated_at`.
+- `assessment`: on plan, the TCS-6 judgement the dossier is pinned to (for example `provisional`, 51, `watch`, confidence,
+  coverage); `not_scored` on section and availability, which return facts.
+- `evidence`: the TCS-6 source manifest (at most 50; a section lists only the sources it cites; `internal_only`
+  sources never appear), `gaps` (TCS-6 data gaps, plus unpriced tokens on availability) and `attestation_ref`.
+
+Every value is copied from the same pinned snapshot; the dossier's own fields stay authoritative and unchanged.
+
 ## Treasury Availability (1.6.0, one call)
 
 `POST /v1/dossier/availability {"entity_id"}` answers in a single $0.005 call how much of the treasury verified on

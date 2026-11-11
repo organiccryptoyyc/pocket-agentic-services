@@ -13,6 +13,8 @@ const crypto = require("crypto");
 const store = require("./store");
 const { ClientError } = require("./http");
 const S = require("./tcs6-scoring");
+const V = require("./verified");
+const VERSION = require("../package.json").version;
 
 const SCHEMA = "capital-integrity-dossier/1.0";
 const PRICE_PER_CALL_USD = 0.005; // agent.pocket.network: "Every service costs $0.005 per call" (owner 2026-10-25)
@@ -96,6 +98,7 @@ function plan(body, nowMs = Date.now()) {
     next: "POST /v1/dossier/section {dossier_id, section} for each available section, in any order",
     attestation_ref: attestationRef(r),
     disclaimer: r.disclaimer,
+    verified: V.build("/v1/dossier/plan", VERSION, r, snap.bundle, { assessment: "tcs6" }, nowMs),
   };
 }
 
@@ -404,6 +407,12 @@ function unresolvedItems(report) {
   };
 }
 
+// The source_refs a section cites, so its verified.evidence lists those sources only (null = every source).
+function sectionRefs(data) {
+  const refs = (data && Array.isArray(data.sources) ? data.sources : []).map((s) => s.source_ref).filter(Boolean);
+  return refs.length ? refs : null;
+}
+
 const BUILDERS = { holdings_map: holdingsMap, authority_graph: authorityGraph, obligations_register: obligationsRegister, exit_liquidity: exitLiquidity, reconciliation, unresolved_items: unresolvedItems };
 
 function section(body, nowMs = Date.now()) {
@@ -441,6 +450,7 @@ function section(body, nowMs = Date.now()) {
     ...(built.chart ? { chart: built.chart } : {}),
     ...(repeat ? { note: "this section was already returned for this dossier; the content is the same pinned snapshot" } : {}),
     disclaimer: r.disclaimer,
+    verified: V.build("/v1/dossier/section", VERSION, r, d.bundle, { assessment: "none", ...(sectionRefs(built.data) ? { evidenceRefs: sectionRefs(built.data) } : { evidenceOnPlan: true }) }, nowMs),
   };
 }
 

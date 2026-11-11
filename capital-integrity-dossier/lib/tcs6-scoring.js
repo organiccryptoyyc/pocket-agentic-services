@@ -74,6 +74,10 @@ const LOW_CONTROL_CONFIDENCE_CAP = 59;
 
 const PRICE_FRESH_MS = 60 * 60 * 1000; // valuation_freshness: 60 minutes
 const HOLDINGS_FRESH_MS = 90 * 24 * 60 * 60 * 1000; // valuation_freshness: 90 days
+// valuation_freshness materiality (owner 2026-11-08): stale positions worth less than
+// 1% of gross verified value don't fail the gate or mark metrics stale. They still
+// count as stale, position by position, in confidence.recency_fit.
+const STALE_MATERIAL_PCT = 1;
 const PRICE_AGREEMENT_PCT = 2; // two sources within 2% count as consistent
 const MIN_PEERS = 20; // entity_scope.peer_rule
 const STALE_DISCLOSURE_DAYS = 90;
@@ -232,9 +236,19 @@ function holdingsRefs(rows) {
   return rows.flatMap((r) => [...(r.h.source_refs || []), ...(r.h.prices || []).map((p) => p.source_ref).filter(Boolean)]);
 }
 
+// Verified positions past the price (60 min) or holdings (90 day) limit, their value,
+// and whether that value is material (>= STALE_MATERIAL_PCT of gross verified value).
+function staleness(base) {
+  const rows = base.verifiedRows.filter((r) => !r.price_fresh || !r.holdings_fresh);
+  const value = sum(rows, (r) => (Number.isFinite(r.fair) ? r.fair : 0));
+  const total = base.grossVerified;
+  const pct = total > 0 ? (value / total) * 100 : rows.length ? 100 : 0;
+  return { rows, value, pct, material: rows.length > 0 && pct >= STALE_MATERIAL_PCT };
+}
+
 function valuationStatus(base) {
   if (base.verifiedRows.length === 0) return "insufficient_data";
-  if (base.verifiedRows.some((r) => !r.price_fresh || !r.holdings_fresh)) return "stale";
+  if (staleness(base).material) return "stale";
   if (base.verifiedRows.every((r) => r.price_check === "consistent" || r.price_check === "disclosed")) return "verified";
   return "single_source";
 }
@@ -485,12 +499,17 @@ function gates(entity, base, bundle, blockedSources) {
     effect: vcp === null ? "No reported holdings; unknown holdings are not treated as zero or as verified." : `${round(vcp, 1)}% of reported gross value has verified control evidence (threshold 60%).${vcp < 60 ? ` Score allowed but provisional; confidence capped at ${LOW_CONTROL_CONFIDENCE_CAP}.` : ""}`,
   });
 
-  const stale = base.verifiedRows.filter((r) => !r.price_fresh || !r.holdings_fresh);
+  const st = staleness(base);
+  const n = st.rows.length;
+  const share = `$${Math.round(st.value).toLocaleString("en-US")}, ${round(st.pct, 2)}% of verified value`;
   out.push({
     id: "valuation_freshness",
-    status: base.verifiedRows.length && stale.length === 0 ? "pass" : "fail",
+    status: base.verifiedRows.length && !st.material ? "pass" : "fail",
     evidence_refs: [],
-    effect: stale.length ? `${stale.length} verified position(s) have prices older than 60 minutes or holdings older than 90 days at as_of; affected metrics marked stale and confidence reduced.` : base.verifiedRows.length ? "All verified positions priced within 60 minutes and holdings within 90 days of as_of." : "No verified positions to value.",
+    effect: !base.verifiedRows.length ? "No verified positions to value."
+      : st.material ? `${n} verified position(s) (${share}) have prices older than 60 minutes or holdings older than 90 days at as_of; affected metrics marked stale and confidence reduced.`
+      : n ? `${n} verified position(s) (${share}) have prices older than 60 minutes or holdings older than 90 days at as_of. That is below the ${STALE_MATERIAL_PCT}% materiality threshold, so the gate passes; those positions still lower confidence (recency).`
+      : "All verified positions priced within 60 minutes and holdings within 90 days of as_of.",
   });
 
   const ov = obligationVisibility(bundle, base.asOfMs);

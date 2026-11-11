@@ -13,6 +13,8 @@ const store = require("./store");
 const { ClientError } = require("./http");
 const S = require("./tcs6-scoring");
 const D = require("./dossier");
+const V = require("./verified");
+const VERSION = require("../package.json").version;
 
 const METHOD = "tcs6-availability/1.0";
 const REPORTED_MAX_AGE_DAYS = 90; // O2 minimum (owner 2026-10-09)
@@ -137,7 +139,7 @@ function build(report, bundle) {
   return { observed, confirmed, ownPools, buckets, unpriced };
 }
 
-function availability(body) {
+function availability(body, nowMs = Date.now()) {
   const id = body && typeof body.entity_id === "string" ? body.entity_id.trim().toLowerCase() : "";
   if (!store.ENTITY_ID_RE.test(id)) {
     throw new ClientError(400, "invalid_input", "field 'entity_id' is required, e.g. \"aave\"; list ids with POST /v1/dossier/entities");
@@ -183,6 +185,10 @@ function availability(body) {
       deeper: "the full dossier (POST /v1/dossier/plan) shows every position, check and source, in up to 7 calls" },
     attestation_ref: D.attestationRef(r),
     disclaimer: r.disclaimer,
+    verified: V.build("/v1/dossier/availability", VERSION, r, bundle, {
+      assessment: "none",
+      extraGaps: unpriced.map((reason) => ({ field: "holdings.prices", reason, impact: "left out of every bucket", remediation: "priced on a later TCS-6 run" })),
+    }, nowMs),
   };
 }
 
