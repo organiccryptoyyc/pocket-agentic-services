@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/docs/envelope/pocket-agentic-envelope-v1.schema.json",
   "title": "pocket-agentic-envelope/1",
-  "description": "One shared description of WHO a response is about, WHEN it was true, WHAT it concluded and WHICH evidence backs it. Added to a service response as one new optional top-level field named `envelope`. It never replaces or renames the service's own fields; a service's frozen contract (for example TCS-6 v1) stays authoritative and the envelope is derived from it.",
+  "description": "One shared description of WHO a response is about, WHEN it was true, WHAT it concluded and WHICH evidence backs it. Added to a service response as one new optional top-level field named `verified`. It never replaces or renames the service's own fields; a service's frozen contract (for example TCS-6 v1) stays authoritative and the envelope is derived from it.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "service", "service_version", "route", "subject", "as_of", "generated_at", "assessment", "evidence", "gaps", "attestation_ref"],

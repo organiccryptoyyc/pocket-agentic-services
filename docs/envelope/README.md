@@ -1,6 +1,6 @@
 # pocket-agentic-envelope/1 — one entity and evidence schema for every service
 
-Status: **draft, step 1 of 4 (spec and mapping only).** Nothing here is deployed, and no service response
+Status: **step 1 of 4 done (spec and mapping); owner decisions recorded 2026-11-11.** Nothing here is deployed, and no service response
 changes until a service's own Beta release adds the field (see [Rollout](#rollout)).
 
 ## What it is
@@ -9,12 +9,12 @@ Every service in this repo answers a different question, but every answer has th
 **who** it is about, **when** that was true, **what** it concluded, and **which evidence** backs it. Today each
 service spells those parts differently (`entity`, `domain`, `brand_id`, `address`; `citations`, `sources`,
 `source_manifest`, `reasons`). The envelope is one shared spelling, added to each response as **one new optional
-top-level field, `envelope`**:
+top-level field, `verified`**:
 
 ```json
 {
   "...the service's own fields, unchanged...": "...",
-  "envelope": {
+  "verified": {
     "schema": "pocket-agentic-envelope/1",
     "service": "pmic-company-signals", "service_version": "0.6.0", "route": "/v1/brief",
     "subject":    { "kind": "company", "id": "company:sec-cik:0000070858", "name": "Bank of America Corp.", "identifiers": { "ticker": "BAC" } },
@@ -60,7 +60,7 @@ Files:
 | kind | namespace and example | Used by |
 |---|---|---|
 | `protocol` | `tcs6` → `protocol:tcs6:aave` (the TCS-6 registry `entity_id`) | treasury-capital-score, capital-integrity-dossier |
-| `company` | `sec-cik` → `company:sec-cik:0000070858`; fallback `pmic` → `company:pmic:bac` | pmic-company-signals, pmic-pharma-signals |
+| `company` | `sec-cik` → `company:sec-cik:0000070858` (canonical, owner 2026-11-11); fallback `pmic` → `company:pmic:bac` when there is no CIK | pmic-company-signals, pmic-pharma-signals |
 | `drug` | `pmic` → `drug:pmic:<entity_id>` (an FDA application number when the hub has one: `drug:fda-appl:NDA021457`) | pmic-pharma-signals |
 | `brand` | `bp` → `brand:bp:<brand_id>` | brand-protection |
 | `domain` | `dns` → `domain:dns:example.com` (lowercase, IDNA/punycode) | agent-trust, brand-protection |
@@ -124,14 +124,14 @@ requested country. pmic-crypto `/v1/tools/address` → `wallet:caip10:…`, `not
 - `sanctions-check`, `reputation`: `subject` `wallet:caip10:<caip2 chain>:<address>`; `reputation_score` (scale "0-100, higher is more trustworthy"); `coverage` → `coverage_pct` where numeric.
 - **The real work:** today agent-trust returns `reasons[]` as plain strings, not sources. The routes already fetch RDAP, DNS, TLS certificates, Blockscout and the sanctions list; phase 2 records each fetch as an evidence item (publisher, URL, retrieved_at). Until then `evidence: []` plus one gap `{field: "evidence", reason: "sources not yet itemized", impact: "reasons only"}`.
 
-### treasury-capital-score [phase 3, needs owner sign-off]
+### treasury-capital-score [not planned: the dossier carries protocols (owner, 2026-11-11)]
 - `subject`: `protocol:tcs6:<entity.entity_id>`; identifiers `entity_type`, `peer_cohort`; links: registry wallets.
 - `assessment`: status per the table; `score`, `coverage_pct` from `overall_score`; `label` `decision_band`; `confidence {score, label}` from `confidence` (0–100 already).
 - `evidence`: `source_manifest` (first 50, `internal_only` dropped); `gaps`: `data_gaps`; `attestation_ref`: from `attestation` (`payload_hash`, `verification_status`).
 - **Blocker:** the frozen v1 paid response schema (`methodology/tcs6_paid_response_schema_v1.json`) has
-  `additionalProperties: false` at the top level, so adding `envelope` is a contract change: a schema revision,
-  golden-test update and owner Beta review (CLAUDE_1 §9). Until then the dossier's envelope already describes the
-  same protocols with the same subject IDs.
+  `additionalProperties: false` at the top level, so adding `verified` is a contract change: a schema revision,
+  golden-test update and owner Beta review (CLAUDE_1 §9). **Owner decision 2026-11-11: not now.** The dossier's
+  `verified` block describes the same protocols with the same subject IDs. The mapping below is kept for later.
 
 ### prediction-market-intel, pokt-network-intel [optional, phase 3]
 Outside the PMIC/trust/treasury/brand scope but cheap once the library exists: `market:polymarket:<slug>`;
@@ -144,20 +144,20 @@ Every step follows the owner rules: Beta first, an owner-reviewed Beta response,
 1. **Spec and mapping** (this folder). No deploys.
 2. **Pilot: capital-integrity-dossier.** Add a small shared helper (`docs/envelope/` stays the spec; each service
    vendors a ~100-line `envelope.js` like it vendors other shared code) → minor version bump → `openapi.json` gains
-   an optional `envelope` property → Beta via PSM → relay test → owner review → MainNet. One card update in PSM
+   an optional `verified` property → Beta via PSM → relay test → owner review → MainNet. One card update in PSM
    (spec hash changes).
 3. **Phase 2:** the five PMIC packs (one shared change in the pack template), brand-protection, agent-trust
    (with source capture). Each service Beta → review → MainNet; about 7 card updates.
-4. **Phase 3:** TCS-6 (contract revision, owner sign-off), then the optional services; cross-service link checks
-   (every `links[].service` must answer for that `id`).
+4. **Phase 3:** the optional services, and cross-service link checks (every `links[].service` must answer for that
+   `id`). TCS-6 keeps its frozen v1 contract; protocols get the shared block through the dossier.
 
 **PNF / portal:** the gateway outputSchemas built from our portal descriptors do not set
 `additionalProperties: false` (checked 2026-11-11 on all PMIC packs, TCS-6, dossier, brand-protection and
 prediction-market-intel), so an extra optional field does not break them. Send PNF a short note with each release
 anyway, as for the 2026-10 typed-fields change.
 
-## Open questions for the owner
+## Owner decisions (2026-11-11)
 
-1. **Field name:** `envelope` (proposed) or something buyer-facing like `verified`?
-2. **TCS-6:** approve a v1.1 contract revision for phase 3, or keep TCS-6 as is and let the dossier carry its envelope?
-3. **Company IDs:** SEC CIK as the canonical company namespace (US-listed only), with `company:pmic:` as the fallback?
+1. **Field name:** `verified`. (The schema keeps its id, `pocket-agentic-envelope/1`; "envelope" is only the spec's name.)
+2. **TCS-6:** no contract revision for now. Protocols get the `verified` block through capital-integrity-dossier.
+3. **Company IDs:** SEC CIK is canonical (`company:sec-cik:`), with `company:pmic:` for companies without one.
