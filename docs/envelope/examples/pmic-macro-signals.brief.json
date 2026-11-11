@@ -1,0 +1,42 @@
+{
+  "schema": "pocket-agentic-envelope/1",
+  "service": "pmic-macro-signals",
+  "service_version": "0.7.0",
+  "route": "/v1/brief",
+  "subject": {
+    "kind": "topic",
+    "id": "topic:pmic-macro:inflation",
+    "name": "Inflation",
+    "identifiers": {
+      "pmic_vertical": "inflation",
+      "countries": [
+        "us"
+      ]
+    }
+  },
+  "as_of": "2026-10-15",
+  "generated_at": "2026-10-19T14:00:00Z",
+  "assessment": {
+    "status": "insufficient_data",
+    "native_status": "insufficient_data",
+    "score": null,
+    "scale": {
+      "min": 0,
+      "max": 100,
+      "higher_is": "riskier"
+    },
+    "label": null,
+    "confidence": null,
+    "coverage_pct": null
+  },
+  "evidence": [],
+  "evidence_more": null,
+  "gaps": [
+    {
+      "field": "inputs",
+      "reason": "fewer scoreable series than the vertical requires",
+      "impact": "no score"
+    }
+  ],
+  "attestation_ref": null
+}

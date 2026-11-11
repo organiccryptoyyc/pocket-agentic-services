@@ -1,0 +1,70 @@
+{
+  "schema": "pocket-agentic-envelope/1",
+  "service": "treasury-capital-score",
+  "service_version": "1.9.3",
+  "route": "/v1/tcs6/score",
+  "subject": {
+    "kind": "protocol",
+    "id": "protocol:tcs6:aave",
+    "name": "Aave",
+    "identifiers": {
+      "tcs6_entity_id": "aave",
+      "entity_type": "dao"
+    },
+    "links": [
+      {
+        "rel": "treasury_wallet",
+        "id": "wallet:caip10:eip155:1:0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c",
+        "service": "agent-trust"
+      }
+    ]
+  },
+  "as_of": "2026-11-09T19:14:45Z",
+  "generated_at": "2026-11-10T04:40:12Z",
+  "assessment": {
+    "status": "provisional",
+    "native_status": "provisional",
+    "score": 51,
+    "scale": {
+      "min": 0,
+      "max": 100,
+      "higher_is": "better"
+    },
+    "label": "watch",
+    "confidence": {
+      "score": 72,
+      "label": "medium"
+    },
+    "coverage_pct": 85
+  },
+  "evidence": [
+    {
+      "source_ref": "src-onchain-eth-collector",
+      "title": "Aave Collector balances (Ethereum)",
+      "publisher": "Ethereum mainnet via Pocket RPC",
+      "url": null,
+      "retrieved_at": "2026-11-09T19:14:45Z",
+      "observation_time": "2026-11-09T19:14:45Z",
+      "source_tier": 1,
+      "rights_status": "permitted_for_derived_output"
+    }
+  ],
+  "evidence_more": {
+    "route": "/v1/tcs6/score",
+    "count": 38,
+    "note": "Full list in source_manifest of the same response."
+  },
+  "gaps": [
+    {
+      "field": "obligation_visibility",
+      "reason": "Latest obligations evidence omits some liability categories",
+      "impact": "partial gate; 10-point penalty"
+    }
+  ],
+  "attestation_ref": {
+    "attestation_id": null,
+    "key_id": "collector-ed25519-1",
+    "payload_hash": "sha256:EXAMPLE",
+    "verification_status": "valid"
+  }
+}

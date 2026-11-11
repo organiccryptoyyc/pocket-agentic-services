@@ -1,0 +1,40 @@
+{
+  "schema": "pocket-agentic-envelope/1",
+  "service": "brand-protection",
+  "service_version": "0.1.8",
+  "route": "/v1/brand/scan",
+  "subject": {
+    "kind": "brand",
+    "id": "brand:bp:example-brand",
+    "name": "Example Brand",
+    "identifiers": {
+      "brand_id": "example-brand"
+    },
+    "links": [
+      {
+        "rel": "official_domain",
+        "id": "domain:dns:example.com",
+        "service": "agent-trust"
+      }
+    ]
+  },
+  "as_of": "2026-11-10T12:00:00Z",
+  "generated_at": "2026-11-10T12:05:00Z",
+  "assessment": {
+    "status": "not_scored",
+    "native_status": null,
+    "score": null,
+    "scale": null,
+    "label": "3 findings",
+    "confidence": null,
+    "coverage_pct": null
+  },
+  "evidence": [],
+  "evidence_more": {
+    "route": "/v1/brand/evidence",
+    "count": 3,
+    "note": "One evidence_id per finding."
+  },
+  "gaps": [],
+  "attestation_ref": null
+}

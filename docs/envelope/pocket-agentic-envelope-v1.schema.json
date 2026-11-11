@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/docs/envelope/pocket-agentic-envelope-v1.schema.json",
+  "title": "pocket-agentic-envelope/1",
+  "description": "One shared description of WHO a response is about, WHEN it was true, WHAT it concluded and WHICH evidence backs it. Added to a service response as one new optional top-level field named `envelope`. It never replaces or renames the service's own fields; a service's frozen contract (for example TCS-6 v1) stays authoritative and the envelope is derived from it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "service", "service_version", "route", "subject", "as_of", "generated_at", "assessment", "evidence", "gaps", "attestation_ref"],
+  "properties": {
+    "schema": { "const": "pocket-agentic-envelope/1" },
+    "service": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,41}$", "description": "The Pocket service ID that produced the response." },
+    "service_version": { "type": "string", "minLength": 1 },
+    "route": { "type": "string", "pattern": "^/v[0-9]+/[a-z0-9/_-]+$" },
+    "subject": { "$ref": "#/$defs/subject" },
+    "as_of": { "$ref": "#/$defs/timestamp", "description": "When the facts in the response were true (the newest evidence the result rests on), not when the response was produced." },
+    "generated_at": { "$ref": "#/$defs/timestamp", "description": "When this response was produced (or read from cache)." },
+    "assessment": { "$ref": "#/$defs/assessment" },
+    "evidence": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/evidence" },
+      "description": "The sources the result rests on, at most 50. Use evidence_more for the full list."
+    },
+    "evidence_more": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["route", "count"],
+      "properties": {
+        "route": { "type": "string", "pattern": "^/v[0-9]+/[a-z0-9/_-]+$" },
+        "count": { "type": "integer", "minimum": 0 },
+        "note": { "type": "string" }
+      },
+      "description": "Where the full evidence lives when it is longer than `evidence` or too large to inline (for example brand-protection /v1/brand/evidence)."
+    },
+    "gaps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/gap" },
+      "description": "What is missing or unverified. An empty list means none was detected, never that none can exist."
+    },
+    "attestation_ref": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/attestation_ref" }]
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?(Z|[+-][0-9]{2}:[0-9]{2}))?$",
+      "description": "ISO 8601 date or UTC date-time. A bare date means the source publishes daily or coarser."
+    },
+    "subject_id": {
+      "type": "string",
+      "pattern": "^(protocol|company|drug|brand|domain|wallet|market|topic|jurisdiction|network_actor):[a-z0-9][a-z0-9._-]*:[^\\s]+$",
+      "description": "<kind>:<namespace>:<value>. Lowercase kind and namespace; the value keeps the case its namespace defines (CAIP-10 addresses, SEC CIKs with leading zeros)."
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "name", "identifiers"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["protocol", "company", "drug", "brand", "domain", "wallet", "market", "topic", "jurisdiction", "network_actor"] },
+        "id": { "$ref": "#/$defs/subject_id" },
+        "name": { "type": ["string", "null"] },
+        "identifiers": {
+          "type": "object",
+          "description": "Other names the same subject is known by. Keys are namespaces; values are strings or arrays of strings.",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" }, "maxItems": 50 }
+            ]
+          }
+        },
+        "links": {
+          "type": "array",
+          "maxItems": 50,
+          "items": { "$ref": "#/$defs/link" },
+          "description": "Related subjects another service in this family can answer about (a protocol's treasury wallets, a brand's official domains)."
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rel", "id"],
+      "properties": {
+        "rel": { "type": "string", "enum": ["treasury_wallet", "official_domain", "issuer", "manufacturer", "parent", "counterparty", "lookalike_of", "same_as"] },
+        "id": { "$ref": "#/$defs/subject_id" },
+        "service": { "type": ["string", "null"], "description": "A service ID that answers about the linked subject, when one does." }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "native_status", "score", "scale", "label", "confidence", "coverage_pct"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["ok", "provisional", "insufficient_data", "ineligible", "not_scored"],
+          "description": "Normalized across services. not_scored = the route returns facts, not a judgement (an evidence lookup, a list)."
+        },
+        "native_status": { "type": ["string", "null"], "description": "The service's own status value, unchanged." },
+        "score": { "type": ["number", "null"] },
+        "scale": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["min", "max", "higher_is"],
+              "properties": {
+                "min": { "type": "number" },
+                "max": { "type": "number" },
+                "higher_is": { "type": "string", "enum": ["better", "riskier"] }
+              }
+            }
+          ]
+        },
+        "label": { "type": ["string", "null"] },
+        "confidence": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["score", "label"],
+              "properties": {
+                "score": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+                "label": { "type": ["string", "null"], "enum": ["high", "medium", "low", null] }
+              }
+            }
+          ]
+        },
+        "coverage_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_ref", "title", "publisher", "url", "retrieved_at", "observation_time", "source_tier", "rights_status"],
+      "description": "Same fields as the TCS-6 source manifest (tcs6_paid_response_schema_v1 $defs/source), with null allowed where another service cannot know the value.",
+      "properties": {
+        "source_ref": { "type": "string", "minLength": 1 },
+        "title": { "type": "string" },
+        "publisher": { "type": "string" },
+        "url": { "type": ["string", "null"], "pattern": "^https?://" },
+        "retrieved_at": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/timestamp" }] },
+        "observation_time": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/timestamp" }] },
+        "source_tier": { "type": ["integer", "null"], "enum": [1, 2, 3, 4, 5, null], "description": "TCS-6 tiers: 1 = primary on-chain or regulator record ... 5 = unverified secondary. null = not yet graded." },
+        "rights_status": { "type": "string", "enum": ["permitted_for_derived_output", "licensed_for_display", "internal_only", "pending_review"] }
+      }
+    },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "reason", "impact"],
+      "description": "Same fields as TCS-6 $defs/data_gap; remediation optional.",
+      "properties": {
+        "field": { "type": "string" },
+        "reason": { "type": "string" },
+        "impact": { "type": "string" },
+        "remediation": { "type": "string" }
+      }
+    },
+    "attestation_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attestation_id", "key_id", "payload_hash", "verification_status"],
+      "description": "Points at a signed attestation (capital-integrity-dossier AttestationRef, TCS-6 attestation). The signature itself stays in the service's own field.",
+      "properties": {
+        "attestation_id": { "type": ["string", "null"] },
+        "key_id": { "type": ["string", "null"] },
+        "payload_hash": { "type": ["string", "null"] },
+        "verification_status": { "type": "string", "enum": ["valid", "invalid", "missing", "stale"] }
+      }
+    }
+  }
+}

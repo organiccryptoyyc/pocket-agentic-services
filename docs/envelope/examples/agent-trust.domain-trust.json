@@ -1,0 +1,42 @@
+{
+  "schema": "pocket-agentic-envelope/1",
+  "service": "agent-trust",
+  "service_version": "1.1.0",
+  "route": "/v1/domain-trust",
+  "subject": {
+    "kind": "domain",
+    "id": "domain:dns:example.com",
+    "name": "example.com",
+    "identifiers": {}
+  },
+  "as_of": "2026-11-10T12:00:00Z",
+  "generated_at": "2026-11-10T12:00:00Z",
+  "assessment": {
+    "status": "ok",
+    "native_status": null,
+    "score": 82,
+    "scale": {
+      "min": 0,
+      "max": 100,
+      "higher_is": "better"
+    },
+    "label": null,
+    "confidence": null,
+    "coverage_pct": null
+  },
+  "evidence": [
+    {
+      "source_ref": "rdap:example.com",
+      "title": "RDAP registration record",
+      "publisher": "RDAP",
+      "url": null,
+      "retrieved_at": "2026-11-10T12:00:00Z",
+      "observation_time": null,
+      "source_tier": null,
+      "rights_status": "pending_review"
+    }
+  ],
+  "evidence_more": null,
+  "gaps": [],
+  "attestation_ref": null
+}

@@ -1,0 +1,54 @@
+{
+  "schema": "pocket-agentic-envelope/1",
+  "service": "pmic-company-signals",
+  "service_version": "0.6.0",
+  "route": "/v1/brief",
+  "subject": {
+    "kind": "company",
+    "id": "company:sec-cik:0000070858",
+    "name": "Bank of America Corp.",
+    "identifiers": {
+      "pmic_entity_id": "bac",
+      "ticker": "BAC"
+    }
+  },
+  "as_of": "2026-10-12",
+  "generated_at": "2026-10-20T15:02:11Z",
+  "assessment": {
+    "status": "ok",
+    "native_status": "ok",
+    "score": 15,
+    "scale": {
+      "min": 0,
+      "max": 100,
+      "higher_is": "riskier"
+    },
+    "label": "insider activity",
+    "confidence": {
+      "score": 98,
+      "label": "high"
+    },
+    "coverage_pct": null
+  },
+  "evidence": [
+    {
+      "source_ref": "sec:BAC:insider_form4_weekly",
+      "title": "Insider transaction filings (Form 4), weekly",
+      "publisher": "SEC EDGAR",
+      "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000070858&type=4&dateb=&owner=include&count=40",
+      "retrieved_at": null,
+      "observation_time": "2026-10-12",
+      "source_tier": 1,
+      "rights_status": "permitted_for_derived_output"
+    }
+  ],
+  "evidence_more": null,
+  "gaps": [
+    {
+      "field": "inputs[sec:BAC:insider_form4_weekly]",
+      "reason": "single_source",
+      "impact": "no cross-source check"
+    }
+  ],
+  "attestation_ref": null
+}
