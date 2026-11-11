@@ -18,11 +18,7 @@
     "status": "ok",
     "native_status": "ok",
     "score": 15,
-    "scale": {
-      "min": 0,
-      "max": 100,
-      "higher_is": "riskier"
-    },
+    "scale": null,
     "label": "insider activity",
     "confidence": {
       "score": 98,

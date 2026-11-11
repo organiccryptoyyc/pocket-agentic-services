@@ -20,11 +20,7 @@
     "status": "insufficient_data",
     "native_status": "insufficient_data",
     "score": null,
-    "scale": {
-      "min": 0,
-      "max": 100,
-      "higher_is": "riskier"
-    },
+    "scale": null,
     "label": null,
     "confidence": null,
     "coverage_pct": null

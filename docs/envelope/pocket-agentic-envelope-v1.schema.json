@@ -83,7 +83,7 @@
       "additionalProperties": false,
       "required": ["rel", "id"],
       "properties": {
-        "rel": { "type": "string", "enum": ["treasury_wallet", "official_domain", "issuer", "manufacturer", "parent", "counterparty", "lookalike_of", "same_as"] },
+        "rel": { "type": "string", "enum": ["treasury_wallet", "official_domain", "issuer", "manufacturer", "parent", "counterparty", "lookalike_of", "same_as", "covers"] },
         "id": { "$ref": "#/$defs/subject_id" },
         "service": { "type": ["string", "null"], "description": "A service ID that answers about the linked subject, when one does." }
       }

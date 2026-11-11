@@ -21,7 +21,7 @@ const { scanBrand, brandIdFor } = require("./lib/scan");
 const { startIngest } = require("./lib/ingest");
 
 const SERVICE = "brand-protection";
-const VERSION = "0.1.8";
+const VERSION = "0.1.9";
 const QUICK = {
   deadlineMs: Number(process.env.BP_QUICK_DEADLINE_MS || 9000),
   maxCandidates: Number(process.env.BP_QUICK_MAX_CANDIDATES || 120),
@@ -180,10 +180,13 @@ async function handleWatched() {
   return { service: SERVICE, version: VERSION, fetched_at: new Date().toISOString(), count: brands.length, max_watched: store.MAX_WATCHED, brands };
 }
 
+// 0.1.9: scan, lookalikes and evidence also carry the shared `verified` block (lib/verified.js).
+const { withVerified } = require("./lib/verified");
+const verifiedRoute = (route, handler) => async (body) => withVerified(route, await handler(body), VERSION);
 const routes = new Map([
-  ["POST /v1/brand/scan", handleScan],
-  ["POST /v1/brand/lookalikes", handleLookalikes],
-  ["POST /v1/brand/evidence", handleEvidence],
+  ["POST /v1/brand/scan", verifiedRoute("/v1/brand/scan", handleScan)],
+  ["POST /v1/brand/lookalikes", verifiedRoute("/v1/brand/lookalikes", handleLookalikes)],
+  ["POST /v1/brand/evidence", verifiedRoute("/v1/brand/evidence", handleEvidence)],
   ["GET /v1/brand/watched", handleWatched],
 ]);
 

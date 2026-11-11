@@ -73,7 +73,8 @@ Files:
 **Links** (`subject.links[]`) are what makes this one layer instead of ten services: a TCS-6 protocol links its
 treasury wallets (`treasury_wallet` → agent-trust can answer about them), a brand links its official domains
 (`official_domain` → agent-trust domain trust), a lookalike domain links back to the brand it imitates
-(`lookalike_of`).
+(`lookalike_of`), and a topic links the jurisdictions it covers (`covers`, added 2026-11-11 for the PMIC country
+tables).
 
 **Assessment status** is normalized; the service's own value is kept in `native_status`:
 
@@ -112,27 +113,55 @@ Phase in brackets: the [rollout](#rollout) step in which the service gets the fi
 - `attestation_ref`: the dossier's `attestation_ref` (`evidence_manifest_hash` → `payload_hash`; a status outside
   valid/invalid/missing/stale becomes `missing`; no attestation → null).
 
-### pmic-company-signals, pmic-pharma-signals [phase 2]
-`/v1/brief`, `/v1/overview`, `/v1/events`.
-- `subject`: from `entity`. Company → `company:sec-cik:<cik>` when the hub row has a CIK, else `company:pmic:<entity_id>`; identifiers `ticker`, `pmic_entity_id`, `industry`. Pharma drugs → `drug:…`, manufacturers → `company:…`.
-- `as_of`: the newest `inputs[].value.as_of`.
-- `assessment`: `status`/`score`/`label`/`confidence` copied; `scale.higher_is` from the vertical's scoring direction (stored once per vertical in the pack config); `coverage_pct` from `coverage` when numeric.
-- `evidence`: one item per `inputs[]`: `series_id` → `source_ref`, `label` → `title`, `source` → `publisher` (display name from the hub's source table), `citation_url` → `url`, `value.as_of` → `observation_time`, `retrieved_at` null until the hub exposes fetch times, `source_tier` from a per-source table (SEC, FDA, EPA = 1), `rights_status` from the same table. Plus `citations[]` not already covered.
-- `gaps`: each `inputs[].risk_flags` entry (`single_source`, `stale`, …) → one gap.
-- `attestation_ref`: null until pmic-hub signs series (the current `attestation` is an unsigned statement and stays where it is).
+Phase 2 (built 2026-11-11): every service builds the block with the same vendored helper,
+[`verified-core.js`](verified-core.js) (copied unchanged to each service's `lib/`; a test in each service checks the
+copy is byte-identical), and keeps its own field mapping in `lib/verified.js`. The block is additive and only on
+successful answers; errors carry none.
 
-### pmic-macro-signals, pmic-public-sector-signals, pmic-crypto-signals [phase 2]
-Same as above except the subject: `topic:pmic-<pack>:<vertical>`, with `jurisdiction:iso3166:<cc>` links for each
-requested country. pmic-crypto `/v1/tools/address` → `wallet:caip10:…`, `not_scored`.
+### pmic-company-signals, pmic-pharma-signals, pmic-macro-signals, pmic-public-sector-signals, pmic-crypto-signals [phase 2: company 0.7.0, pharma 0.7.0, macro 0.8.0, public-sector 0.5.0, crypto 0.4.0; `packs/lib/verified.js`]
+`/v1/brief`, `/v1/overview`, `/v1/events`, crypto `/v1/tools/address`.
+- `subject`: a company brief, overview or event feed is about the company: `company:sec-cik:<10-digit CIK>` from the
+  hub's entity row, else `company:pmic:<entity_id>`; identifiers `pmic_entity_id`, `ticker`, `industry`, `sec_cik`.
+  Every other answer is about the pack's topic: `topic:pmic-<pack>:<vertical>` (`overview`, `events` for those
+  routes). A country table links each country asked for as `covers` → `jurisdiction:iso3166:<cc>`.
+  `/v1/tools/address`: `wallet:evm-address:<lowercase>` for an EVM address (no chain is given), else
+  `wallet:<format>:<address>`; `not_scored`.
+- `as_of`: the newest `inputs[].value.as_of` / `citations[].as_of` (events: the newest `event_time`).
+- `assessment`: brief `status` (`ok` / `insufficient_data`), `score`, `label`, `confidence` copied;
+  `coverage_pct` = `coverage.weight_share` × 100. **`scale` is null:** a PMIC score reads against its vertical's own
+  labels (a high score can mean "calm", "heating" or "spiking"), so neither "better" nor "riskier" is true across
+  verticals; the label carries the meaning. Overview and events are `not_scored`.
+- `evidence`: one item per input and watch series (`series_id` → `source_ref`, `label` → `title`, the hub source's
+  name → `publisher`, `citation_url` → `url`, `value.as_of` → `observation_time`, the hub source tier → `source_tier`;
+  tiers 1-2 are `permitted_for_derived_output`, others `pending_review`), plus citations not already listed (filing
+  risk and peer tables cite by URL). Events: one item per event with a source URL (`fetch_time` → `retrieved_at`).
+  Overview lists none and points to `/v1/brief`.
+- `gaps`: data-quality flags only (`insufficient_data`, `inputs_pending`, `partial_coverage`, `stale_data`,
+  `cross_source_mismatch`, `single_source`), on the brief or an input; each pending input; and one line when cited
+  series lack a current signed cross-check (from `attestation.summary`).
+- `attestation_ref`: null. A brief cites many series, each with its own signed envelope, which stay in `attestation`.
 
-### brand-protection [phase 2]
-- `/v1/brand/scan`, `/v1/brand/lookalikes`: `subject` `brand:bp:<brand_id>`, links `official_domain` per `official_domains[]`; `as_of`; `not_scored`, label `"<findings_total> findings"`; `evidence: []` and `evidence_more` → `/v1/brand/evidence` with `count = findings_total`; `coverage` → gaps where a check did not run.
-- `/v1/brand/evidence`: `subject` `domain:dns:<domain>` with `lookalike_of` the brand; `as_of` `collected_at`; evidence from `sources[]` (RDAP, DNS, CT log, homepage fetch; tier 1 for RDAP/CT, 2 for homepage).
+### brand-protection [phase 2: 0.1.9, `lib/verified.js`]
+- `/v1/brand/scan`, `/v1/brand/lookalikes`: `subject` `brand:bp:<brand_id>`, links `official_domain` →
+  `domain:dns:<d>` per `official_domains[]` with `service: "agent-trust"`; `as_of` the scan time; `not_scored`, label
+  `"<findings_total> findings[, <n> high risk in this page]"`; `evidence: []` and `evidence_more` →
+  `/v1/brand/evidence` with `count = findings_total`; gaps for a quick scan, a partial scan, DNS errors and
+  `collector_warnings`.
+- `/v1/brand/evidence`: `subject` `domain:dns:<domain>` linked `lookalike_of` the brand; `as_of` `collected_at`;
+  one evidence item per lookup that answered (DNS, RDAP, CT tier 1; TLS tier 1; homepage tier 2), each failed lookup
+  a gap.
 
-### agent-trust [phase 2, needs source capture]
-- `domain-trust`, `brand-verify`, `seller-trust`: `subject` `domain:dns:<domain or hostname>`; score copied, scale 0–100 `better`.
-- `sanctions-check`, `reputation`: `subject` `wallet:caip10:<caip2 chain>:<address>`; `reputation_score` (scale "0-100, higher is more trustworthy"); `coverage` → `coverage_pct` where numeric.
-- **The real work:** today agent-trust returns `reasons[]` as plain strings, not sources. The routes already fetch RDAP, DNS, TLS certificates, Blockscout and the sanctions list; phase 2 records each fetch as an evidence item (publisher, URL, retrieved_at). Until then `evidence: []` plus one gap `{field: "evidence", reason: "sources not yet itemized", impact: "reasons only"}`.
+### agent-trust [phase 2: 1.2.0, `lib/verified.js`]
+- `domain-trust`, `brand-verify`, `seller-trust`: `subject` `domain:dns:<domain or hostname>`; score copied, scale 0-100
+  `better`; seller-trust's `recommendation` is the label and `native_status`.
+- `reputation`: `subject` `wallet:caip10:eip155:<1|8453|42161|137>:<address>`; `reputation_score`; `native_status` the
+  route's `coverage` (`full` / `basic`) and `coverage_pct` its `score_max_possible` (100 / 35), with a gap when
+  explorer signals are missing.
+- `sanctions-check`: `wallet:evm-address:<lowercase>` for an address (the screening list has no chain), else
+  `topic:csl-name:<url-encoded query>`; `not_scored`, label the match count.
+- **Sources itemized:** each live lookup the route made is one evidence item (RDAP via rdap.org, DNS, the TLS
+  handshake, the Consolidated Screening List, Blockscout or the Pocket RPC host), retrieved when the answer was
+  computed (`as_of` = cache time, so a cached answer shows its real age).
 
 ### treasury-capital-score [not planned: the dossier carries protocols (owner, 2026-11-11)]
 - `subject`: `protocol:tcs6:<entity.entity_id>`; identifiers `entity_type`, `peer_cohort`; links: registry wallets.
@@ -156,8 +185,9 @@ Every step follows the owner rules: Beta first, an owner-reviewed Beta response,
    vendors a ~100-line `envelope.js` like it vendors other shared code) → minor version bump → `openapi.json` gains
    an optional `verified` property → Beta via PSM → relay test → owner review → MainNet. One card update in PSM
    (spec hash changes).
-3. **Phase 2:** the five PMIC packs (one shared change in the pack template), brand-protection, agent-trust
-   (with source capture). Each service Beta → review → MainNet; about 7 card updates.
+3. **Phase 2** (built 2026-11-11 as one batch): the five PMIC packs (one shared change in the pack server),
+   brand-protection, agent-trust (with source capture). Beta → review → MainNet. No card update is needed: the
+   cards' spec links track `main` (brand-protection and agent-trust cards pin a commit and can be refreshed later).
 4. **Phase 3:** the optional services, and cross-service link checks (every `links[].service` must answer for that
    `id`). TCS-6 keeps its frozen v1 contract; protocols get the shared block through the dossier.
 

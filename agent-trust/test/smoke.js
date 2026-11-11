@@ -107,6 +107,36 @@ async function main() {
   const badAddr = await req("/v1/reputation", { chain: "base", address: "0x123" });
   assert.strictEqual(badAddr.status, 422);
 
+  // 1.2.0: the shared `verified` block (pocket-agentic-envelope/1) on every 200, valid against the repo schema.
+  const path = require("path");
+  const fs = require("fs");
+  const envDir = path.join(__dirname, "..", "..", "docs", "envelope");
+  assert.strictEqual(fs.readFileSync(path.join(__dirname, "..", "lib", "verified-core.js"), "utf8"),
+    fs.readFileSync(path.join(envDir, "verified-core.js"), "utf8"), "lib/verified-core.js must be an unchanged copy of docs/envelope/verified-core.js");
+  const { validate } = await import(require("url").pathToFileURL(path.join(envDir, "validate.mjs")).href);
+  const schema = JSON.parse(fs.readFileSync(path.join(envDir, "pocket-agentic-envelope-v1.schema.json"), "utf8"));
+  const st = await req("/v1/seller-trust", { url: "https://example.com/pay" });
+  assert.strictEqual(st.status, 200);
+  for (const [r, route] of [[dt, "/v1/domain-trust"], [bv, "/v1/brand-verify"], [st, "/v1/seller-trust"], [sc, "/v1/sanctions-check"], [ethRep, "/v1/reputation"], [eoa, "/v1/reputation"], [ethFallback, "/v1/reputation"]]) {
+    const v = r.body.verified;
+    assert.ok(v, `${route}: verified missing`);
+    assert.deepStrictEqual(validate(schema, v), [], `${route}: verified fails the schema`);
+    assert.strictEqual(v.route, route);
+    assert.strictEqual(v.service_version, "1.2.0");
+    assert.ok(v.evidence.length >= 1, `${route}: evidence listed`);
+  }
+  assert.strictEqual(dt.body.verified.subject.id, "domain:dns:example.com");
+  assert.strictEqual(dt.body.verified.assessment.score, dt.body.trust_score);
+  assert.strictEqual(st.body.verified.assessment.label, st.body.recommendation);
+  assert.strictEqual(sc.body.verified.assessment.status, "not_scored");
+  assert.strictEqual(ethRep.body.verified.subject.id, "wallet:caip10:eip155:1:0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
+  assert.strictEqual(ethRep.body.verified.evidence[0].publisher, "Blockscout");
+  assert.strictEqual(eoa.body.verified.subject.id, "wallet:caip10:eip155:8453:0x1" + "a".repeat(39));
+  assert.strictEqual(eoa.body.verified.assessment.coverage_pct, 35);
+  assert.strictEqual(eoa.body.verified.gaps[0].field, "explorer_signals");
+  assert.strictEqual(ethFallback.body.verified.evidence[0].publisher, "Pocket Network public RPC");
+  assert.strictEqual(badDomain.body.verified, undefined, "errors carry no verified block");
+
   console.log("smoke: all assertions passed");
   process.exit(0);
 }

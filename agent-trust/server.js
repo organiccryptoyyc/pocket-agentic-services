@@ -18,7 +18,7 @@ const checks = require("./lib/checks");
 const { cached } = require("./lib/net");
 
 const SERVICE = "agent-trust";
-const VERSION = "1.1.0";
+const VERSION = "1.2.0";
 const VERSION_PATH = "/v1/version";
 const HEALTH_PATH = "/v1/health";
 
@@ -290,13 +290,15 @@ async function handleReputation(body) {
 
 // --- wiring ------------------------------------------------------------------
 
+// 1.2.0: every successful answer also carries the shared `verified` block (lib/verified.js).
+const { withVerified } = require("./lib/verified");
 const routes = new Map([
   ["POST /v1/domain-trust", handleDomainTrust],
   ["POST /v1/brand-verify", handleBrandVerify],
   ["POST /v1/seller-trust", handleSellerTrust],
   ["POST /v1/sanctions-check", handleSanctionsCheck],
   ["POST /v1/reputation", handleReputation],
-]);
+].map(([key, handler]) => [key, async (body) => withVerified(key.split(" ")[1], await handler(body), VERSION)]));
 
 const server = createServer({ service: SERVICE, version: VERSION, versionPath: VERSION_PATH, healthPath: HEALTH_PATH, routes });
 const PORT = Number(process.env.PORT || 8080);

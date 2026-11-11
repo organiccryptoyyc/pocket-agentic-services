@@ -127,6 +127,28 @@ async function entityInfo(id) {
   return e ? { entity_id: e.entity_id, name: e.name, ticker: e.ticker, industry: e.industry } : { entity_id: id };
 }
 
+// ---- the shared `verified` block (lib/verified.js) ---------------------------------------
+// Additive: never changes the answer, and a failure to build it leaves the answer without it.
+const VF = require("./lib/verified");
+const cikOf = (id) => {
+  const e = entityCache.map && entityCache.map.get(id);
+  return e && e.cik ? String(e.cik) : null;
+};
+async function sourceTable() {
+  const r = await hubOptional("/v1/sources", {});
+  return new Map(((r && r.sources) || []).map((s) => [s.source_id, { name: s.name, tier: s.tier }]));
+}
+async function withVerified(out, fn, { entityId = null, countries = null } = {}) {
+  try {
+    const entity = entityId ? await entityInfo(entityId) : null;
+    const ctx = { pack: PACK, version: PACK.version, cik: entityId ? cikOf(entityId) : null, entity, sources: await sourceTable(), countries };
+    return { ...out, verified: fn(out, ctx) };
+  } catch (e) {
+    console.error(JSON.stringify({ verified_error: String(e && e.message) }));
+    return out;
+  }
+}
+
 // ---- briefs -------------------------------------------------------------------------------
 
 async function member(cfg, horizon) {
@@ -369,9 +391,15 @@ const routes = new Map([
   ["POST /v1/brief", async (raw) => {
     const b = obj(raw);
     const v = verticalOf(b);
-    return wrap(await withAttestation(await brief(v, { horizon: horizonOf(b), entity: entityOf(b, needsEntity(v)), countries: countriesOf(b) })));
+    const entity = entityOf(b, needsEntity(v));
+    const countries = countriesOf(b);
+    const out = wrap(await withAttestation(await brief(v, { horizon: horizonOf(b), entity, countries })));
+    return withVerified(out, VF.forBrief, { entityId: entity, countries });
   }],
-  ["POST /v1/overview", async (raw) => wrap(await overview(obj(raw)))],
+  ["POST /v1/overview", async (raw) => {
+    const out = wrap(await overview(obj(raw)));
+    return withVerified(out, VF.forOverview, { entityId: out.entity ? out.entity.entity_id : null });
+  }],
   ["POST /v1/signals", async (raw) => wrap(await signals(obj(raw)))],
   ["POST /v1/signal", async (raw) => { const b = obj(raw); await inScope(b.series_id); return wrap(await withAttestation(await hub("/v1/signal", { series_id: b.series_id }))); }],
   ["POST /v1/explain", async (raw) => { const b = obj(raw); await inScope(b.series_id); return wrap(await hub("/v1/explain", { series_id: b.series_id, horizon: horizonOf(b) })); }],
@@ -382,7 +410,8 @@ if (PACK.events_scope) {
   routes.set("POST /v1/events", async (raw) => {
     const b = obj(raw);
     const entity = entityOf(b, !PACK.events_scope.industry);
-    return wrap(await hub("/v1/events", { ...pick(b), ...PACK.events_scope, ...(entity ? { entity_id: entity } : {}) }));
+    const out = wrap(await hub("/v1/events", { ...pick(b), ...PACK.events_scope, ...(entity ? { entity_id: entity } : {}) }));
+    return withVerified(out, VF.forEvents, { entityId: entity });
   });
 }
 if ((PACK.extra_routes || []).includes("inflation_adjust")) routes.set("POST /v1/inflation/adjust", async (raw) => wrap(await inflationAdjust(obj(raw))));
@@ -394,7 +423,8 @@ if ((PACK.extra_routes || []).includes("crypto_tools")) {
     if (r.error) throw new ClientError(400, "invalid_input", r.error);
     return wrap(r);
   };
-  routes.set("POST /v1/tools/address", tool(T.addressCheck));
+  const address = tool(T.addressCheck);
+  routes.set("POST /v1/tools/address", async (raw) => withVerified(await address(raw), VF.forAddress));
   routes.set("POST /v1/tools/units", tool(T.unitConvert));
 }
 

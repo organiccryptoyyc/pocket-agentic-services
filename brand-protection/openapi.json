@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Brand Protection Monitor",
-    "version": "0.1.8",
+    "version": "0.1.9",
     "description": "Lookalike domains, certificates and copied homepages for a brand, with deterministic risk scores and evidence hashes. Detection and evidence only."
   },
   "paths": {
@@ -113,6 +113,7 @@
       "Report": {
         "type": "object",
         "properties": {
+          "verified": { "$ref": "#/components/schemas/Verified" },
           "service": { "type": "string" },
           "brand_id": { "type": "string" },
           "brand": { "type": "string" },
@@ -129,6 +130,7 @@
       "Evidence": {
         "type": "object",
         "properties": {
+          "verified": { "$ref": "#/components/schemas/Verified" },
           "evidence_id": { "type": "string" },
           "domain": { "type": "string" },
           "collected_at": { "type": "string", "format": "date-time" },
@@ -138,6 +140,24 @@
           "certificate": { "type": "object", "nullable": true },
           "homepage": { "type": "object", "nullable": true, "description": "Derived fields and a SHA-256 of the page; never the page itself" },
           "ct_log_entry": { "type": "object", "nullable": true }
+        }
+      },
+      "Verified": {
+        "type": "object",
+        "description": "Since 0.1.9. The shared pocket-agentic-envelope/1 block. Scan and lookalikes: subject brand:bp:<brand_id>, linked to its official domains (official_domain, answered by agent-trust); assessment not_scored (findings are observations, not a verdict); evidence empty with evidence_more pointing to /v1/brand/evidence; gaps where a scan was quick or partial. Evidence: subject domain:dns:<lookalike>, linked lookalike_of the brand; one evidence item per lookup that answered, failed lookups as gaps. Full schema: https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/docs/envelope/pocket-agentic-envelope-v1.schema.json",
+        "properties": {
+          "schema": { "type": "string", "enum": ["pocket-agentic-envelope/1"] },
+          "service": { "type": "string" },
+          "service_version": { "type": "string" },
+          "route": { "type": "string" },
+          "subject": { "type": "object" },
+          "as_of": { "type": "string" },
+          "generated_at": { "type": "string" },
+          "assessment": { "type": "object" },
+          "evidence": { "type": "array", "items": { "type": "object" } },
+          "evidence_more": { "type": "object", "nullable": true },
+          "gaps": { "type": "array", "items": { "type": "object" } },
+          "attestation_ref": { "type": "object", "nullable": true }
         }
       }
     }

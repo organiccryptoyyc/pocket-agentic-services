@@ -35,6 +35,14 @@ const SAMPLES = {
   },
 };
 
+// The shared `verified` block (pocket-agentic-envelope/1): typed loosely here (plain JSON Schema and OpenAPI 3.0 can't
+// share the full 2020-12 schema); the full schema is in docs/envelope.
+const VERIFIED = {
+  type: "object",
+  description: "The shared pocket-agentic-envelope/1 block: who the answer is about (a company by SEC CIK, else the pack's topic), when it was true (as_of), what was concluded (assessment, copied from status/score/label/confidence), the sources behind it (evidence, at most 50), what is missing or unverified (gaps). Full schema: https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/docs/envelope/pocket-agentic-envelope-v1.schema.json. Also on /v1/overview, /v1/events and /v1/tools/address.",
+  properties: { schema: { type: "string", enum: ["pocket-agentic-envelope/1"] }, service: { type: "string" }, service_version: { type: "string" }, route: { type: "string" }, subject: { type: "object" }, as_of: { type: "string" }, generated_at: { type: "string" }, assessment: { type: "object" }, evidence: { type: "array", items: { type: "object" } }, gaps: { type: "array", items: { type: "object" } } },
+};
+
 // The answer to POST /v1/brief, as JSON Schema both the openapi spec and the portal descriptor carry.
 // Fields that can be null carry no type: OpenAPI 3.0's "nullable" is ignored by plain JSON Schema
 // validators (a gateway refused an insufficient_data brief with score null for it).
@@ -52,6 +60,7 @@ const BRIEF = {
     inputs: { type: "array", items: { type: "object" } }, watch: { type: "array", items: { type: "object" } },
     recent_events: { type: "array", items: { type: "object" } },
     citations: { type: "array", items: { type: "object", properties: { url: { type: "string" }, label: { type: "string" } } } },
+    verified: VERIFIED,
   },
   required: ["service", "vertical", "status", "summary"],
 };

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Agent Trust and Compliance API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "agent-trust on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body. Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every check is a real live call (RDAP, DNS, a live TLS handshake, the U.S. Consolidated Screening List, the public Blockscout explorer, or Pocket Network's public RPC) made at request time."
   },
   "servers": [
@@ -105,6 +105,9 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "verified": {
+                      "$ref": "#/components/schemas/Verified"
                     }
                   }
                 }
@@ -169,6 +172,9 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "verified": {
+                      "$ref": "#/components/schemas/Verified"
                     }
                   }
                 }
@@ -224,6 +230,9 @@
                         "proceed_with_caution",
                         "high_risk"
                       ]
+                    },
+                    "verified": {
+                      "$ref": "#/components/schemas/Verified"
                     }
                   }
                 }
@@ -274,6 +283,9 @@
                     },
                     "matches": {
                       "type": "array"
+                    },
+                    "verified": {
+                      "$ref": "#/components/schemas/Verified"
                     }
                   }
                 }
@@ -432,6 +444,9 @@
                     },
                     "note": {
                       "type": "string"
+                    },
+                    "verified": {
+                      "$ref": "#/components/schemas/Verified"
                     }
                   }
                 }
@@ -473,6 +488,60 @@
                 "type": "string"
               }
             }
+          }
+        }
+      },
+      "Verified": {
+        "type": "object",
+        "description": "Since 1.2.0. The shared pocket-agentic-envelope/1 block on every successful POST answer: who it is about (domain:dns:<domain>; wallet:caip10:eip155:<chain id>:<address> for reputation; an address or name for sanctions-check), when the lookups ran (as_of = when the answer was computed, so a cached answer shows its real age), what was concluded (assessment: the route's 0-100 score, higher is more trustworthy; sanctions-check is not_scored), each live lookup as an evidence item (RDAP, DNS, TLS, the screening list, the explorer or RPC) and what is missing (gaps). Full schema: https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/docs/envelope/pocket-agentic-envelope-v1.schema.json",
+        "properties": {
+          "schema": {
+            "const": "pocket-agentic-envelope/1"
+          },
+          "service": {
+            "type": "string"
+          },
+          "service_version": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "object"
+          },
+          "as_of": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string"
+          },
+          "assessment": {
+            "type": "object"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "evidence_more": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "attestation_ref": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }

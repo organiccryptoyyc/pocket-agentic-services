@@ -484,3 +484,61 @@ test("inputs the hub has never collected are pending, not missing", () => {
   assert.deepEqual(out.pending_inputs.map((p) => p.series_id), ["b", "c"]);
   assert.equal(out.coverage.inputs, 1);
 });
+
+// The shared `verified` block (pocket-agentic-envelope/1, docs/envelope/): on every brief, overview, events and
+// address answer of every bundle, valid against the repo schema, copied from the answer (never changing it).
+test("verified: every brief, overview, events and address answer carries a valid shared block", async () => {
+  const ENV = path.join(__dirname, "..", "..", "docs", "envelope");
+  assert.equal(fs.readFileSync(path.join(__dirname, "..", "packs", "lib", "verified-core.js"), "utf8"), fs.readFileSync(path.join(ENV, "verified-core.js"), "utf8"), "packs/lib/verified-core.js must be an unchanged copy");
+  const { validate } = await import(require("node:url").pathToFileURL(path.join(ENV, "validate.mjs")).href);
+  const schema = JSON.parse(fs.readFileSync(path.join(ENV, "pocket-agentic-envelope-v1.schema.json"), "utf8"));
+  const ok = (v, what) => { assert.ok(v, `${what}: verified missing`); assert.deepEqual(validate(schema, v), [], what); };
+  for (const b of BUNDLES) {
+    const bundle = require(`../packs/bundles/${b}.json`);
+    for (const v of bundle.verticals) {
+      const entities = ["entity_composite", "entity_events", "peer_table"].includes(v.kind) ? bundle.entities : [null];
+      for (const e of entities) {
+        const r = await call(b, "POST", "/v1/brief", { vertical: v.id, ...(e ? { entity_id: e } : {}) });
+        const x = r.json.verified;
+        ok(x, `${b} ${v.id} ${e || ""}`);
+        assert.equal(x.service, b);
+        assert.equal(x.service_version, bundle.version);
+        assert.equal(x.route, "/v1/brief");
+        assert.equal(x.assessment.native_status, r.json.status);
+        assert.equal(x.assessment.score, r.json.score ?? null);
+        assert.equal(x.assessment.scale, null, "PMIC scores read against the vertical's labels");
+        if (e) assert.match(x.subject.id, /^company:(sec-cik:\d{10}|pmic:[a-z0-9]+)$/);
+        else assert.equal(x.subject.id, `topic:pmic-${b.replace(/^pmic-/, "").replace(/-signals$/, "")}:${v.id}`);
+        assert.ok(x.evidence.length > 0 || !(r.json.citations || []).length, `${b} ${v.id}: cited sources become evidence`);
+      }
+    }
+    const ov = await call(b, "POST", "/v1/overview", {});
+    if (ov.status === 200) {
+      ok(ov.json.verified, `${b} overview`);
+      assert.equal(ov.json.verified.evidence_more.route, "/v1/brief");
+    }
+  }
+  // Companies are keyed by their SEC CIK (owner, 2026-11-11).
+  const fund = (await call("pmic-company-signals", "POST", "/v1/overview", { entity_id: "aapl" })).json.verified;
+  assert.equal(fund.subject.id, "company:sec-cik:0000320193");
+  assert.equal(fund.subject.identifiers.ticker, "AAPL");
+  const ev = await call("pmic-company-signals", "POST", "/v1/events", { entity_id: "aapl" });
+  ok(ev.json.verified, "company events");
+  assert.equal(ev.json.verified.subject.id, "company:sec-cik:0000320193");
+  assert.equal(ev.json.verified.assessment.label, `${ev.json.events.length} event${ev.json.events.length === 1 ? "" : "s"}`);
+  const ph = await call("pmic-pharma-signals", "POST", "/v1/events", {});
+  ok(ph.json.verified, "pharma events");
+  // Country tables link the countries asked for.
+  const mac = require("../packs/bundles/pmic-macro-signals.json").verticals.find((v) => v.kind === "country_table");
+  if (mac) {
+    const ct = (await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: mac.id, countries: ["us", "de"] })).json.verified;
+    assert.deepEqual(ct.subject.links.map((l) => [l.rel, l.id]), [["covers", "jurisdiction:iso3166:us"], ["covers", "jurisdiction:iso3166:de"]]);
+  }
+  const addr = await call("pmic-crypto-signals", "POST", "/v1/tools/address", { address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" });
+  ok(addr.json.verified, "address tool");
+  assert.equal(addr.json.verified.subject.id, "wallet:evm-address:0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+  // Errors carry no block.
+  const bad = await call("pmic-macro-signals", "POST", "/v1/brief", { vertical: "nope" });
+  assert.equal(bad.status, 400);
+  assert.equal(bad.json.verified, undefined);
+});
