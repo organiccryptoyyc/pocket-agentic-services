@@ -103,6 +103,13 @@ function tcs6Assessment(report) {
   };
 }
 
+// Extra gaps are added only when the TCS-6 report does not already state the same reason (availability's not_valued
+// lines come from the same bundle gaps the report lists).
+function mergeGaps(base, extra) {
+  const seen = new Set(base.map((g) => g.reason));
+  return [...base, ...extra.filter((g) => !seen.has(g.reason) && seen.add(g.reason))];
+}
+
 const NOT_SCORED = { status: "not_scored", native_status: null, score: null, scale: null, label: null, confidence: null, coverage_pct: null };
 
 /**
@@ -132,7 +139,7 @@ function build(route, version, report, bundle, opts = {}, nowMs = Date.now()) {
     assessment: opts.assessment === "tcs6" ? tcs6Assessment(report) : { ...NOT_SCORED },
     evidence: ev.shown,
     evidence_more: more,
-    gaps: [...gapsOf(report), ...(opts.extraGaps || [])],
+    gaps: mergeGaps(gapsOf(report), opts.extraGaps || []),
     attestation_ref: attestationRef(report),
   };
 }

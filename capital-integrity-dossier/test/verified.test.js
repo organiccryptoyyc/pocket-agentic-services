@@ -153,7 +153,14 @@ test("availability: not_scored, unpriced tokens become gaps", async () => {
   assert.deepStrictEqual(await schemaErrors(a.verified), []);
   assert.strictEqual(a.verified.route, "/v1/dossier/availability");
   assert.strictEqual(a.verified.assessment.status, "not_scored");
-  assert.ok(a.verified.gaps.some((g) => g.field === "holdings.prices" && /XYZ/.test(g.reason)));
+  assert.ok(a.verified.gaps.some((g) => g.field === "not_valued" && /XYZ/.test(g.reason)));
+});
+
+test("availability does not repeat a gap the TCS-6 report already states", () => {
+  const b = bundle();
+  const r = report({ data_gaps: [{ field: "holdings.prices", reason: b.gaps[0].reason, impact: "Those positions are not counted." }] });
+  const a = A.availability({ entity_id: seed(r, b) }, NOW);
+  assert.strictEqual(a.verified.gaps.filter((g) => g.reason === b.gaps[0].reason).length, 1);
 });
 
 test("status and attestation edge cases", async () => {

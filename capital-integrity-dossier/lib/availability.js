@@ -187,7 +187,7 @@ function availability(body, nowMs = Date.now()) {
     disclaimer: r.disclaimer,
     verified: V.build("/v1/dossier/availability", VERSION, r, bundle, {
       assessment: "none",
-      extraGaps: unpriced.map((reason) => ({ field: "holdings.prices", reason, impact: "left out of every bucket", remediation: "priced on a later TCS-6 run" })),
+      extraGaps: unpriced.map((reason) => ({ field: "not_valued", reason, impact: "left out of every bucket" })),
     }, nowMs),
   };
 }

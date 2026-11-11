@@ -107,7 +107,8 @@ Phase in brackets: the [rollout](#rollout) step in which the service gets the fi
   bundle's `sources` with null tier and times. A section that cites sources lists only those; a section that cites
   none lists no evidence and points to the plan (`evidence_more` → `/v1/dossier/plan`), so the same list is not
   repeated on every paid call. `evidence_more` → `/v1/dossier/section` when the plan has more than 50.
-- `gaps`: the report's `data_gaps`; availability adds each unpriced token (`not_valued`) as a `holdings.prices` gap.
+- `gaps`: the report's `data_gaps`; availability adds each `not_valued` line as a `not_valued` gap unless the report
+  already states the same reason.
 - `attestation_ref`: the dossier's `attestation_ref` (`evidence_manifest_hash` → `payload_hash`; a status outside
   valid/invalid/missing/stale becomes `missing`; no attestation → null).
 
