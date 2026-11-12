@@ -7,6 +7,8 @@
 //
 //   node pmic/packs/ops/build-listings.js
 // Re-run after editing a bundle. registrationTx comes from REGISTRATION_TX below (placeholder until registered).
+// Output matches the committed (registered) files. A card only changes, and only then gets today's
+// date, when its content does; card_changed: true in the log means it must be re-registered (PSM).
 "use strict";
 
 // MainNet registration txs (2026-10-04, 1,000 POKT each).
@@ -43,6 +45,31 @@ const VERIFIED = {
   properties: { schema: { type: "string", enum: ["pocket-agentic-envelope/1"] }, service: { type: "string" }, service_version: { type: "string" }, route: { type: "string" }, subject: { type: "object" }, as_of: { type: "string" }, generated_at: { type: "string" }, assessment: { type: "object" }, evidence: { type: "array", items: { type: "object" } }, gaps: { type: "array", items: { type: "object" } } },
 };
 
+// Signed input attestations (the Verified layer, 2026-10-19/20): on every brief.
+const ATTESTATION = {"type": "object", "description": "Signed input attestations for the series this answer cites (Verified layer). Each series has a verification status (valid, stale, invalid, or missing when no cross-check is run for it) and, unless invalid, the envelope exactly as the collector signed it: Ed25519 over an RFC 8785 payload, public key in config/attestation_keys.json. Attestation only: it never changes a score, label or value.", "properties": {"schema_version": {"type": "string"}, "summary": {"type": "object", "properties": {"series": {"type": "integer"}, "valid": {"type": "integer"}, "stale": {"type": "integer"}, "invalid": {"type": "integer"}, "missing": {"type": "integer"}}}, "statement": {"type": "string"}, "series": {"type": "array", "items": {"type": "object", "properties": {"series_id": {"type": "string"}, "verification_status": {"type": "string", "enum": ["valid", "stale", "invalid", "missing"]}, "verification_detail": {"type": "string"}, "envelope": {"type": ["object", "null"]}}}}}};
+
+// OpenAPI 3.0 form of ATTESTATION (no type lists; an example and a description in place of the nullable envelope type).
+const ATTESTATION_OAS = {"type": "object", "description": "Signed input attestations for the series this answer cites (Verified layer). Each series has a verification status (valid, stale, invalid, or missing when no cross-check is run for it) and, unless invalid, the envelope exactly as the collector signed it: Ed25519 over an RFC 8785 payload, public key in config/attestation_keys.json. Attestation only: it never changes a score, label or value.", "properties": {"schema_version": {"type": "string", "example": "pmic-attestation/1.1"}, "summary": {"type": "object", "properties": {"series": {"type": "integer"}, "valid": {"type": "integer"}, "stale": {"type": "integer"}, "invalid": {"type": "integer"}, "missing": {"type": "integer"}}}, "statement": {"type": "string"}, "series": {"type": "array", "items": {"type": "object", "properties": {"series_id": {"type": "string"}, "verification_status": {"type": "string", "enum": ["valid", "stale", "invalid", "missing"]}, "verification_detail": {"type": "string"}, "envelope": {"description": "{payload, payload_hash, signature}: the signed attestation, unchanged; null when missing or invalid"}}}}}};
+
+// Extra fields a pack's brief can carry, after attestation (keyed by service_id).
+const OUTPUT_PROPERTIES = {
+  "pmic-macro-signals": { fed_consensus: {"type": "object", "description": "fed-consensus brief only: three independent views of the Fed's next move side by side.", "properties": {"prediction_market": {"type": "object", "properties": {"source": {"type": "string"}, "meeting": {"type": ["string", "null"]}, "market_closes_at": {"type": ["string", "null"]}, "p_cut": {"type": ["number", "null"]}, "p_hold": {"type": ["number", "null"]}, "p_hike": {"type": ["number", "null"]}, "implied_change_bp": {"type": ["number", "null"], "description": "Probability-weighted change in basis points (50+ counted as 50)."}, "most_likely": {"type": ["string", "null"]}, "volume_24h_usd": {"type": ["number", "null"]}, "observed_at": {"type": ["string", "null"]}, "stale": {"type": ["boolean", "null"]}, "url": {"type": ["string", "null"]}, "lean": {"type": ["string", "null"], "enum": ["cut", "hold", "hike", null], "description": "cut, hold or hike; null when that view has no reading."}}}, "bond_market": {"type": "object", "properties": {"policy_rate_pct": {"type": ["number", "null"]}, "treasury_2y_pct": {"type": ["number", "null"]}, "spread_2y_minus_policy_bp": {"type": ["integer", "null"]}, "lean": {"type": ["string", "null"], "enum": ["cut", "hold", "hike", null], "description": "cut, hold or hike; null when that view has no reading."}, "horizon": {"type": "string"}}}, "data": {"type": "object", "properties": {"score": {"type": ["integer", "null"]}, "label": {"type": ["string", "null"]}, "lean": {"type": ["string", "null"], "enum": ["cut", "hold", "hike", null], "description": "cut, hold or hike; null when that view has no reading."}}}, "prediction_vs_bond": {"type": ["string", "null"], "enum": ["aligned", "mixed", "diverging", null]}, "agreement": {"type": ["string", "null"], "enum": ["aligned", "mixed", "diverging", null]}, "summary": {"type": "string"}, "method": {"type": "string"}}} },
+};
+
+// Card text that differs from the generic template, as registered on chain (D7: the repo matches
+// what runs). attestation_note goes before "Every response"; lead replaces the bundle description
+// at the start; compact is the shorter template public-sector needs to stay under 4,096 bytes;
+// minified cards are stored on one line (as registered).
+const ATTEST_LONG = "Each brief carries signed input attestations for the series it cites (Ed25519, verified by the service, passed through unchanged); they never change a score.";
+const ATTEST_SHORT = "Briefs carry signed input attestations (Ed25519) that never change a score.";
+const CARD_TEXT = {
+  "pmic-company-signals": { attestation_note: ATTEST_SHORT, minified: true },
+  "pmic-crypto-signals": { attestation_note: ATTEST_LONG },
+  "pmic-macro-signals": { attestation_note: ATTEST_LONG },
+  "pmic-pharma-signals": { attestation_note: ATTEST_SHORT, lead: "Scored drug-market and company safety briefs from openFDA, FDA, NLM DailyMed and BLS: drug recalls, adverse event reports, label changes and approvals for the US drug market and for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipelines (ClinicalTrials.gov), drug shortages, medical device recalls and adverse events, FDA warning letters, and drug price inflation (CPI and PPI). Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and citations." },
+  "pmic-public-sector-signals": { attestation_note: ATTEST_SHORT, compact: true, minified: true, questions: { "medicare-providers": "Is Medicare enrollment growing and shifting to Medicare Advantage?" }, lead: "Scored US public sector briefs from official government data: product safety recalls (CPSC, NHTSA, FDA food), political money (FEC, Senate lobbying), federal spending (USAspending, Treasury), natural hazards (FEMA, USGS, NWS), cyber threat (CISA KEV, NVD), respiratory illness (CDC), wildfire activity (NIFC), climate anomaly (NOAA), air travel demand (TSA), federal rulemaking (Federal Register), legislation (Congress.gov), environmental enforcement (EPA ECHO), Medicare enrollment (CMS) and nonprofit finances (IRS Form 990). Each brief is a 0-100 score with label, trend over the horizon, its driving inputs, risk flags, confidence and a citation for every input." },
+};
+
 // The answer to POST /v1/brief, as JSON Schema both the openapi spec and the portal descriptor carry.
 // Fields that can be null carry no type: OpenAPI 3.0's "nullable" is ignored by plain JSON Schema
 // validators (a gateway refused an insufficient_data brief with score null for it).
@@ -60,6 +87,7 @@ const BRIEF = {
     inputs: { type: "array", items: { type: "object" } }, watch: { type: "array", items: { type: "object" } },
     recent_events: { type: "array", items: { type: "object" } },
     citations: { type: "array", items: { type: "object", properties: { url: { type: "string" }, label: { type: "string" } } } },
+    attestation: ATTESTATION,
     verified: VERIFIED,
   },
   required: ["service", "vertical", "status", "summary"],
@@ -69,12 +97,21 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
+// PMIC_LISTINGS_OUT writes the files somewhere else (the drift test compares them with the committed ones).
+const OUT = process.env.PMIC_LISTINGS_OUT ? path.resolve(process.env.PMIC_LISTINGS_OUT) : path.join(ROOT, "ops");
 const REPO = "https://github.com/organiccryptoyyc/pocket-agentic-services";
 const RAW = "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/main/pmic/packs";
 const SUPPLIER = "pokt1a0e9xlhmrpsw44upzmxqj7ct6eh7enqr7tzysx";
 const OWNER = "pokt16cqt2tjzec6gsxdncl0v6k2aa7awya0wghevlw";
 const ENDPOINT = "https://agentic.organiccryptoyyc.com";
 const CU = 100000;
+
+// BRIEF plus the pack's own extra fields, placed after attestation and before verified.
+function briefFor(b) {
+  const extra = OUTPUT_PROPERTIES[b.service_id] || {};
+  const { verified, ...rest } = BRIEF.properties;
+  return { ...BRIEF, properties: { ...rest, ...extra, verified } };
+}
 
 const needsEntity = (v) => v.kind === "entity_composite" || v.kind === "entity_events" || v.kind === "peer_table";
 
@@ -102,15 +139,23 @@ function example(b) {
 const CARD_DESCRIPTION_MAX = 2048;
 
 function cardDescription(b) {
-  const text = (verts) => `${b.description} POST /v1/brief {vertical${b.entities ? ", entity_id" : ""}} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: ${verts}. Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${b.events_scope ? ", /v1/events" : ""}. Every response is a single JSON object. Research signal, not investment advice.`;
-  const long = text(b.verticals.map((v) => `${v.id} (${v.question})`).join("; "));
+  const t = CARD_TEXT[b.service_id] || {};
+  const lead = t.lead || b.description;
+  const note = t.attestation_note ? `${t.attestation_note} ` : "";
+  const ev = b.events_scope ? ", /v1/events" : "";
+  const ent = b.entities ? ", entity_id" : "";
+  const text = t.compact
+    ? (verts) => `${lead} POST /v1/brief {vertical${ent}}: one brief; /v1/overview: all briefs; /v1/verticals: the list. Verticals: ${verts}. Raw series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${ev}. ${note}Every response is one JSON object. Research signal, not investment advice.`
+    : (verts) => `${lead} POST /v1/brief {vertical${ent}} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: ${verts}. Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${ev}. ${note}Every response is a single JSON object. Research signal, not investment advice.`;
+  const long = text(b.verticals.map((v) => `${v.id} (${(t.questions || {})[v.id] || v.question})`).join("; "));
   if (long.length <= CARD_DESCRIPTION_MAX) return long;
   const short = text(b.verticals.map((v) => v.id).join(", "));
   if (short.length > CARD_DESCRIPTION_MAX) throw new Error(`${b.service_id}: card description is ${short.length} characters, over ${CARD_DESCRIPTION_MAX}`);
   return short;
 }
 
-function card(b) {
+// `updated` is passed in: the existing card's date when nothing else changed.
+function card(b, updated = new Date().toISOString().slice(0, 10)) {
   return {
     schema: "pocket-service-card/v1",
     description: cardDescription(b),
@@ -118,7 +163,6 @@ function card(b) {
     apis: [`${b.service_id}-briefs`],
     specs: [
       { kind: "openapi", api: `${b.service_id}-briefs`, url: `${RAW}/ops/${b.service_id}/openapi.json` },
-      { kind: "docs", api: `${b.service_id}-briefs`, url: `${RAW}/README.md`, notes: "How briefs are scored." },
     ],
     access: "public",
     results: "variable",
@@ -135,7 +179,7 @@ function card(b) {
       notes: "Gateway operators: configure as type passthrough with rpc_types [\"rest\"].",
     },
     docs: `${REPO}/blob/main/pmic/packs/README.md`,
-    updated: new Date().toISOString().slice(0, 10),
+    updated,
   };
 }
 
@@ -159,7 +203,7 @@ function portal(b) {
       required: ["vertical"],
     },
     outputSchema: {
-      ...BRIEF,
+      ...briefFor(b),
       description: "The answer to POST /v1/brief. score, label and trend_basis are null on insufficient_data briefs; entity is an object on company briefs. Errors return {error: {code, message}} with HTTP 400; other routes return their own JSON objects (see the openapi spec).",
     },
     methods,
@@ -234,6 +278,8 @@ function oas30(schema) {
     if (schema.type.includes("null") || types.length !== 1) delete out.type;
     else out.type = types[0];
   }
+  // An enum that allows null can't be expressed without a type list either.
+  if (Array.isArray(schema.enum) && schema.enum.includes(null)) delete out.enum;
   return out;
 }
 
@@ -269,7 +315,8 @@ function openapi(b) {
       schemas: {
         Object: { type: "object" },
         Error: { type: "object", properties: { error: { type: "object", properties: { code: { type: "string" }, message: { type: "string" } } } } },
-        Brief: oas30(BRIEF),
+        Brief: (() => { const br = oas30(briefFor(b)); br.properties.attestation = { $ref: "#/components/schemas/Attestation" }; return br; })(),
+        Attestation: ATTESTATION_OAS,
       },
     },
   };
@@ -314,13 +361,17 @@ const entries = [];
 for (const f of fs.readdirSync(path.join(ROOT, "bundles")).filter((x) => x.endsWith(".json")).sort()) {
   const b = JSON.parse(fs.readFileSync(path.join(ROOT, "bundles", f), "utf8"));
   entries.push(healthEntry(b));
-  const dir = path.join(ROOT, "ops", b.service_id);
+  const dir = path.join(OUT, b.service_id);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "card.json"), JSON.stringify(card(b), null, 2) + "\n");
+  const cardFile = path.join(dir, "card.json");
+  const prevFile = path.join(ROOT, "ops", b.service_id, "card.json");
+  const prev = fs.existsSync(prevFile) ? JSON.parse(fs.readFileSync(prevFile, "utf8")) : null;
+  const same = Boolean(prev) && JSON.stringify(card(b, prev.updated)) === JSON.stringify(prev);
+  const c = card(b, same ? prev.updated : undefined);
+  fs.writeFileSync(cardFile, ((CARD_TEXT[b.service_id] || {}).minified ? JSON.stringify(c) : JSON.stringify(c, null, 2)) + "\n");
   fs.writeFileSync(path.join(dir, "portal-descriptor.json"), JSON.stringify(portal(b), null, 2) + "\n");
   fs.writeFileSync(path.join(dir, "sage-service.yaml"), sage(b));
   fs.writeFileSync(path.join(dir, "openapi.json"), JSON.stringify(openapi(b), null, 2) + "\n");
-  const size = Buffer.byteLength(JSON.stringify(card(b)));
-  console.log(JSON.stringify({ service_id: b.service_id, card_bytes: size, routes: routesOf(b).length }));
+  console.log(JSON.stringify({ service_id: b.service_id, card_bytes: fs.statSync(cardFile).size, card_changed: !same, routes: routesOf(b).length }));
 }
-fs.writeFileSync(path.join(ROOT, "ops", "pocket-health-checks-entry.yaml"), entries.join(""));
+fs.writeFileSync(path.join(OUT, "pocket-health-checks-entry.yaml"), entries.join(""));
