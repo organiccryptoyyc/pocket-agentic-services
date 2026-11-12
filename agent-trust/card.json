@@ -20,8 +20,8 @@
     {
       "kind": "openapi",
       "api": "agent-trust-domain-trust",
-      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/e253f60f265758469c5ec9e841c6eb441a224610/agent-trust/openapi.json",
-      "sha256": "42bd3be2bf69fbe91e962516ae29019bc38838dbd50a043e2bff0087d4189c03",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/6354e1f00af256d241c8a0d044ed7cf98d2d2a73/agent-trust/openapi.json",
+      "sha256": "de1edda4ebc622ff6f1ffc649ee9b1e501c38055614837ba328e23a4a3f53b47",
       "notes": "Covers all five resources in one document."
     }
   ],
@@ -32,7 +32,7 @@
     "implementations": [
       "agent-trust >= 1.3"
     ],
-    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/e253f60f265758469c5ec9e841c6eb441a224610/agent-trust",
+    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/6354e1f00af256d241c8a0d044ed7cf98d2d2a73/agent-trust",
     "min_disk_gb": 1,
     "min_ram_gb": 1,
     "healthcheck": [
@@ -57,6 +57,6 @@
     ],
     "notes": "Request bodies are capped at 1 MiB; responses are usually a few KB. Each upstream call has an 8 s timeout with one retry, so use a relay timeout of 30 s. /v1/sanctions-check needs TRADE_GOV_SUBSCRIPTION_KEY (free from developer.trade.gov); without it, it returns 422 not_configured, never a false clean result. Gateway operators: configure as type passthrough with rpc_types [\"rest\"]."
   },
-  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/e253f60f265758469c5ec9e841c6eb441a224610/agent-trust/README.md",
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/6354e1f00af256d241c8a0d044ed7cf98d2d2a73/agent-trust/README.md",
   "updated": "2026-11-12"
 }
