@@ -64,8 +64,14 @@ function withVerified(route, out, version, nowMs = Date.now()) {
       assessment: C.assessment({ status: "ok", native_status: out.coverage, score: out.reputation_score, scale: C.SCALE_0_100, coverage_pct: out.score_max_possible }),
       evidence: [explorer
         ? C.evidence({ source_ref: `blockscout:${out.chain}:${out.address}`, title: `Block explorer record for ${out.address}`, publisher: "Blockscout", url: `https://${host}/address/${out.address}`, retrieved_at: at, observation_time: at, source_tier: 1, rights_status: OK })
-        : C.evidence({ source_ref: `rpc:${out.chain}:${out.address}`, title: `On-chain code, nonce and balance of ${out.address}`, publisher: "Pocket Network public RPC", url: `https://${host}`, retrieved_at: at, observation_time: at, source_tier: 1, rights_status: OK })],
-      gaps: out.coverage === "full" ? [] : [C.gap("explorer_signals", "explorer signals (reputation flag, verified source, scam flag, public tags, ENS) are not available for this chain or the explorer did not answer", "basic score, at most 35")] });
+        : C.evidence({ source_ref: `rpc:${out.chain}:${out.address}`, title: `On-chain code, nonce and balance of ${out.address}`, publisher: "Pocket Network public RPC", url: `https://${host}`, retrieved_at: at, observation_time: at, source_tier: 1, rights_status: OK }),
+      ...(!explorer && out.is_contract && out.is_verified !== null
+        ? [C.evidence({ source_ref: `sourcify:${cid}:${out.address}`, title: `Sourcify verified-source record for ${out.address}`, publisher: "Sourcify", url: `https://sourcify.dev/server/v2/contract/${cid}/${out.address}`, retrieved_at: at, observation_time: at, source_tier: 1, rights_status: OK })]
+        : []),
+      ...(!explorer && out.ens_name
+        ? [C.evidence({ source_ref: `ens:${out.ens_name}`, title: `Ethereum ENS reverse record ${out.ens_name}, resolved forward to ${out.address}`, publisher: "ENS registry (Ethereum), via Pocket Network public RPC", url: `https://${POCKET_RPC_HOSTS.eth}`, retrieved_at: at, observation_time: at, source_tier: 1, rights_status: OK })]
+        : [])],
+      gaps: out.coverage === "full" ? [] : [C.gap("explorer_signals", "explorer signals (reputation flag, scam flag, public tags) are not available for this chain or the explorer did not answer; verified source comes from Sourcify and the name from ENS", `basic score, at most ${out.score_max_possible}`)] });
   } else {
     return out;
   }

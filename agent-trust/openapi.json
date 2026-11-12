@@ -307,7 +307,7 @@
     },
     "/v1/reputation": {
       "post": {
-        "summary": "EVM address reputation. eth uses the public Blockscout explorer, falling back to Pocket Network's public RPC; base, arbitrum and polygon use the RPC only, with coverage basic and score_max_possible 35",
+        "summary": "EVM address reputation. eth uses the public Blockscout explorer, falling back to Pocket Network's public RPC; base, arbitrum and polygon use the RPC plus Sourcify (verified source) and the forward-checked Ethereum ENS name, with coverage basic and score_max_possible 60",
         "requestBody": {
           "required": true,
           "content": {
@@ -369,7 +369,7 @@
                     },
                     "coverage": {
                       "type": "string",
-                      "description": "basic means on-chain facts only, without explorer signals"
+                      "description": "basic means on-chain facts, Sourcify and ENS, without the explorer's reputation flag, scam flag and public tags"
                     },
                     "score_max_possible": {
                       "type": "number"
@@ -391,7 +391,7 @@
                         "boolean",
                         "null"
                       ],
-                      "description": "null when explorer signals are not available"
+                      "description": "full: the explorer's flag; basic: Sourcify for contracts; null for accounts or when the source did not answer"
                     },
                     "is_scam": {
                       "type": [

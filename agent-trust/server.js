@@ -18,7 +18,7 @@ const checks = require("./lib/checks");
 const { cached } = require("./lib/net");
 
 const SERVICE = "agent-trust";
-const VERSION = "1.2.0";
+const VERSION = "1.3.0";
 const VERSION_PATH = "/v1/version";
 const HEALTH_PATH = "/v1/health";
 
@@ -210,9 +210,14 @@ function txActivityPoints(count) {
   return count != null ? Math.min(35, Math.log10(1 + count) * 8) : 0;
 }
 
-// On-chain facts only: base / arbitrum / polygon always (no free explorer API),
-// eth when its explorer does not answer. Explorer-only signals are null and the
-// score can reach at most 35.
+// On-chain facts plus two free identity signals: base / arbitrum / polygon always
+// (their explorers' free APIs sit behind a bot check), eth when its explorer does not
+// answer. Code, nonce and balance from Pocket's public RPC; verified source from
+// Sourcify (contracts); the address's Ethereum ENS name, read on chain and accepted
+// only when it resolves forward to the same address. Explorer-only signals
+// (reputation flag, scam flag, public tags) stay null; the score can reach 60.
+const BASIC_MAX = 60;
+
 async function rpcReputation(chain, address, explorerError = null) {
   let r;
   try {
@@ -221,26 +226,45 @@ async function rpcReputation(chain, address, explorerError = null) {
     throw toClientError(e);
   }
   if (!r.found) throw new ClientError(404, "not_found", `no on-chain activity found for '${address}' on '${chain}'`);
+  const [src, ens] = await Promise.allSettled([
+    r.is_contract ? checks.sourcifyVerified(chain, address) : Promise.resolve(null),
+    checks.ensReverse(address),
+  ]);
   const reasons = [];
   const txPts = txActivityPoints(r.nonce);
+  let score = txPts;
   if (txPts > 0) reasons.push(`${r.nonce} outgoing transaction${r.nonce === 1 ? "" : "s"} (account nonce) (+${txPts.toFixed(1)})`);
   if (r.is_delegated) reasons.push(`EIP-7702 delegated account (wallet code delegated to ${r.delegate_address}); not a standalone contract (+0)`);
+  let isVerified = null; // null: not a contract, or Sourcify did not answer
+  if (r.is_contract) {
+    if (src.status === "fulfilled") {
+      isVerified = src.value.verified;
+      if (isVerified) { score += 15; reasons.push(`contract source is verified on Sourcify (${src.value.match}) (+15)`); }
+      else reasons.push("contract source is not verified on Sourcify (+0)");
+    } else reasons.push(`Sourcify did not answer (${String(src.reason && src.reason.message).slice(0, 120)}); verified source unknown`);
+  }
+  let ensName = null;
+  if (ens.status === "fulfilled") {
+    if (ens.value.name && ens.value.verified) { ensName = ens.value.name; score += 10; reasons.push(`has Ethereum ENS name '${ensName}', confirmed forward (+10)`); }
+    else if (ens.value.name) reasons.push(`Ethereum ENS reverse record '${ens.value.name}' does not resolve back to this address; ignored (+0)`);
+  } else reasons.push(`the ENS lookup failed (${String(ens.reason && ens.reason.message).slice(0, 120)}); ENS name unknown`);
   reasons.push(explorerError
-    ? `the ${chain} block explorer did not answer (${explorerError}); fell back to on-chain data only, so explorer signals (reputation flag, verified source, scam flag, public tags, ENS) are missing and this is a basic score (max 35)`
-    : `explorer signals (reputation flag, verified source, scam flag, public tags, ENS) are not available on ${chain} in this version (read from on-chain data only), so this is a basic score (max 35)`);
+    ? `the ${chain} block explorer did not answer (${explorerError}); fell back to on-chain data, Sourcify and ENS, so the explorer's reputation flag, scam flag and public tags are missing and this is a basic score (max ${BASIC_MAX})`
+    : `the ${chain} block explorer's reputation flag, scam flag and public tags are not available in this version (on-chain data, Sourcify and ENS only), so this is a basic score (max ${BASIC_MAX})`);
   return {
     chain, address,
-    reputation_score: Math.max(0, Math.min(100, Math.round(txPts * 10) / 10)),
+    reputation_score: Math.max(0, Math.min(100, Math.round(score * 10) / 10)),
     reputation_score_scale: "0-100, higher is more trustworthy",
     coverage: "basic",
-    score_max_possible: 35,
+    score_max_possible: BASIC_MAX,
     is_contract: r.is_contract, is_delegated: r.is_delegated, delegate_address: r.delegate_address,
-    is_verified: null, is_scam: null,
+    is_verified: isVerified, is_scam: null,
     transactions_count: null, outgoing_transactions_count: r.nonce, token_transfers_count: null,
     coin_balance_wei: r.coin_balance_wei,
-    public_tags: null, ens_name: null,
+    public_tags: null, ens_name: ensName,
     reasons,
-    note: `On-chain facts (code, nonce, balance) read from Pocket Network's public RPC (${r.source_host}). ` +
+    note: `On-chain facts (code, nonce, balance) read from Pocket Network's public RPC (${r.source_host}); ` +
+      "verified source from Sourcify; ENS name from the Ethereum ENS registry via Pocket's public Ethereum RPC. " +
       "Not a proprietary reputation database; a low score here means little activity, not a confirmed risk.",
   };
 }
@@ -290,6 +314,8 @@ async function handleReputation(body) {
 
 // --- wiring ------------------------------------------------------------------
 
+// 1.3.0: the RPC path (base, arbitrum, polygon; eth fallback) adds Sourcify verified source and the
+// forward-confirmed Ethereum ENS name; basic score max 35 -> 60.
 // 1.2.0: every successful answer also carries the shared `verified` block (lib/verified.js).
 const { withVerified } = require("./lib/verified");
 const routes = new Map([

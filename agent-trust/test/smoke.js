@@ -79,7 +79,10 @@ async function main() {
   assert.strictEqual(eoa.body.is_contract, false);
   assert.strictEqual(eoa.body.is_verified, null);
   assert.strictEqual(eoa.body.coin_balance_wei, "1000000000000000000");
-  assert.ok(eoa.body.reputation_score > 0 && eoa.body.reputation_score <= 35);
+  assert.ok(eoa.body.reputation_score > 0 && eoa.body.reputation_score <= 60);
+  assert.strictEqual(eoa.body.score_max_possible, 60);
+  assert.strictEqual(eoa.body.ens_name, "alice.eth", "forward-confirmed ENS name");
+  assert.ok(eoa.body.reasons.some((x) => x.includes("alice.eth") && x.includes("+10")));
 
   const delegated = await req("/v1/reputation", { chain: "arbitrum", address: "0x2" + "b".repeat(39) });
   assert.strictEqual(delegated.status, 200);
@@ -91,6 +94,9 @@ async function main() {
   assert.strictEqual(contract.status, 200);
   assert.strictEqual(contract.body.is_contract, true);
   assert.strictEqual(contract.body.is_delegated, false);
+  assert.strictEqual(contract.body.is_verified, true, "Sourcify exact_match");
+  assert.ok(contract.body.reasons.some((x) => x.includes("Sourcify") && x.includes("+15")));
+  assert.strictEqual(contract.body.ens_name, null);
 
   const empty = await req("/v1/reputation", { chain: "base", address: "0x0" + "d".repeat(39) });
   assert.strictEqual(empty.status, 404);
@@ -117,12 +123,12 @@ async function main() {
   const schema = JSON.parse(fs.readFileSync(path.join(envDir, "pocket-agentic-envelope-v1.schema.json"), "utf8"));
   const st = await req("/v1/seller-trust", { url: "https://example.com/pay" });
   assert.strictEqual(st.status, 200);
-  for (const [r, route] of [[dt, "/v1/domain-trust"], [bv, "/v1/brand-verify"], [st, "/v1/seller-trust"], [sc, "/v1/sanctions-check"], [ethRep, "/v1/reputation"], [eoa, "/v1/reputation"], [ethFallback, "/v1/reputation"]]) {
+  for (const [r, route] of [[dt, "/v1/domain-trust"], [bv, "/v1/brand-verify"], [st, "/v1/seller-trust"], [sc, "/v1/sanctions-check"], [ethRep, "/v1/reputation"], [eoa, "/v1/reputation"], [ethFallback, "/v1/reputation"], [contract, "/v1/reputation"]]) {
     const v = r.body.verified;
     assert.ok(v, `${route}: verified missing`);
     assert.deepStrictEqual(validate(schema, v), [], `${route}: verified fails the schema`);
     assert.strictEqual(v.route, route);
-    assert.strictEqual(v.service_version, "1.2.0");
+    assert.strictEqual(v.service_version, "1.3.0");
     assert.ok(v.evidence.length >= 1, `${route}: evidence listed`);
   }
   assert.strictEqual(dt.body.verified.subject.id, "domain:dns:example.com");
@@ -132,10 +138,18 @@ async function main() {
   assert.strictEqual(ethRep.body.verified.subject.id, "wallet:caip10:eip155:1:0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
   assert.strictEqual(ethRep.body.verified.evidence[0].publisher, "Blockscout");
   assert.strictEqual(eoa.body.verified.subject.id, "wallet:caip10:eip155:8453:0x1" + "a".repeat(39));
-  assert.strictEqual(eoa.body.verified.assessment.coverage_pct, 35);
+  assert.strictEqual(eoa.body.verified.assessment.coverage_pct, 60);
+  assert.ok(eoa.body.verified.evidence.some((e) => e.source_ref === "ens:alice.eth"));
+  assert.ok(contract.body.verified.evidence.some((e) => e.publisher === "Sourcify"));
   assert.strictEqual(eoa.body.verified.gaps[0].field, "explorer_signals");
   assert.strictEqual(ethFallback.body.verified.evidence[0].publisher, "Pocket Network public RPC");
   assert.strictEqual(badDomain.body.verified, undefined, "errors carry no verified block");
+
+  // 1.3.0: Keccak-256 and ENS namehash against published vectors.
+  const { keccak256, namehash } = require("../lib/keccak");
+  assert.strictEqual(keccak256("").toString("hex"), "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+  assert.strictEqual(namehash("foo.eth").toString("hex"), "de9b09fd7c5f901e23a3f19fecc54828e9c848539801e86591bd9801b019f84f");
+  assert.strictEqual(keccak256("addr(bytes32)").toString("hex").slice(0, 8), "3b3b57de");
 
   console.log("smoke: all assertions passed");
   process.exit(0);

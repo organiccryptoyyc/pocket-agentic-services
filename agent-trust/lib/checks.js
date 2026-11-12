@@ -261,6 +261,59 @@ async function rpcAddress(chain, address) {
   };
 }
 
+// --- free identity signals for the RPC path (1.3.0) ------------------------
+// Sourcify: open verified-source repository (also used by TCS-6), keyed by chain id.
+// ENS: the address's Ethereum reverse record, read on chain through Pocket's public
+// Ethereum RPC and accepted only when the name resolves forward to the same address.
+
+const CHAIN_IDS = { eth: 1, base: 8453, arbitrum: 42161, polygon: 137 };
+const ENS_REGISTRY = "0x00000000000c2e074ec69a0dfb2997ba6c7d2e1e";
+const { namehash } = require("./keccak");
+
+async function sourcifyVerified(chain, address) {
+  const url = `https://sourcify.dev/server/v2/contract/${CHAIN_IDS[chain]}/${address}`;
+  const res = await withRetry(() => fetchJSON(url), 1);
+  if (res.status === 404) return { verified: false, match: null, url };
+  if (!res.ok) throw new UpstreamError(`Sourcify lookup failed: HTTP ${res.status}`);
+  const m = res.body && res.body.match;
+  return { verified: m === "match" || m === "exact_match", match: m || null, url };
+}
+
+const asAddress = (ret) => "0x" + ret.replace(/^0x/, "").padStart(64, "0").slice(24).toLowerCase();
+
+function decodeString(ret) {
+  const h = ret.replace(/^0x/, "");
+  if (h.length < 128) return null;
+  const off = Number.parseInt(h.slice(0, 64), 16) * 2;
+  const len = Number.parseInt(h.slice(off, off + 64), 16);
+  if (!Number.isSafeInteger(len) || len === 0 || len > 255) return null;
+  return Buffer.from(h.slice(off + 64, off + 64 + len * 2), "hex").toString("utf8");
+}
+
+async function ethCall(to, data) {
+  return rpcCall(POCKET_RPC_HOSTS.eth, "eth_call", [{ to, data }, "latest"]);
+}
+
+const ZERO = "0x" + "0".repeat(40);
+
+async function resolverOf(node) {
+  return asAddress(await ethCall(ENS_REGISTRY, "0x0178b8bf" + node.toString("hex")));
+}
+
+// { name, verified } or { name: null } when the address has no reverse record.
+async function ensReverse(address) {
+  const node = namehash(`${address.toLowerCase().slice(2)}.addr.reverse`);
+  const rev = await resolverOf(node);
+  if (rev === ZERO) return { name: null };
+  const name = decodeString(await ethCall(rev, "0x691f3431" + node.toString("hex")));
+  if (!name || !/^[a-z0-9.-]+$/.test(name)) return { name: null };
+  const fwdNode = namehash(name);
+  const fwd = await resolverOf(fwdNode);
+  if (fwd === ZERO) return { name, verified: false };
+  const resolved = asAddress(await ethCall(fwd, "0x3b3b57de" + fwdNode.toString("hex")));
+  return { name, verified: resolved === address.toLowerCase() };
+}
+
 async function blockscoutAddress(chain, address) {
   validateChainAndAddress(chain, address);
   const host = BLOCKSCOUT_HOSTS[chain];
@@ -306,6 +359,10 @@ module.exports = {
   screeningSearch,
   blockscoutAddress,
   rpcAddress,
+  sourcifyVerified,
+  ensReverse,
+  decodeString,
+  CHAIN_IDS,
   BLOCKSCOUT_HOSTS,
   POCKET_RPC_HOSTS,
   SUPPORTED_CHAINS,

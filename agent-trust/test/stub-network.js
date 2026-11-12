@@ -66,10 +66,18 @@ global.fetch = async function stubFetch(url, init) {
       public_tags: [], ens_domain_name: "vitalik.eth", coin_balance: "6712597953701629485",
     });
   }
+  if (u.hostname === "sourcify.dev") {
+    // Contracts (0x3...) on polygon are verified; anything else is unknown to Sourcify.
+    if (u.pathname.includes("/137/0x3")) return jsonResponse({ match: "exact_match", chainId: "137" });
+    return jsonResponse({ match: null }, 200);
+  }
   if (u.hostname.endsWith(".api.pocket.network")) {
     // JSON-RPC fixtures keyed by the address's first hex digit after 0x:
     // 1 and 5 active EOA, 2 EIP-7702 delegated EOA, 3 contract, 0 no activity, 4 RPC error.
     const { method, params } = JSON.parse(init.body);
+    // ENS (eth_call): the reverse node of 0x1aaa... has resolver 0x...e1 returning
+    // "alice.eth", which resolves forward to 0x1aaa...; every other address has no record.
+    if (method === "eth_call") return jsonResponse({ jsonrpc: "2.0", id: 1, result: ensFixture(params[0]) });
     const kind = params[0].slice(2, 3);
     if (kind === "4") return jsonResponse({ jsonrpc: "2.0", id: 1, error: { code: -32000, message: "stub: upstream error" } });
     const fixtures = {
@@ -84,6 +92,23 @@ global.fetch = async function stubFetch(url, init) {
   if (realFetch) return realFetch(url, init);
   throw new Error(`stub-network: no fixture for ${url}`);
 };
+
+function ensFixture({ to, data }) {
+  const { namehash } = require("../lib/keccak");
+  const pad = (h) => h.replace(/^0x/, "").padStart(64, "0");
+  const alice = "0x1" + "a".repeat(39);
+  const rev = namehash(`${alice.slice(2)}.addr.reverse`).toString("hex");
+  const fwd = namehash("alice.eth").toString("hex");
+  const sel = data.slice(0, 10);
+  const node = data.slice(10);
+  if (sel === "0x0178b8bf") return "0x" + pad(node === rev || node === fwd ? "e1".padStart(40, "0") : "0");
+  if (sel === "0x691f3431" && node === rev) {
+    const name = Buffer.from("alice.eth").toString("hex");
+    return "0x" + pad("20") + pad((name.length / 2).toString(16)) + name.padEnd(64, "0");
+  }
+  if (sel === "0x3b3b57de" && node === fwd) return "0x" + pad(alice.slice(2));
+  return "0x" + pad("0");
+}
 
 // --- dns stub ------------------------------------------------------------------
 
