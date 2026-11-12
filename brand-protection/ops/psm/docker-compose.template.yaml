@@ -7,6 +7,11 @@
 # "{{DEPLOY_ID}}" (health /v1/health), then on the {{NETWORK}} stack add-service
 # brand-protection -> http://{{DEPLOY_ID}}-backend:8080.
 #
+# Certificate Transparency follower (package-psm.js --ct): a second container
+# from the same image that follows one CT shard per operator and writes hits to
+# the shared data volume; the Pi reads them via GET /ingest/ct-hits. About
+# 15 GB/day of download. Only one network runs it (MainNet; Beta for testing).
+#
 # Ingest token: filled in by ops/package-psm.js from .secrets/<network>-ingest.env
 # (gitignored), so it exists only in this generated copy and on the server.
 
@@ -31,7 +36,7 @@ services:
       - "8090"
     mem_limit: 256m
     networks: [supplier]
-
+{{CT_SERVICE}}
 volumes:
   brand-protection-data:
 

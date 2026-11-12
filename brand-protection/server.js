@@ -21,7 +21,7 @@ const { scanBrand, brandIdFor } = require("./lib/scan");
 const { startIngest } = require("./lib/ingest");
 
 const SERVICE = "brand-protection";
-const VERSION = "0.1.9";
+const VERSION = "0.1.10";
 const QUICK = {
   deadlineMs: Number(process.env.BP_QUICK_DEADLINE_MS || 9000),
   maxCandidates: Number(process.env.BP_QUICK_MAX_CANDIDATES || 120),
@@ -180,6 +180,8 @@ async function handleWatched() {
   return { service: SERVICE, version: VERSION, fetched_at: new Date().toISOString(), count: brands.length, max_watched: store.MAX_WATCHED, brands };
 }
 
+// 0.1.10: no API change; the image also runs ct-follow.js (certificate-log follower, own container,
+// package-psm.js --ct) and the private ingest listener serves its hits at GET /ingest/ct-hits.
 // 0.1.9: scan, lookalikes and evidence also carry the shared `verified` block (lib/verified.js).
 const { withVerified } = require("./lib/verified");
 const verifiedRoute = (route, handler) => async (body) => withVerified(route, await handler(body), VERSION);

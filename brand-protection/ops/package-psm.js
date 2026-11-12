@@ -45,9 +45,31 @@ if (!fs.existsSync(SECRET)) {
 const copy = (from, to) => fs.cpSync(path.join(SRC, from), path.join(OUT, to), { recursive: true });
 
 fs.rmSync(OUT, { recursive: true, force: true });
-for (const f of ["server.js", "package.json", "Dockerfile"]) copy(f, `backend/${f}`);
+for (const f of ["server.js", "ct-follow.js", "package.json", "Dockerfile"]) copy(f, `backend/${f}`);
 copy("lib", "backend/lib");
+// --ct adds the certificate-log follower container (same image, same volume).
+const WITH_CT = process.argv.includes("--ct");
+const CT_SERVICE = WITH_CT ? `
+  ct:
+    build: ../backend
+    image: {{DEPLOY_ID}}-backend:latest
+    container_name: {{DEPLOY_ID}}-ct
+    command: ["node", "ct-follow.js"]
+    restart: unless-stopped
+    depends_on: [backend]
+    environment:
+      BP_NETWORK: {{NETWORK}}
+      BP_CT_OPERATORS: "Let's Encrypt,Google"
+      BP_CT_LOGS_PER_OPERATOR: "1"
+      BP_CT_AHEAD_DAYS: "90"
+    volumes:
+      - brand-protection-data:/var/lib/brand-protection
+    mem_limit: 256m
+    cpus: 0.5
+    networks: [supplier]
+` : "";
 const compose = fs.readFileSync(path.join(SRC, "ops/psm/docker-compose.template.yaml"), "utf8")
+  .replaceAll("{{CT_SERVICE}}", CT_SERVICE)
   .replaceAll("{{NETWORK}}", NETWORK).replaceAll("{{DEPLOY_ID}}", DEPLOY_ID)
   .replaceAll("{{DEPLOY_STAMP}}", new Date().toISOString())
   .replaceAll("{{INGEST_TOKEN}}", fs.readFileSync(SECRET, "utf8").match(/BP_INGEST_TOKEN=([0-9a-f]+)/)[1]);
@@ -57,4 +79,4 @@ fs.writeFileSync(path.join(OUT, "deploy/docker-compose.yaml"), compose);
 fs.writeFileSync(path.join(OUT, "deploy/routes.json"), JSON.stringify({ routes: [{ path: ROUTE, port: 8090 }] }, null, 2) + "\n");
 copy("card.json", "card.json");
 copy("service.json", "service.json");
-console.log(JSON.stringify({ network: NETWORK, deploy_id: DEPLOY_ID, backend_url: `http://${DEPLOY_ID}-backend:8080`, ingest_route: ROUTE, folder: OUT }));
+console.log(JSON.stringify({ network: NETWORK, deploy_id: DEPLOY_ID, backend_url: `http://${DEPLOY_ID}-backend:8080`, ingest_route: ROUTE, ct_follower: WITH_CT, folder: OUT }));

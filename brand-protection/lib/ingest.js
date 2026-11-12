@@ -3,6 +3,7 @@
 //   GET  /ingest/watch     -> the watch list, so the Pi knows what to scan
 //   POST /ingest/watch     {brands: [{brand, official_domains, keywords}]}  seed brands (owner-approved list)
 //   POST /ingest/results   {results: [scanResult, ...]}                     full scans from the Pi
+//   GET  /ingest/ct-hits?since=<RFC 3339>  -> certificate-log hits from the ct-follow container (last 14 days)
 //   Authorization: Bearer <BP_INGEST_TOKEN>
 //
 // Separate port from the paid API (default 127.0.0.1:8090), so the RelayMiner,
@@ -15,8 +16,11 @@ const { sendJson, readJsonBody, ClientError } = require("./http");
 const store = require("./store");
 const { isValidDomain } = require("./checks");
 const { brandIdFor } = require("./scan");
+const path = require("path");
+const { CT_DIR, readHits } = require("../ct-follow");
 
 const MAX_RESULTS = 50;
+const MAX_CT_HITS = 20000;
 const MAX_FINDINGS = 3000;
 // Fields holding what third parties published: page titles, redirect URLs, certificates,
 // registry and DNS answers. A random ID there isn't our key, and scanning them would let
@@ -66,6 +70,28 @@ function checkResult(r, watch) {
   return problems;
 }
 
+// Hits the ct-follow container wrote to the shared data volume, newest last.
+// `following` is false when no follower has written anything (Beta, or CT off).
+function ctHits(since, now = Date.now()) {
+  const sinceMs = since ? Date.parse(since) : NaN;
+  if (since && !Number.isFinite(sinceMs)) throw new ClientError(400, "bad_since", "since must be an RFC 3339 timestamp");
+  const stats = store.readJson(path.join(CT_DIR, "stats.json"));
+  let hits = readHits();
+  if (Number.isFinite(sinceMs)) hits = hits.filter((h) => Date.parse(h.seen_at) > sinceMs);
+  const truncated = hits.length > MAX_CT_HITS;
+  if (truncated) hits = hits.slice(-MAX_CT_HITS);
+  const updated = stats && Date.parse(stats.updated_at);
+  return {
+    following: Boolean(stats),
+    follower_updated_at: stats ? stats.updated_at : null,
+    follower_stale: stats ? !(now - updated < 15 * 60_000) : null,
+    logs: stats ? stats.logs : {},
+    count: hits.length,
+    truncated,
+    hits,
+  };
+}
+
 function startIngest() {
   const token = process.env.BP_INGEST_TOKEN;
   if (!token) {
@@ -77,8 +103,8 @@ function startIngest() {
   const server = http.createServer(async (req, res) => {
     try {
       const route = `${req.method} ${new URL(req.url, "http://x").pathname}`;
-      if (!["GET /ingest/watch", "POST /ingest/watch", "POST /ingest/results"].includes(route)) {
-        return sendJson(res, 404, { error: { code: "not_found", message: "GET|POST /ingest/watch, POST /ingest/results" } });
+      if (!["GET /ingest/watch", "POST /ingest/watch", "POST /ingest/results", "GET /ingest/ct-hits"].includes(route)) {
+        return sendJson(res, 404, { error: { code: "not_found", message: "GET|POST /ingest/watch, POST /ingest/results, GET /ingest/ct-hits" } });
       }
       if (!tokenOk(req.headers.authorization, token)) return sendJson(res, 401, { error: { code: "unauthorized", message: "bearer token required" } });
       if (route === "GET /ingest/watch") {
@@ -89,6 +115,7 @@ function startIngest() {
         });
         return sendJson(res, 200, { brands, max_watched: store.MAX_WATCHED });
       }
+      if (route === "GET /ingest/ct-hits") return sendJson(res, 200, ctHits(new URL(req.url, "http://x").searchParams.get("since")));
       const body = await readJsonBody(req);
       if (route === "POST /ingest/watch") {
         const list = Array.isArray(body.brands) ? body.brands : [];
@@ -127,4 +154,4 @@ function startIngest() {
   return server;
 }
 
-module.exports = { startIngest, checkResult, checkBrandEntry, tokenOk };
+module.exports = { startIngest, checkResult, checkBrandEntry, tokenOk, ctHits };
