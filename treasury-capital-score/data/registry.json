@@ -798,10 +798,15 @@
       "scoreable": false,
       "treasury_perimeter": "Not established: no public treasury disclosure (vetting 2026-11-14).",
       "notes": [
-        "Carryover from the original watchlist.", "Vetted 2026-11-14: PancakeSwap publishes no treasury addresses, treasury report or obligations disclosure (docs FAQ, fee table, tokenomics, developer address pages). On-chain candidates (two 3-of-7 Safes, V2/V3 fee receivers) hold CAKE pending burn or emission, not attributable treasury reserves. Excluded by user decision 2026-11-14 until a treasury disclosure is published; re-check quarterly."
+        "Carryover from the original watchlist.",
+        "Vetted 2026-11-14: PancakeSwap publishes no treasury addresses, treasury report or obligations disclosure (docs FAQ, fee table, tokenomics, developer address pages). On-chain candidates (two 3-of-7 Safes, V2/V3 fee receivers) hold CAKE pending burn or emission, not attributable treasury reserves. Excluded by user decision 2026-11-14 until a treasury disclosure is published; re-check quarterly."
       ],
       "treasury_addresses": [],
-      "sources": ["https://docs.pancakeswap.finance/welcome-to-pancakeswap/contact-us/faq", "https://docs.pancakeswap.finance/earn/pancakeswap-pools", "https://developer.pancakeswap.finance/contracts/v3/addresses"]
+      "sources": [
+        "https://docs.pancakeswap.finance/welcome-to-pancakeswap/contact-us/faq",
+        "https://docs.pancakeswap.finance/earn/pancakeswap-pools",
+        "https://developer.pancakeswap.finance/contracts/v3/addresses"
+      ]
     },
     {
       "entity_id": "stargate-finance",
@@ -813,10 +818,14 @@
       "scoreable": false,
       "treasury_perimeter": "Not established: DAO dissolved after the LayerZero Foundation acquisition (vetting 2026-11-14).",
       "notes": [
-        "Carryover from the original watchlist.", "Vetted 2026-11-14: Stargate DAO approved the LayerZero Foundation acquisition (Aug 2025, ~95% for); STG converts to ZRO at 1:0.08634; the DAO was dissolved and the protocol and treasury passed to the LayerZero Foundation. No DAO treasury remains to score. Excluded by user decision 2026-11-14."
+        "Carryover from the original watchlist.",
+        "Vetted 2026-11-14: Stargate DAO approved the LayerZero Foundation acquisition (Aug 2025, ~95% for); STG converts to ZRO at 1:0.08634; the DAO was dissolved and the protocol and treasury passed to the LayerZero Foundation. No DAO treasury remains to score. Excluded by user decision 2026-11-14."
       ],
       "treasury_addresses": [],
-      "sources": ["https://stargate.discourse.group/t/layerzero-foundation-acquisition-of-stargate-stg/682", "https://thedefiant.io/news/defi/stargate-approves-usd110-million-takeover-by-layerzero"]
+      "sources": [
+        "https://stargate.discourse.group/t/layerzero-foundation-acquisition-of-stargate-stg/682",
+        "https://thedefiant.io/news/defi/stargate-approves-usd110-million-takeover-by-layerzero"
+      ]
     },
     {
       "entity_id": "machinex",
@@ -828,10 +837,13 @@
       "scoreable": false,
       "treasury_perimeter": "Not established: no protocol treasury found (vetting 2026-11-14).",
       "notes": [
-        "Carryover from the original watchlist.", "Vetted 2026-11-14: MachineX is a small DEX on peaq (legacy version ~$51k TVL) with no published DAO treasury or financial disclosures; peaq is not read by the collector. Excluded by user decision 2026-11-14. XMAQUINA / MachineDAO (separate entity with an on-chain treasury) is reviewed as its own candidate."
+        "Carryover from the original watchlist.",
+        "Vetted 2026-11-14: MachineX is a small DEX on peaq (legacy version ~$51k TVL) with no published DAO treasury or financial disclosures; peaq is not read by the collector. Excluded by user decision 2026-11-14. XMAQUINA / MachineDAO (separate entity with an on-chain treasury) is reviewed as its own candidate."
       ],
       "treasury_addresses": [],
-      "sources": ["https://coinmarketcap.com/exchanges/machinex/"]
+      "sources": [
+        "https://coinmarketcap.com/exchanges/machinex/"
+      ]
     },
     {
       "entity_id": "cow-dao",
@@ -881,7 +893,9 @@
           "verified_at": "2026-10-03",
           "onchain_check": "safe 3-of-6",
           "note": "kpk-managed Core Treasury (CIP-62): Aave, Morpho kpk USDC Prime vault, LSTs.",
-          "stakewise_vaults": ["0x15639e82d2072fa510e5d2b5f0db361c823bcad3"]
+          "stakewise_vaults": [
+            "0x15639e82d2072fa510e5d2b5f0db361c823bcad3"
+          ]
         },
         {
           "chain": "gnosis",
@@ -1766,6 +1780,84 @@
         "https://docs.xmaquina.io/dao/governance.md"
       ],
       "address_inventory_status": "initial_verified_2026-11-14"
+    },
+    {
+      "entity_id": "ens",
+      "name": "ENS DAO (Ethereum Name Service)",
+      "entity_type": "dao",
+      "peer_cohort": "DeFi protocol",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "DAO timelock (wallet.ensdao.eth), the Endowment Safe (endowment.ensdao.eth; administered by the ENS Foundation since the 2026-08-11 vote, assets unchanged in the same Safe), the current and old .eth registrar controllers (protocol revenue awaiting withdrawal to the DAO) and the TWAP Safe (twap.ensdao.eth). Excludes working-group multisigs (budgets already disbursed), ENS Labs and service-provider wallets, and user names.",
+      "notes": [
+        "Vetted 2026-11-14 (TCS6-vetting-ssv-ens-vitadao-2026-11-14.md); owner: build, Endowment counted as DAO treasury (role foundation_administered_endowment), cohort DeFi protocol with a note.",
+        "Cohort note: naming infrastructure, not a DeFi protocol; placed in the DeFi protocol cohort so D1 peer percentiles keep working (owner 2026-11-14).",
+        "Steakhouse's monthly total (DAO wallet + Endowment + Registrars, ENS token excluded) is the reconciliation reference; the TWAP Safe is outside that total."
+      ],
+      "treasury_addresses": [
+        {
+          "chain": "ethereum",
+          "address": "0xFe89cc7aBB2C4183683ab71653C4cdc9B02D44b7",
+          "role": "dao_timelock",
+          "perimeter": "include",
+          "source": "https://discuss.ens.domains/t/21923",
+          "source_detail": "Treasury Flow Automation (EP, 2026-02-27): 'DAO Timelock ... (wallet.ensdao.eth)'",
+          "verified_at": "2026-11-14",
+          "onchain_check": "OpenZeppelin TimelockController, minDelay 172800 s (2 days); governor governor.ensdao.eth 0x323A76393544d5ecca80cd6ef2A560C6a395b7E3"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4F2083f5fBede34C2714aFfb3105539775f7FE64",
+          "role": "foundation_administered_endowment",
+          "perimeter": "include",
+          "source": "https://discuss.ens.domains/t/21923",
+          "source_detail": "Endowment (endowment.ensdao.eth); ENS Foundation administrative control per the 2026-08-11 vote (https://discuss.ens.domains/t/22329)",
+          "verified_at": "2026-11-14",
+          "onchain_check": "Safe 1-of-1; owner 0x0bcc3da6ad796f59288c0961602675e88a2b406c is a timelock with minDelay 777600 s (9 days, matches the vote); 2 modules (treasury-manager roles)",
+          "stakewise_vaults": [
+            "0xac0f906e433d58fa868f936e8a43230473652885"
+          ],
+          "note": "StakeWise Genesis Vault (EthGenesisVault 0xac0f...2885): 9,514.77 ETH staked on 2026-11-14, 275.53 osETH minted against it (netted by the reader)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x253553366Da8546fC250F225fE3d25d0C782303b",
+          "role": "registrar_controller",
+          "perimeter": "include",
+          "source": "https://discuss.ens.domains/t/21923",
+          "source_detail": "Current Registrar Controller (controller.ens.eth): .eth registration ETH, withdrawn to the DAO",
+          "verified_at": "2026-11-14",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x283Af0B28c62C092C9727F1Ee09c02CA627eb7F5",
+          "role": "registrar_controller_legacy",
+          "perimeter": "include",
+          "source": "https://discuss.ens.domains/t/21923",
+          "source_detail": "Old Registrar Controller (~772 ETH in Feb 2026)",
+          "verified_at": "2026-11-14",
+          "onchain_check": "contract"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x02D61347e5c6EA5604f3f814C5b5498421cEBdEB",
+          "role": "dao_twap_safe",
+          "perimeter": "include",
+          "source": "https://discuss.ens.domains/t/21923",
+          "source_detail": "TWAP safe (twap.ensdao.eth) used by the DAO for swaps",
+          "verified_at": "2026-11-14",
+          "onchain_check": "to confirm on the first read"
+        }
+      ],
+      "sources": [
+        "https://discuss.ens.domains/t/21923",
+        "https://discuss.ens.domains/t/22329",
+        "https://discuss.ens.domains/t/ens-financial-reporting-by-steakhouse/16601/55",
+        "https://discuss.ens.domains/t/endowment-monthly-reports/17614/47"
+      ],
+      "address_inventory_status": "initial_verified_2026-11-14"
     }
   ],
   "change_log": [
@@ -1864,6 +1956,13 @@
       "by": "Claude (owner decisions 2026-10-03)",
       "changes": [
         "origin-protocol: added Protocol NAV Safe (Ethereum, Base); hold lifted (partial)."
+      ]
+    },
+    {
+      "date": "2026-11-14",
+      "by": "Claude (owner: 'Yes, build ENS')",
+      "changes": [
+        "ens: added (ENS DAO; timelock, Endowment Safe, registrar controllers, TWAP Safe); Beta first."
       ]
     }
   ]
