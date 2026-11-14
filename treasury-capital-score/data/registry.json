@@ -809,14 +809,14 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "unverified",
-      "eligibility": "needs_first_time_vetting",
+      "eligibility": "excluded_by_user_decision",
       "scoreable": false,
-      "treasury_perimeter": "Not yet established.",
+      "treasury_perimeter": "Not established: DAO dissolved after the LayerZero Foundation acquisition (vetting 2026-11-14).",
       "notes": [
-        "Carryover from the original watchlist; never formally vetted."
+        "Carryover from the original watchlist.", "Vetted 2026-11-14: Stargate DAO approved the LayerZero Foundation acquisition (Aug 2025, ~95% for); STG converts to ZRO at 1:0.08634; the DAO was dissolved and the protocol and treasury passed to the LayerZero Foundation. No DAO treasury remains to score. Excluded by user decision 2026-11-14."
       ],
       "treasury_addresses": [],
-      "sources": []
+      "sources": ["https://stargate.discourse.group/t/layerzero-foundation-acquisition-of-stargate-stg/682", "https://thedefiant.io/news/defi/stargate-approves-usd110-million-takeover-by-layerzero"]
     },
     {
       "entity_id": "machinex",
@@ -824,14 +824,14 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "unverified",
-      "eligibility": "needs_first_time_vetting",
+      "eligibility": "excluded_by_user_decision",
       "scoreable": false,
-      "treasury_perimeter": "Not yet established.",
+      "treasury_perimeter": "Not established: no protocol treasury found (vetting 2026-11-14).",
       "notes": [
-        "Carryover from the original watchlist; never formally vetted."
+        "Carryover from the original watchlist.", "Vetted 2026-11-14: MachineX is a small DEX on peaq (legacy version ~$51k TVL) with no published DAO treasury or financial disclosures; peaq is not read by the collector. Excluded by user decision 2026-11-14. XMAQUINA / MachineDAO (separate entity with an on-chain treasury) is reviewed as its own candidate."
       ],
       "treasury_addresses": [],
-      "sources": []
+      "sources": ["https://coinmarketcap.com/exchanges/machinex/"]
     },
     {
       "entity_id": "cow-dao",
