@@ -1714,6 +1714,58 @@
           "note": "Listed on Origin's Protocol NAV dashboard (cited in Origin's Snapshot proposal on OGN price support); holds OETH/wOETH (Ethereum). Owner-approved 2026-10-03."
         }
       ]
+    },
+    {
+      "entity_id": "xmaquina",
+      "name": "XMAQUINA / MachineDAO",
+      "entity_type": "dao",
+      "peer_cohort": "Investment DAO",
+      "registry_status": "partially_verified",
+      "eligibility": "confirmed",
+      "scoreable": true,
+      "treasury_perimeter": "MachineDAO treasury as published on the XMAQUINA DAO Portal: Base DAO Treasury Safe, the Aragon OSx DAO contract on Base, the peaq DAO Treasury Safe, and the robotics equity held by XMAQUINA Foundation for the DAO (off-chain, valued at attested cost). Excludes RCM assets (Humanoid Holdings Ltd., held for RCM noteholders), Northstar Council LLC funds, and the Foundation's own operating accounts beyond the disclosed bank balance.",
+      "notes": [
+        "2026-11-14: first-time vetting (TCS6-vetting-xmaquina-2026-11-14.md); owner approved attested-cost valuation for private equity and a new 'Investment DAO' peer cohort. Beta first; MainNet after owner review."
+      ],
+      "treasury_addresses": [
+        {
+          "chain": "base",
+          "address": "0x9F6cb720A9aBc0496f75BCc715733AA95772Ec3a",
+          "role": "dao_treasury_safe",
+          "perimeter": "include",
+          "source": "https://dao.xmaquina.io/treasury",
+          "source_detail": "DAO Portal, Treasury Wallets (Base): 'DAO Treasury - Secure multisig Safe for asset custody and proposal execution'",
+          "verified_at": "2026-11-14",
+          "onchain_check": "safe 3-of-4; 457,113.71 USDC (2026-11-14)"
+        },
+        {
+          "chain": "base",
+          "address": "0xfEA21e0500022F34dE0a02Ae3A7D04dF923Ed020",
+          "role": "aragon_voting_dao",
+          "perimeter": "include",
+          "source": "https://dao.xmaquina.io/treasury",
+          "source_detail": "DAO Portal, Treasury Wallets (Base): 'XMAQUINA DAO - Aragon-based DAO contract'; also docs.xmaquina.io/dao/governance-parameters",
+          "verified_at": "2026-11-14",
+          "onchain_check": "contract; 300,000,000 DEUS (2026-11-14)"
+        },
+        {
+          "chain": "peaq",
+          "address": "0x876244Fe0Ff78E3692941C2659647B25B476A75B",
+          "role": "dao_treasury_safe",
+          "perimeter": "include",
+          "source": "https://dao.xmaquina.io/treasury",
+          "source_detail": "DAO Portal, Treasury Wallets (Peaq): 'DAO Treasury - Secure multisig Safe'",
+          "verified_at": "2026-11-14",
+          "onchain_check": "safe threshold 3; 3,407,416.8 PEAQ native (2026-11-14)"
+        }
+      ],
+      "sources": [
+        "https://dao.xmaquina.io/treasury",
+        "https://www.xmaquina.io/blog/robotics-treasury-report-vol-2-2026",
+        "https://docs.xmaquina.io/dao/attestations.md",
+        "https://docs.xmaquina.io/dao/governance.md"
+      ],
+      "address_inventory_status": "initial_verified_2026-11-14"
     }
   ],
   "change_log": [

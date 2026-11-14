@@ -12,13 +12,13 @@
     "direct": "liquid, non-freezable tokens the wallet can transfer now; lent positions only up to the share a signed exit check measured as withdrawable",
     "borrow": "collateral escape: plain freezable tokens x the best collateral factor (Aave v3 LTV, Compound v3 borrow collateral factor); lent positions (freezable, or the part that cannot be withdrawn) x LTV up to the account's unused Aave v3 borrowing room; per chain capped by the WETH cash the Aave v3 core pool and the Compound v3 WETH market hold",
     "freezable": "issuer-freezable stablecoins count only through the borrow path; the rest is reported as freezable",
-    "locked": "positions flagged lockup or unlock_pending, and locked_unverifiable assets, cannot leave within the hour"
+    "locked": "positions flagged lockup or unlock_pending, and locked_unverifiable and private_equity assets, cannot leave within the hour"
   },
   "lending_markets": ["Aave v3 core pools", "Compound v3 WETH markets"],
   "freezable_symbols": ["USDC", "EURC", "USDT", "USDT0", "XAUT", "PYUSD", "USDP", "PAXG", "FDUSD", "TUSD", "USDG", "RLUSD", "USD1", "GUSD"],
   "freezable_rule": "the issuer's token contract can block an address (Circle, Tether, Paxos, First Digital, TrueUSD, Ripple, World Liberty Financial, Gemini); a lending receipt of one (e.g. aEthUSDC) counts as freezable",
   "locked_flags": ["lockup", "unlock_pending"],
-  "locked_classes": ["locked_unverifiable"],
+  "locked_classes": ["locked_unverifiable", "private_equity"],
   "bands": [
     { "max_share": 0.10, "d6_cap": null },
     { "max_share": 0.25, "d6_cap": 75 },

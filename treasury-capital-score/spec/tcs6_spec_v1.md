@@ -70,10 +70,12 @@ needed to rebuild it (`test/snapshots.test.js` proves this).
   `fair_value_usd` for disclosed off-chain balances.
 - Only `control: verified` rows count toward capital; unverified rows are reported only.
 - Haircut ranges (percent): cash_equivalent 0–5 · fiat_stablecoin 2–10 · major_crypto 5–20 ·
-  liquid_alt 15–40 · lp_position 30–70 · native_token 60–100 · locked_unverifiable 50–100.
+  liquid_alt 15–40 · lp_position 30–70 · native_token 60–100 · locked_unverifiable 50–100 · private_equity 50–90.
   Position = midpoint + ¼ range per documented flag (or explicit `haircut_severity`).
   `native_token` + `no_orderly_exit` = 100%. `locked_unverifiable` without
-  `realization_path_evidenced` = 100%.
+  `realization_path_evidenced` = 100%. `private_equity` (investment DAOs, 1.10.0) is valued at
+  attested cost as an off-chain `fair_value_usd` row; unattested stakes are `control: unverified`.
+  Investment DAOs score in their own peer cohort ("Investment DAO").
 - HQLA (D2) = cash_equivalent, fiat_stablecoin, major_crypto **without** any of: redemption_limits,
   legal_restriction, lockup, unlock_pending, depeg_active, thin_depth, custody_concentration.
 

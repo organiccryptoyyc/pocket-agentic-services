@@ -31,6 +31,9 @@ const HAIRCUT_RANGES = {
   lp_position: [30, 70],
   native_token: [60, 100],
   locked_unverifiable: [50, 100],
+  // Private company equity (investment DAOs, owner 2026-11-14): valued at attested cost, never at internal
+  // marks; not HQLA; locked for wallet-exit. Midpoint 70%; each documented flag +10 points.
+  private_equity: [50, 90],
 };
 const ASSET_CLASSES = Object.keys(HAIRCUT_RANGES);
 
@@ -60,6 +63,7 @@ const STRESS_SET = {
     lp_position: 60, // LP / lending / lockup realization shock
     native_token: 80, // severe native-token price and impact shock
     locked_unverifiable: 80,
+    private_equity: 80, // illiquid private stakes: down-round / no-exit scenario
   },
 };
 const CONCENTRATION_FAILURE_PCT = 50; // single non-cash asset above this caps D4 at 75
@@ -359,7 +363,9 @@ function d4(base) {
 
   const vs = valuationStatus(base);
   const refs = holdingsRefs(rows);
-  const shocks = Object.entries(STRESS_SET.price_shock_pct).map(([k, v]) => `${k} -${v}%`).join(", ");
+  // private_equity (1.10.0) is listed only where held, so reports without it keep their published text.
+  const hasPe = rows.some((r) => r.h.asset_class === "private_equity");
+  const shocks = Object.entries(STRESS_SET.price_shock_pct).filter(([k]) => k !== "private_equity" || hasPe).map(([k, v]) => `${k} -${v}%`).join(", ");
   return dim("D4", score, "complete", [
     metric("top_1_asset_weight_pct", top.w * 100, "pct", "largest verified exposure / gross verified fair value", vs, refs),
     metric("native_token_weight_pct", nativeW * 100, "pct", "native-token fair value / gross verified fair value", vs, refs),

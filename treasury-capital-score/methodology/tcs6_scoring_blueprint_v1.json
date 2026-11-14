@@ -90,6 +90,11 @@
         "asset_class": "Locked, disputed, unverifiable, or non-transferable asset",
         "range_pct": "50-100",
         "conditions": "Do not include unless control, legal claim, and an evidence-backed realization path are visible."
+      },
+      {
+        "asset_class": "Private company equity (investment DAO holdings)",
+        "range_pct": "50-90",
+        "conditions": "Value at attested cost (purchase verification by a named accounting firm), never at internal or indicative marks. Unattested positions are reported but not counted (control: unverified). Increase for down-round, transfer restrictions, or concentration. Not HQLA; cannot leave within the hour."
       }
     ],
     "anti_double_counting_rules": [

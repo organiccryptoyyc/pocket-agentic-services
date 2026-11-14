@@ -247,3 +247,20 @@ test("valuation_freshness: stale value under 1% of verified value passes; 1% or 
   assert.match(big.gate.effect, /marked stale/);
   assert.ok(big.r.dimensions.some((d) => d.primary_metrics.some((m) => m.status === "stale")));
 });
+
+test("private_equity (investment DAOs, 1.10.0): attested cost at a 70% haircut, never HQLA, unattested not counted", () => {
+  assert.strictEqual(S.haircutPct({ asset_class: "private_equity" }), 70);
+  assert.strictEqual(S.STRESS_SET.price_shock_pct.private_equity, 80);
+  const b = clone(EXAMPLE);
+  const base0 = S.computeBase(clone(b));
+  const hqla0 = S.d2(base0, b).primary_metrics.find((m) => m.name === "tier_0_to_1_hqla_usd").value;
+  b.holdings.push({ asset_id: "pe:robotics-co:common", symbol: null, chain: null, address: null, bucket: "offchain", asset_class: "private_equity",
+    control: "verified", quantity: null, fair_value_usd: 1000000, holdings_observed_at: b.collected_at, prices: [], haircut_flags: [], source_refs: [b.holdings[0].source_refs[0]] });
+  b.holdings.push({ asset_id: "pe:unattested-co:common", symbol: null, chain: null, address: null, bucket: "offchain", asset_class: "private_equity",
+    control: "unverified", quantity: null, fair_value_usd: 5000000, holdings_observed_at: b.collected_at, prices: [], haircut_flags: [], source_refs: [b.holdings[0].source_refs[0]] });
+  const base = S.computeBase(b);
+  assert.strictEqual(Math.round(base.grossAdjusted - base0.grossAdjusted), 300000);  // only the attested row, at 30%
+  assert.strictEqual(S.d2(base, b).primary_metrics.find((m) => m.name === "tier_0_to_1_hqla_usd").value, hqla0);
+  const r = report(b);
+  assert.ok(validateReport(r).ok, JSON.stringify(validateReport(r).errors || []).slice(0, 300));
+});

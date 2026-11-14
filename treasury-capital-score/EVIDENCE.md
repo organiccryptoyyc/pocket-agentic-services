@@ -13,7 +13,7 @@ the fields below are read, and only derived aggregates leave in a paid report.
 | `entity_id` | yes | Registry id. Unknown ids are rejected. |
 | `collected_at` | yes | RFC 3339. Becomes the report's `as_of`; price freshness (60 min) and holdings freshness (90 d) are measured from it. Bundles older than `TCS6_MAX_EVIDENCE_AGE_HOURS` (24) are skipped and the previous report is kept. |
 | `holdings[]` | yes | One row per position. |
-| `holdings[].asset_class` | yes | `cash_equivalent` · `fiat_stablecoin` · `major_crypto` · `liquid_alt` · `lp_position` · `native_token` · `locked_unverifiable` |
+| `holdings[].asset_class` | yes | `cash_equivalent` · `fiat_stablecoin` · `major_crypto` · `liquid_alt` · `lp_position` · `native_token` · `locked_unverifiable` · `private_equity` |
 | `holdings[].control` | yes | `verified` (counts) or `unverified` (reported only, never counted). |
 | `holdings[].quantity` + `prices[]` | on-chain | `prices[]`: `{source_ref, usd, observed_at}`. Two sources within 2% → consistent; further apart → the lower price is used and the conflict lowers confidence. |
 | `holdings[].fair_value_usd` | off-chain | Disclosed balance (filing, report). Use instead of quantity/prices. |
