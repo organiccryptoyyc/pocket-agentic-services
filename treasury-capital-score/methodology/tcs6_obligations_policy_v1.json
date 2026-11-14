@@ -2,13 +2,22 @@
   "policy_id": "tcs6-obligations/1.0",
   "status": "active",
   "approved": "owner 2026-10-21 (decisions D21 and D21a in PMIC-verified-layer-deployment.md)",
-  "applies_to": "bundles whose obligations.policy_id is tcs6-obligations/1.0 (pilot: Lido, Maker/Sky, Compound; the other protocols keep the pre-policy rule until curated under this policy)",
+  "applies_to": "bundles whose obligations.policy_id is tcs6-obligations/1.0 (all curated protocols since 2026-10-23)",
   "classes": {
     "counted": "approved, unconditional and owed from treasury assets (including the protocol's own token when paid from tokens the treasury already holds): obligations.items, deducted from treasury capital",
     "disclosed": "voluntary, ex gratia, conditional, contingent, disputed or unconfirmed commitments, and own-token commitments settled through new issuance or non-treasury supply: obligations.disclosed, shown in the report, never deducted until approved and unconditional",
     "cash_use": "future operating budgets for services not yet delivered: cash_uses_12m (runway), not obligations"
   },
-  "disclosed_classes": ["voluntary", "ex_gratia", "conditional", "contingent", "disputed", "unconfirmed", "native_token_issuance", "spent"],
+  "disclosed_classes": [
+    "voluntary",
+    "ex_gratia",
+    "conditional",
+    "contingent",
+    "disputed",
+    "unconfirmed",
+    "native_token_issuance",
+    "spent"
+  ],
   "evidence_age": {
     "max_age_days": 90,
     "rule": "current while the report's period end (report_date) is within max_age_days of as_of, or while it was published (publication_date) within max_age_days and governance records were checked for anything newer (governance_checked_through on or after publication_date, itself within max_age_days of as_of)"
@@ -27,5 +36,13 @@
     "unknown": "score withheld (unknown is never zero)"
   },
   "obligations_penalty_points": 10,
-  "audit": "every report under this policy carries obligations_policy with the pre-policy score and status, the score effect in points, the materiality reasons and the disclosed commitments"
+  "audit": "every report under this policy carries obligations_policy with the pre-policy score and status, the score effect in points, the materiality reasons and the disclosed commitments",
+  "bounding": {
+    "amended": "owner 2026-11-14 (Build C bounding, engine 1.11.0)",
+    "curated": "unvalued_bounds_usd counts only with a citation in unvalued_bounds_refs for the same item; payables are bounded by one payment cycle of a cited, approved budget",
+    "legal_or_contingent_claims_covered": "a dated legal_claims_search over court records, governance forums and news, searched_through within evidence_age.max_age_days, cited: no claims found = $0; each finding at its stated amount; a finding without an amount = undetermined",
+    "scope_reconciled": "the reconciliation gap |reported - observed same scope| when the collector reconciled this run (quantity mode: the token gap at the bundle price); otherwise undetermined",
+    "liabilities_listed": "umbrella item: bounded only when debt, payables, streams and claims are each covered or bounded, at the sum of their bounds",
+    "rule": "every bound is shown in materiality_reasons with its basis and citations; an item without a usable bound stays undetermined, never immaterial"
+  }
 }

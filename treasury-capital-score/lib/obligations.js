@@ -46,6 +46,73 @@ function gapMateriality(boundUsd, treasuryUsd, p = POLICY.materiality) {
   return "non_material";
 }
 
+// Upper bounds for unvalued checklist items (owner 2026-11-14, Build C bounding):
+//  - a curated bound (unvalued_bounds_usd) counts only with its citation (unvalued_bounds_refs[item]);
+//    payables are bounded by one payment cycle of a cited, approved budget;
+//  - legal or contingent claims: a dated search (legal_claims_search) of court records, governance
+//    forums and news, run within the evidence-age limit; nothing found = $0, each finding counts at
+//    its stated amount, a finding without an amount leaves the item undetermined;
+//  - scope: the reconciliation gap (reported vs observed, same scope) when the collector reconciled
+//    this run; otherwise undetermined;
+//  - liabilities listed is the umbrella: bounded only when debt, payables, streams and claims are
+//    each covered or bounded, at the sum of their bounds (assessed together, never item by item).
+const LEGAL_SOURCE_KINDS = ["court_records", "governance_forum", "news"];
+
+function legalBound(block, asOfMs) {
+  const s = block.legal_claims_search;
+  if (!s || typeof s !== "object") return null;
+  const age = days(asOfMs, s.searched_through);
+  const kinds = new Set((Array.isArray(s.sources) ? s.sources : []).map((x) => x && x.kind));
+  const refs = Array.isArray(s.source_refs) ? s.source_refs.filter((r) => typeof r === "string") : [];
+  if (age === null || age < 0 || age > POLICY.evidence_age.max_age_days || !LEGAL_SOURCE_KINDS.every((k) => kinds.has(k)) || !refs.length) {
+    return { usd: NaN, basis: `legal claims search not usable (searched through ${s.searched_through || "n/a"}; needs ${LEGAL_SOURCE_KINDS.join(", ")} within ${POLICY.evidence_age.max_age_days} days, cited)`, refs };
+  }
+  const findings = Array.isArray(s.findings) ? s.findings.filter((f) => f && typeof f === "object") : [];
+  const unvalued = findings.filter((f) => !Number.isFinite(f.usd));
+  if (unvalued.length) return { usd: NaN, basis: `legal claims search through ${s.searched_through}: ${unvalued.length} finding(s) without a stated amount`, refs };
+  const usd = findings.reduce((t, f) => t + f.usd, 0);
+  return { usd, basis: findings.length ? `legal claims search through ${s.searched_through}: ${findings.length} finding(s) at their stated amounts` : `legal claims search through ${s.searched_through}: no claims found`, refs };
+}
+
+function scopeBound(bundle) {
+  const g = bundle.governance || {};
+  const rec = g.reconciliation;
+  if (!rec || !Number.isFinite(g.reconciliation_pct)) return null;
+  const refs = Array.isArray(rec.source_refs) ? rec.source_refs.filter((r) => typeof r === "string") : [];
+  if (rec.mode === "quantity") {
+    const gapQty = Math.abs(Number(rec.reported_quantity) - Number(rec.observed_quantity_same_scope));
+    const h = (bundle.holdings || []).find((x) => x && (x.symbol || "").toUpperCase() === String(rec.unit || "").toUpperCase() && Array.isArray(x.prices) && x.prices.length && Number.isFinite(x.prices[0].usd));
+    if (!Number.isFinite(gapQty) || !h) return { usd: NaN, basis: `reconciliation gap of ${Number.isFinite(gapQty) ? gapQty.toFixed(2) : "n/a"} ${rec.unit} could not be priced`, refs };
+    return { usd: gapQty * h.prices[0].usd, basis: `reconciliation gap ${gapQty.toFixed(2)} ${rec.unit} (reported ${rec.reported_as_of}) at the bundle price`, refs };
+  }
+  const gap = Math.abs(Number(rec.reported_total_usd) - Number(rec.observed_usd_same_scope));
+  return Number.isFinite(gap) ? { usd: gap, basis: `reconciliation gap: reported ${rec.reported_as_of} vs observed, same scope`, refs } : null;
+}
+
+function gapBounds(bundle, block, asOfMs) {
+  const curated = block.unvalued_bounds_usd && typeof block.unvalued_bounds_usd === "object" ? block.unvalued_bounds_usd : {};
+  const citeMap = block.unvalued_bounds_refs && typeof block.unvalued_bounds_refs === "object" ? block.unvalued_bounds_refs : {};
+  const out = {};
+  for (const [k] of CHECKS) {
+    const usd = Number(curated[k]);
+    const refs = Array.isArray(citeMap[k]) ? citeMap[k].filter((r) => typeof r === "string") : [];
+    if (Number.isFinite(usd) && usd >= 0 && refs.length) out[k] = { usd, basis: "curated upper bound", refs };
+    else if (Number.isFinite(usd)) out[k] = { usd: NaN, basis: "curated bound without a citation (not used)", refs: [] };
+  }
+  const legal = legalBound(block, asOfMs);
+  if (legal && !(out.legal_or_contingent_claims_covered && Number.isFinite(out.legal_or_contingent_claims_covered.usd))) out.legal_or_contingent_claims_covered = legal;
+  const scope = scopeBound(bundle);
+  if (scope && !(out.scope_reconciled && Number.isFinite(out.scope_reconciled.usd))) out.scope_reconciled = scope;
+  if (!(out.liabilities_listed && Number.isFinite(out.liabilities_listed.usd))) {
+    const parts = ["debt_covered", "payables_covered", "streams_and_grants_covered", "legal_or_contingent_claims_covered"];
+    const vals = parts.map((k) => (block[k] === true ? 0 : out[k] ? out[k].usd : NaN));
+    out.liabilities_listed = vals.every(Number.isFinite)
+      ? { usd: vals.reduce((t, v) => t + v, 0), basis: "sum of the debt, payables, streams and claims bounds (each covered or bounded)", refs: [] }
+      : { usd: NaN, basis: "not every liability category is covered or bounded", refs: [] };
+  }
+  return out;
+}
+
 function grade(bundle, asOfMs, treasuryUsd) {
   const obl = bundle.obligations || {};
   const block = obl.obligation_visibility && typeof obl.obligation_visibility === "object" ? obl.obligation_visibility : {};
@@ -59,11 +126,11 @@ function grade(bundle, asOfMs, treasuryUsd) {
   else if (pubAge !== null && pubAge <= max && checkedAge !== null && checkedAge >= 0 && checkedAge <= max && checkedAfterPub) ageBasis = "publication_and_governance_check";
 
   const missing = CHECKS.filter(([k]) => block[k] !== true);
-  const bounds = block.unvalued_bounds_usd && typeof block.unvalued_bounds_usd === "object" ? block.unvalued_bounds_usd : {};
+  const bounds = gapBounds(bundle, block, asOfMs);
   const reasons = missing.map(([k, label]) => {
-    const bound = Number(bounds[k]);
-    const m = gapMateriality(Number.isFinite(bound) ? bound : NaN, treasuryUsd);
-    return { item: k, description: label, upper_bound_usd: Number.isFinite(bound) ? bound : null, materiality: m };
+    const b = bounds[k] || { usd: NaN, basis: null };
+    const m = gapMateriality(b.usd, treasuryUsd);
+    return { item: k, description: label, upper_bound_usd: Number.isFinite(b.usd) ? b.usd : null, bound_basis: b.basis, bound_refs: b.refs || [], materiality: m };
   });
   for (const c of Array.isArray(block.material_conflicts) ? block.material_conflicts : []) {
     const text = typeof c === "string" ? c : c && c.description;

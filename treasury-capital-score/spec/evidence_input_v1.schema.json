@@ -542,6 +542,86 @@
             "unvalued_bounds_usd": {
               "type": "object",
               "description": "Curated upper bound in USD per missing checklist item (key = checklist field); an item without a bound is undetermined (never immaterial)."
+            },
+            "unvalued_bounds_refs": {
+              "type": "object",
+              "description": "Citations per unvalued_bounds_usd item (source ids). A curated bound without a citation is not used (owner 2026-11-14). Payables: one payment cycle of a cited, approved budget.",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "legal_claims_search": {
+              "type": "object",
+              "description": "Dated search for legal or contingent claims (owner 2026-11-14). Needs sources of kind court_records, governance_forum and news, searched_through within 90 days of as_of, and source_refs. No findings = bounded at $0; each finding counts at its stated usd; a finding without usd leaves the item undetermined.",
+              "required": [
+                "searched_through",
+                "sources",
+                "findings",
+                "source_refs"
+              ],
+              "properties": {
+                "searched_through": {
+                  "type": "string",
+                  "description": "YYYY-MM-DD"
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "kind"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "court_records",
+                          "governance_forum",
+                          "news"
+                        ]
+                      },
+                      "what": {
+                        "type": "string"
+                      },
+                      "query": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "description": {
+                        "type": "string"
+                      },
+                      "usd": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "source_refs": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "source_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
             }
           }
         },

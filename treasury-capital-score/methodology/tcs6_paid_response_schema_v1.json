@@ -1417,6 +1417,19 @@
                   "null"
                 ]
               },
+              "bound_basis": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Where the upper bound comes from (curated and cited, legal claims search, reconciliation gap, or the umbrella sum); null when no bound applies (1.11.0)"
+              },
+              "bound_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
               "materiality": {
                 "type": "string",
                 "enum": [
