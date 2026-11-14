@@ -41,7 +41,7 @@
     "amended": "owner 2026-11-14 (Build C bounding, engine 1.11.0)",
     "curated": "unvalued_bounds_usd counts only with a citation in unvalued_bounds_refs for the same item; payables are bounded by one payment cycle of a cited, approved budget",
     "legal_or_contingent_claims_covered": "a dated legal_claims_search over court records, governance forums and news, searched_through within evidence_age.max_age_days, cited: no claims found = $0; each finding at its stated amount; a finding without an amount = undetermined",
-    "scope_reconciled": "the reconciliation gap |reported - observed same scope| when the collector reconciled this run (quantity mode: the token gap at the bundle price); otherwise undetermined",
+    "scope_reconciled": "the reconciliation gap |reported - observed same scope| when the collector reconciled this run (quantity mode: the token gap at the bundle price); otherwise undetermined; a scope bound from a reconciliation gap is at most material, never critical (the gap is not an unlisted liability and tcs6-materiality already caps confidence for it)",
     "liabilities_listed": "umbrella item: bounded only when debt, payables, streams and claims are each covered or bounded, at the sum of their bounds",
     "rule": "every bound is shown in materiality_reasons with its basis and citations; an item without a usable bound stays undetermined, never immaterial"
   }

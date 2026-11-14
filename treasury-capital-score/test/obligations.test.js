@@ -160,6 +160,9 @@ test("bounding: scope is bounded by the reconciliation gap when the collector re
   const small = withRecon({ reconciliation_pct: 99.9, reconciliation: { reported_total_usd: 1000000, observed_usd_same_scope: 1040000, reported_as_of: "2026-09-30", source_refs: ["SRC-R"] } });
   assert.equal(reason(small, "scope_reconciled").upper_bound_usd, 40000);
   assert.equal(reason(small, "scope_reconciled").materiality, "non_material");
+  const huge = withRecon({ reconciliation_pct: 20, reconciliation: { reported_total_usd: 100e6, observed_usd_same_scope: 20e6, reported_as_of: "2026-09-30", source_refs: ["SRC-R"] } });
+  assert.equal(reason(huge, "scope_reconciled").materiality, "material", "a reconciliation gap never withholds the score on its own");
+  assert.notEqual(huge.overall_score.score, null);
   const none = withRecon({ reconciliation_pct: null, reconciliation: { reported_total_usd: 1000000, observed_usd_same_scope: 1040000 } });
   assert.equal(reason(none, "scope_reconciled").materiality, "undetermined", "not reconciled this run: no bound");
 });

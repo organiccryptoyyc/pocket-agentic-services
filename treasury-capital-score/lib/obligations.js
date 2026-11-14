@@ -129,7 +129,10 @@ function grade(bundle, asOfMs, treasuryUsd) {
   const bounds = gapBounds(bundle, block, asOfMs);
   const reasons = missing.map(([k, label]) => {
     const b = bounds[k] || { usd: NaN, basis: null };
-    const m = gapMateriality(b.usd, treasuryUsd);
+    let m = gapMateriality(b.usd, treasuryUsd);
+    // A reconciliation gap is not an unlisted liability, and tcs6-materiality already caps confidence for
+    // it: as a scope bound it can be material, never critical (it never withholds the score on its own).
+    if (k === "scope_reconciled" && m === "critical" && b.basis && b.basis.startsWith("reconciliation gap")) m = "material";
     return { item: k, description: label, upper_bound_usd: Number.isFinite(b.usd) ? b.usd : null, bound_basis: b.basis, bound_refs: b.refs || [], materiality: m };
   });
   for (const c of Array.isArray(block.material_conflicts) ? block.material_conflicts : []) {
