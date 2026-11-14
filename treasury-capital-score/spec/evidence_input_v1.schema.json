@@ -545,13 +545,7 @@
             },
             "unvalued_bounds_refs": {
               "type": "object",
-              "description": "Citations per unvalued_bounds_usd item (source ids). A curated bound without a citation is not used (owner 2026-11-14). Payables: one payment cycle of a cited, approved budget.",
-              "additionalProperties": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
+              "description": "Citations per unvalued_bounds_usd item (source ids). A curated bound without a citation is not used (owner 2026-11-14). Payables: one payment cycle of a cited, approved budget."
             },
             "legal_claims_search": {
               "type": "object",
