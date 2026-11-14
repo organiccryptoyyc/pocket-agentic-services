@@ -794,14 +794,14 @@
       "entity_type": "defi_protocol",
       "peer_cohort": "DeFi protocol",
       "registry_status": "unverified",
-      "eligibility": "needs_first_time_vetting",
+      "eligibility": "excluded_by_user_decision",
       "scoreable": false,
-      "treasury_perimeter": "Not yet established.",
+      "treasury_perimeter": "Not established: no public treasury disclosure (vetting 2026-11-14).",
       "notes": [
-        "Carryover from the original watchlist; never formally vetted."
+        "Carryover from the original watchlist.", "Vetted 2026-11-14: PancakeSwap publishes no treasury addresses, treasury report or obligations disclosure (docs FAQ, fee table, tokenomics, developer address pages). On-chain candidates (two 3-of-7 Safes, V2/V3 fee receivers) hold CAKE pending burn or emission, not attributable treasury reserves. Excluded by user decision 2026-11-14 until a treasury disclosure is published; re-check quarterly."
       ],
       "treasury_addresses": [],
-      "sources": []
+      "sources": ["https://docs.pancakeswap.finance/welcome-to-pancakeswap/contact-us/faq", "https://docs.pancakeswap.finance/earn/pancakeswap-pools", "https://developer.pancakeswap.finance/contracts/v3/addresses"]
     },
     {
       "entity_id": "stargate-finance",
