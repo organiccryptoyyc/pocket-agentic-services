@@ -118,6 +118,7 @@ const needsEntity = (v) => v.kind === "entity_composite" || v.kind === "entity_e
 function routesOf(b) {
   const r = ["POST /v1/verticals", "POST /v1/brief", "POST /v1/overview", "POST /v1/signals", "POST /v1/signal", "POST /v1/explain", "POST /v1/catalog"];
   if (b.events_scope) r.push("POST /v1/events");
+  if (b.evidence_packet) r.push("POST /v1/evidence-packet");
   if ((b.extra_routes || []).includes("inflation_adjust")) r.push("POST /v1/inflation/adjust");
   if ((b.extra_routes || []).includes("crypto_tools")) r.push("POST /v1/tools/address", "POST /v1/tools/units");
   return r;
@@ -143,10 +144,12 @@ function cardDescription(b) {
   const lead = t.lead || b.description;
   const note = t.attestation_note ? `${t.attestation_note} ` : "";
   const ev = b.events_scope ? ", /v1/events" : "";
+  // Build 3 (2026-11-14): the evidence packet, one sentence.
+  const pk = b.evidence_packet ? "POST /v1/evidence-packet {entity_id, from?, to?, kinds?, q?}: every dated, cited regulatory event for one entity in up to 366 days, with per-source coverage and hashes. " : "";
   const ent = b.entities ? ", entity_id" : "";
   const text = t.compact
-    ? (verts) => `${lead} POST /v1/brief {vertical${ent}}: one brief; /v1/overview: all briefs; /v1/verticals: the list. Verticals: ${verts}. Raw series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${ev}. ${note}Every response is one JSON object. Research signal, not investment advice.`
-    : (verts) => `${lead} POST /v1/brief {vertical${ent}} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: ${verts}. Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${ev}. ${note}Every response is a single JSON object. Research signal, not investment advice.`;
+    ? (verts) => `${lead} POST /v1/brief {vertical${ent}}: one brief; /v1/overview: all briefs; /v1/verticals: the list. Verticals: ${verts}. Raw series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${ev}. ${pk}${note}Every response is one JSON object. Research signal, not investment advice.`
+    : (verts) => `${lead} POST /v1/brief {vertical${ent}} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: ${verts}. Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${ev}. ${pk}${note}Every response is a single JSON object. Research signal, not investment advice.`;
   const long = text(b.verticals.map((v) => `${v.id} (${(t.questions || {})[v.id] || v.question})`).join("; "));
   if (long.length <= CARD_DESCRIPTION_MAX) return long;
   const short = text(b.verticals.map((v) => v.id).join(", "));
@@ -301,6 +304,14 @@ function openapi(b) {
     "/v1/health": { get: { summary: "Readiness.", responses: { 200: ok("Object") } } },
   };
   if (b.events_scope) paths["/v1/events"] = { post: { summary: "Dated events with source links.", requestBody: body({ ...E, event_type: { type: "string" }, severity: { type: "string", enum: ["low", "medium", "high"] }, since: { type: "string", format: "date" }, limit: { type: "integer" } }), responses: { 200: ok("Object"), 400: err } } };
+  if (b.evidence_packet) {
+    const P = b.evidence_packet;
+    paths["/v1/evidence-packet"] = { post: {
+      summary: "Every dated, cited regulatory event for one entity in a window of up to 366 days, newest first, with per-source coverage (checked_ok, empty, stale, failed), an evidence_hash per item and a packet_hash. Titles and the source's own field values only.",
+      requestBody: body({ entity_id: { type: "string", enum: P.entities }, from: { type: "string", format: "date", description: "Default: 365 days before 'to'." }, to: { type: "string", format: "date", description: "Default: today (UTC)." }, kinds: { type: "array", items: { type: "string" }, maxItems: 10, description: "Event kinds to keep, e.g. drug_recall; every packet lists kinds_found." }, q: { type: "string", maxLength: 80, description: "Word or phrase matched in titles and fields." }, max_items: { type: "integer", minimum: 1, maximum: 50 }, cursor: { type: "string", description: "next_cursor of the previous page." } }, ["entity_id"]),
+      responses: { 200: ok("Object"), 400: err },
+    } };
+  }
   if ((b.extra_routes || []).includes("crypto_tools")) {
     paths["/v1/tools/address"] = { post: { summary: "Check an address: EVM (EIP-55 checksum), Pocket/Cosmos/Bitcoin bech32, Bitcoin and Tron base58check, Solana. No network calls.", requestBody: body({ address: { type: "string" } }, ["address"]), responses: { 200: ok("Object"), 400: err } } };
     paths["/v1/tools/units"] = { post: { summary: "Convert units of one asset exactly (wei/gwei/eth, sat/btc, lamport/sol, upokt/pokt, sun/trx), or any token with 'decimals' between 'raw' and 'token'.", requestBody: body({ amount: { type: "string" }, from: { type: "string" }, to: { type: "string" }, decimals: { type: "integer" } }, ["amount", "from", "to"]), responses: { 200: ok("Object"), 400: err } } };

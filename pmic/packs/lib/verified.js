@@ -147,4 +147,28 @@ function forAddress(out, ctx, nowMs = Date.now()) {
   });
 }
 
-module.exports = { forBrief, forOverview, forEvents, forAddress, packTopic };
+// evidence packet: about the company when the entity is one (ticker), else the pack's topic for that entity;
+// one evidence item per cited event on the page; a gap per source that is stale or failed, and for truncation.
+function forEvidencePacket(out, ctx, nowMs = Date.now()) {
+  const s = out.subject || {};
+  const subject = s.ticker && ctx.entity
+    ? companySubject(ctx.entity, ctx.cik)
+    : { ...topicSubject(ctx.pack, `evidence-${s.entity_id}`, `${s.name || s.entity_id} evidence packet`, null), identifiers: { pack: ctx.pack.service_id, pmic_entity_id: s.entity_id } };
+  const items = out.items || [];
+  const gaps = (out.coverage || []).filter((c) => c.status === "stale" || c.status === "failed")
+    .map((c) => C.gap(`source:${c.source_id}`, c.note || c.status, "items from this source may be missing"));
+  if (out.complete === false && !gaps.length) gaps.push(C.gap("window", "the hub list limit was reached before the start of the window", "older items may be missing", "narrow the window or pass kinds"));
+  return C.build({
+    service: ctx.pack.service_id, version: ctx.version, route: "/v1/evidence-packet", nowMs,
+    subject, as_of: C.newest(items.map((i) => i.date)),
+    assessment: C.notScored(`${out.items_total} item${out.items_total === 1 ? "" : "s"}${out.window ? `, ${out.window.from} to ${out.window.to}` : ""}`),
+    evidence: items.filter((i) => i.url).map((i) => {
+      const src = ctx.sources.get(i.source_id) || {};
+      return C.evidence({ source_ref: `${i.source_id}:${i.evidence_hash.slice(0, 16)}`, title: i.title || i.kind, publisher: src.name || i.source_name, url: i.url, retrieved_at: i.fetched_at, observation_time: i.date, source_tier: src.tier ?? null, rights_status: rights(src.tier) });
+    }),
+    gaps,
+    moreRoute: "/v1/evidence-packet",
+  });
+}
+
+module.exports = { forBrief, forOverview, forEvents, forAddress, forEvidencePacket, packTopic };

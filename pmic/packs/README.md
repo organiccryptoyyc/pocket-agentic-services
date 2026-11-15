@@ -38,6 +38,14 @@ bundle). `POST /v1/verticals {}` lists what the service sells. The raw scored se
 available inside each bundle's scope: `/v1/signals`, `/v1/signal`, `/v1/explain`, `/v1/catalog`,
 plus `/v1/events` for the company and pharma bundles.
 
+`POST /v1/evidence-packet {entity_id, from?, to?, kinds?, q?, max_items?, cursor?}` (company 0.8.0, pharma 0.8.0,
+public-sector 0.6.0) returns every dated, cited regulatory event for one entity in a window of up to 366 days
+(default: the last 366 days), newest first, 50 per page. Each item has its date, kind, source, title, severity,
+URL, the source's own fields and an `evidence_hash`; `packet_hash` covers every matching item across pages.
+`coverage` has one line per source that applies to the entity (`checked_ok`, `empty`, `stale`, `failed`), so an
+empty source is reported, never dropped. The bundle's `evidence_packet` block lists the entities and which hub
+sources apply to each; the route reads only the hub's `/v1/events` and `/v1/sources` (code: `lib/evidence.js`).
+
 ## How a brief is scored (`pmic-vertical/1.0`)
 
 1. **Inputs.** Each input is a hub series with its own 0-100 composite (see `pmic/docs/SCORING.md`).

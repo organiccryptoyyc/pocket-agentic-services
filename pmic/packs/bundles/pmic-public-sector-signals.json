@@ -2,7 +2,20 @@
   "_comment": "Public sector verticals: product safety recalls, political money and federal spending, from free US government APIs (CPSC, NHTSA, FDA, FEC, Senate LDA, USAspending, Treasury). Batch 2's one new service.",
   "service_id": "pmic-public-sector-signals",
   "display_name": "PMIC Public Sector Signals",
-  "version": "0.5.0",
+  "version": "0.6.0",
+  "evidence_packet": {
+    "_comment": "POST /v1/evidence-packet (0.6.0): dated public laws, significant federal rules, product and vehicle recalls, disaster declarations and earthquakes, and exploited vulnerabilities, each from its official source.",
+    "entities": ["us-congress", "us-federal", "us-consumer-products", "us-vehicles", "us-hazards", "us-cyber"],
+    "sources": [
+      {"source_id": "congress", "entities": ["us-congress"]},
+      {"source_id": "fedreg", "entities": ["us-federal"]},
+      {"source_id": "cpsc", "entities": ["us-consumer-products"]},
+      {"source_id": "nhtsa", "entities": ["us-vehicles"]},
+      {"source_id": "fema", "entities": ["us-hazards"]},
+      {"source_id": "usgs", "entities": ["us-hazards"]},
+      {"source_id": "cisa", "entities": ["us-cyber"]}
+    ]
+  },
   "category": "government",
   "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC, NHTSA, FDA food), political money (FEC, Senate lobbying), federal spending (USAspending, Treasury), natural hazards (FEMA, USGS, NWS), cyber threat (CISA KEV, NVD), respiratory illness (CDC), wildfire activity (NIFC), climate anomaly (NOAA), air travel demand (TSA), federal rulemaking (Federal Register), legislation (Congress.gov), environmental enforcement (EPA ECHO), Medicare enrollment (CMS) and nonprofit finances (IRS Form 990). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input.",
   "default_horizon": "90d",

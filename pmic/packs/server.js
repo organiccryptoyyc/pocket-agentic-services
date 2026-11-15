@@ -11,6 +11,7 @@
 //   POST /v1/signal    {series_id}        POST /v1/explain {series_id, horizon?}
 //   POST /v1/catalog   {entity_id?, q?, ...}
 //   POST /v1/events    {entity_id?, event_type?, severity?, since?, limit?}   (company and pharma bundles)
+//   POST /v1/evidence-packet {entity_id, from?, to?, kinds?, q?, max_items?, cursor?}  (company, pharma, public-sector)
 //   POST /v1/inflation/adjust {amount, from: "YYYY-MM", to?: "YYYY-MM"}     (macro bundle)
 //   POST /v1/tools/address {address}; POST /v1/tools/units {amount, from, to}  (crypto bundle)
 //   GET  /v1/version, /v1/health, /healthz
@@ -412,6 +413,26 @@ if (PACK.events_scope) {
     const entity = entityOf(b, !PACK.events_scope.industry);
     const out = wrap(await hub("/v1/events", { ...pick(b), ...PACK.events_scope, ...(entity ? { entity_id: entity } : {}) }));
     return withVerified(out, VF.forEvents, { entityId: entity });
+  });
+}
+if (PACK.evidence_packet) {
+  // Dated, cited regulatory events for one entity in a window (lib/evidence.js). Reads only the hub's
+  // /v1/events and /v1/sources, so nothing on the hub changes.
+  const EV = require("./lib/evidence");
+  routes.set("POST /v1/evidence-packet", async (raw) => {
+    const input = EV.parseInput(obj(raw), PACK.evidence_packet);
+    const entity = await entityInfo(input.entity);
+    const ask = (extra) => hub("/v1/events", { entity_id: input.entity, since: input.from, limit: EV.HUB_LIMIT, ...extra }).then((r) => r.events);
+    let lists = input.kinds ? await Promise.all(input.kinds.map((k) => ask({ event_type: k }))) : [await ask({})];
+    // One list hit the hub limit: ask again kind by kind (each kind gets its own 500), up to 10 kinds.
+    if (!input.kinds && lists[0].length >= EV.HUB_LIMIT) {
+      const kinds = [...new Set(lists[0].map((e) => e.event_type))];
+      if (kinds.length <= 10) lists = await Promise.all(kinds.map((k) => ask({ event_type: k })));
+    }
+    const src = await hubOptional("/v1/sources", {});
+    const health = new Map(((src && src.sources) || []).map((s) => [s.source_id, s]));
+    const out = wrap(EV.buildPacket({ input, entity, cfg: PACK.evidence_packet, lists, health, collector: (src && src.collector) || null }));
+    return withVerified(out, VF.forEvidencePacket, { entityId: entity.ticker ? input.entity : null });
   });
 }
 if ((PACK.extra_routes || []).includes("inflation_adjust")) routes.set("POST /v1/inflation/adjust", async (raw) => wrap(await inflationAdjust(obj(raw))));

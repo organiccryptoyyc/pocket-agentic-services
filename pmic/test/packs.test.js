@@ -542,3 +542,133 @@ test("verified: every brief, overview, events and address answer carries a valid
   assert.equal(bad.status, 400);
   assert.equal(bad.json.verified, undefined);
 });
+
+// Build 3 (2026-11-14): POST /v1/evidence-packet on the company, pharma and public-sector packs.
+test("evidence packet: dated, cited events per entity with per-source coverage, paging and filters", async () => {
+  const ENV = path.join(__dirname, "..", "..", "docs", "envelope");
+  const { validate } = await import(require("node:url").pathToFileURL(path.join(ENV, "validate.mjs")).href);
+  const schema = JSON.parse(fs.readFileSync(path.join(ENV, "pocket-agentic-envelope-v1.schema.json"), "utf8"));
+
+  // A pharma company in the company pack: SEC plus the three pharma sources, each with a coverage line.
+  const pfe = await call("pmic-company-signals", "POST", "/v1/evidence-packet", { entity_id: "pfe" });
+  assert.equal(pfe.status, 200);
+  assert.equal(pfe.json.service, "pmic-company-signals");
+  assert.equal(pfe.json.subject.entity_id, "pfe");
+  assert.deepEqual(pfe.json.coverage.map((c) => c.source_id), ["sec", "openfda", "ctgov", "fdawl"]);
+  assert.ok(pfe.json.items_total > 50 && pfe.json.items_returned === 50 && pfe.json.next_cursor === "50");
+  assert.ok(pfe.json.window.days === 366);
+  const dates = pfe.json.items.map((i) => i.date);
+  assert.deepEqual(dates, [...dates].sort().reverse(), "newest first");
+  for (const i of pfe.json.items) {
+    assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(i.date) && i.kind && i.title && /^https?:\/\//.test(i.url) && /^[0-9a-f]{64}$/.test(i.evidence_hash), JSON.stringify(i));
+    assert.ok(["sec", "openfda", "ctgov", "fdawl"].includes(i.source_id));
+  }
+  assert.equal(Object.values(pfe.json.kinds_found).reduce((a, b) => a + b, 0), pfe.json.items_total);
+  assert.deepEqual(validate(schema, pfe.json.verified), [], "pfe verified");
+  assert.equal(pfe.json.verified.route, "/v1/evidence-packet");
+  assert.equal(pfe.json.verified.subject.kind, "company");
+
+  // The second page continues the first; the packet hash covers every page.
+  const page2 = await call("pmic-company-signals", "POST", "/v1/evidence-packet", { entity_id: "pfe", cursor: "50" });
+  assert.equal(page2.json.items[0].evidence_hash !== pfe.json.items[0].evidence_hash, true);
+  assert.ok(page2.json.items[0].date <= pfe.json.items[49].date);
+  assert.equal(page2.json.packet_hash, pfe.json.packet_hash);
+
+  // kinds and q narrow the packet; kinds_found still describes the whole window.
+  const recalls = await call("pmic-company-signals", "POST", "/v1/evidence-packet", { entity_id: "pfe", kinds: ["drug_recall", "warning_letter"] });
+  assert.ok(recalls.json.items_total >= 1 && recalls.json.items.every((i) => ["drug_recall", "warning_letter"].includes(i.kind)));
+  assert.notEqual(recalls.json.packet_hash, pfe.json.packet_hash);
+  const q = await call("pmic-company-signals", "POST", "/v1/evidence-packet", { entity_id: "pfe", q: "Unavailable" });
+  assert.ok(q.json.items_total >= 1 && q.json.items.every((i) => `${i.title} ${JSON.stringify(i.fields)}`.toLowerCase().includes("unavailable")));
+
+  // A non-pharma company: SEC only, no claim that openFDA was checked.
+  const aapl = await call("pmic-company-signals", "POST", "/v1/evidence-packet", { entity_id: "aapl", max_items: 5 });
+  assert.deepEqual(aapl.json.coverage.map((c) => c.source_id), ["sec"]);
+  assert.ok(aapl.json.items.every((i) => i.source_id === "sec") && aapl.json.items_returned === 5);
+
+  // Pharma pack: the drug market, from openFDA only; a sector entity is a topic, not a company.
+  const mkt = await call("pmic-pharma-signals", "POST", "/v1/evidence-packet", { entity_id: "us-drug-market" });
+  assert.equal(mkt.status, 200);
+  assert.deepEqual(mkt.json.coverage.map((c) => c.source_id), ["openfda"]);
+  assert.equal(mkt.json.verified.subject.kind, "topic");
+  assert.deepEqual(validate(schema, mkt.json.verified), [], "us-drug-market verified");
+  // The pharma pack does not sell SEC filings (pmic-company-signals does).
+  const pfePharma = await call("pmic-pharma-signals", "POST", "/v1/evidence-packet", { entity_id: "pfe" });
+  assert.ok(pfePharma.json.items_total > 0 && pfePharma.json.items.every((i) => i.source_id !== "sec"));
+
+  // Public-sector pack: laws from Congress.gov; hazards from FEMA and USGS.
+  const laws = await call("pmic-public-sector-signals", "POST", "/v1/evidence-packet", { entity_id: "us-congress" });
+  assert.equal(laws.status, 200);
+  assert.ok(laws.json.items_total > 0 && laws.json.items.every((i) => i.kind === "public_law" && i.source_id === "congress"));
+  const hz = await call("pmic-public-sector-signals", "POST", "/v1/evidence-packet", { entity_id: "us-hazards" });
+  assert.deepEqual(hz.json.coverage.map((c) => c.source_id), ["fema", "usgs"]);
+
+  // A window with nothing in it: every applicable source answers `empty`, nothing is dropped.
+  const old = await call("pmic-public-sector-signals", "POST", "/v1/evidence-packet", { entity_id: "us-congress", from: "2025-12-01", to: "2025-12-02" });
+  assert.equal(old.json.items_total, 0);
+  assert.ok(old.json.coverage.every((c) => c.status === "empty" || c.status === "stale"));
+
+  // Bad input is a 400 with a JSON error; packs without the block don't have the route.
+  for (const [b, body, why] of [
+    ["pmic-company-signals", {}, "no entity"],
+    ["pmic-company-signals", { entity_id: "us-congress" }, "entity of another pack"],
+    ["pmic-company-signals", { entity_id: "pfe", from: "2026-13-01" }, "bad date"],
+    ["pmic-company-signals", { entity_id: "pfe", from: "2025-01-01", to: "2026-06-01" }, "window over 366 days"],
+    ["pmic-company-signals", { entity_id: "pfe", to: "2999-01-01" }, "future"],
+    ["pmic-company-signals", { entity_id: "pfe", kinds: [] }, "empty kinds"],
+    ["pmic-company-signals", { entity_id: "pfe", kinds: ["Drug Recall"] }, "bad kind"],
+    ["pmic-company-signals", { entity_id: "pfe", max_items: 51 }, "max_items"],
+    ["pmic-company-signals", { entity_id: "pfe", cursor: "x" }, "cursor"],
+  ]) {
+    const r = await call(b, "POST", "/v1/evidence-packet", body);
+    assert.equal(r.status, 400, why);
+    assert.ok(r.json.error && r.json.error.code, why);
+  }
+  assert.equal((await call("pmic-macro-signals", "POST", "/v1/evidence-packet", { entity_id: "us-congress" })).status, 404);
+});
+
+test("evidence packet: coverage statuses, truncation and the window rules (unit)", () => {
+  const EV = require("../packs/lib/evidence");
+  const now = Date.parse("2026-11-14T12:00:00Z");
+  const cfg = { entities: ["pfe", "aapl", "us-congress"], sources: [{ source_id: "sec" }, { source_id: "openfda", industry: "pharma" }, { source_id: "congress", entities: ["us-congress"] }] };
+  assert.deepEqual(EV.sourcesFor(cfg, { entity_id: "aapl", industry: "tech" }), ["sec"]);
+  assert.deepEqual(EV.sourcesFor(cfg, { entity_id: "pfe", industry: "pharma" }), ["sec", "openfda"]);
+
+  const health = new Map([
+    ["sec", { name: "SEC EDGAR", cadence_minutes: 360, last_success_at: "2026-11-14T06:00:00Z" }],
+    ["openfda", { name: "openFDA", cadence_minutes: 1440, last_success_at: "2026-11-01T00:00:00Z" }],
+  ]);
+  assert.equal(EV.coverageLine("sec", 3, health, now).status, "checked_ok");
+  assert.equal(EV.coverageLine("sec", 0, health, now).status, "empty");
+  assert.equal(EV.coverageLine("openfda", 0, health, now).status, "stale");
+  assert.equal(EV.coverageLine("ctgov", 0, health, now).status, "failed");
+  // Hub mode: the hub's own fetch log is empty, so freshness is the Pi's last push and its open alerts.
+  const hubHealth = new Map([["congress", { name: "Congress.gov", cadence_minutes: 1440, last_success_at: null }], ["fedreg", { name: "Federal Register", last_success_at: null }]]);
+  const pushed = { received_at: "2026-11-14T09:00:00Z", open_alerts: [{ kind: "api_failure", source_id: "fedreg", last_seen: "2026-11-14T08:00:00Z" }, { kind: "stale", source_id: "congress" }] };
+  assert.equal(EV.coverageLine("congress", 4, hubHealth, now, pushed).status, "checked_ok", "a data alert (stale series) is not a fetch failure");
+  assert.equal(EV.coverageLine("congress", 4, hubHealth, now, pushed).collector_pushed_at, "2026-11-14T09:00:00Z");
+  assert.equal(EV.coverageLine("congress", 0, hubHealth, now, pushed).status, "empty");
+  assert.match(EV.coverageLine("fedreg", 2, hubHealth, now, pushed).note, /api_failure/);
+  assert.equal(EV.coverageLine("fedreg", 2, hubHealth, now, pushed).status, "stale");
+  assert.equal(EV.coverageLine("congress", 4, hubHealth, now, { received_at: "2026-11-10T00:00:00Z", open_alerts: [] }).status, "stale", "the Pi stopped pushing");
+  assert.equal(EV.coverageLine("congress", 4, hubHealth, now, null).status, "failed");
+
+  const input = EV.parseInput({ entity_id: "pfe" }, cfg, { now });
+  assert.deepEqual([input.from, input.to, input.days], ["2025-11-14", "2026-11-14", 366]);
+  assert.throws(() => EV.parseInput({ entity_id: "pfe", from: "2023-01-01", to: "2023-06-01" }, cfg, { now }), /at most 1095 days back/);
+
+  const ev = (d, src = "sec", type = "filing_8k") => ({ source_id: src, event_type: type, event_time: d, title: `${type} ${d}`, severity: "low", source_url: "https://example.gov/x", detail: {}, fetch_time: "2026-11-14T00:00:00Z" });
+  // A full hub list that still ends after `from` may be cut short: incomplete, with a note.
+  const full = Array.from({ length: EV.HUB_LIMIT }, (_, i) => ev(new Date(now - i * 3600000).toISOString().slice(0, 10)));
+  const p = EV.buildPacket({ input, entity: { entity_id: "pfe", industry: "pharma" }, cfg, lists: [full], health, now });
+  assert.equal(p.complete, false);
+  assert.ok(p.notes.some((n) => n.includes("at most 500")) && p.notes.some((n) => n.includes("openfda (stale)")));
+  // Duplicates across kind lists count once; events outside the window or from other sources are left out.
+  const q = EV.buildPacket({ input, entity: { entity_id: "pfe", industry: "pharma" }, cfg, lists: [[ev("2026-11-01"), ev("2025-01-01"), ev("2026-11-02", "congress", "public_law")], [ev("2026-11-01")]], health, now });
+  assert.equal(q.items_total, 1);
+  assert.deepEqual(q.coverage.map((c) => [c.source_id, c.status, c.items_in_window]), [["sec", "checked_ok", 1], ["openfda", "stale", 0]]);
+  // The same events give the same hashes.
+  const again = EV.buildPacket({ input, entity: { entity_id: "pfe", industry: "pharma" }, cfg, lists: [[ev("2026-11-01")]], health, now });
+  assert.equal(again.packet_hash, q.packet_hash);
+  assert.equal(again.items[0].evidence_hash, q.items[0].evidence_hash);
+});

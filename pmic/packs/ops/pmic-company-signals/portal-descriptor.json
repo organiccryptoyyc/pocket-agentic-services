@@ -303,7 +303,8 @@
     "POST /v1/signal": "read",
     "POST /v1/explain": "read",
     "POST /v1/catalog": "read",
-    "POST /v1/events": "read"
+    "POST /v1/events": "read",
+    "POST /v1/evidence-packet": "read"
   },
   "example": {
     "method": "POST",

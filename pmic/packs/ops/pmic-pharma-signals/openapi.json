@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Pharma Safety and Approval Signals",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "description": "Scored drug-market and company safety briefs from openFDA, FDA and BLS: drug recalls, adverse event reports, label changes and approvals for the US drug market and for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipelines (ClinicalTrials.gov), drug shortages, medical device recalls and adverse events, FDA warning letters, and drug price inflation (CPI and PPI). Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and citations."
   },
   "servers": [
@@ -482,6 +482,90 @@
                   }
                 },
                 "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input: JSON object with error {code, message}.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evidence-packet": {
+      "post": {
+        "summary": "Every dated, cited regulatory event for one entity in a window of up to 366 days, newest first, with per-source coverage (checked_ok, empty, stale, failed), an evidence_hash per item and a packet_hash. Titles and the source's own field values only.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "entity_id": {
+                    "type": "string",
+                    "enum": [
+                      "pfe",
+                      "lly",
+                      "jnj",
+                      "us-drug-market",
+                      "us-fda-compliance"
+                    ]
+                  },
+                  "from": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Default: 365 days before 'to'."
+                  },
+                  "to": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Default: today (UTC)."
+                  },
+                  "kinds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 10,
+                    "description": "Event kinds to keep, e.g. drug_recall; every packet lists kinds_found."
+                  },
+                  "q": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "description": "Word or phrase matched in titles and fields."
+                  },
+                  "max_items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50
+                  },
+                  "cursor": {
+                    "type": "string",
+                    "description": "next_cursor of the previous page."
+                  }
+                },
+                "required": [
+                  "entity_id"
+                ]
               }
             }
           }
