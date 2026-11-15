@@ -187,6 +187,30 @@ test("no conflict when the exit check did not pass, the position is not restrict
   assert.ok(sim.assessments.some((x) => x.kind === "classification_conflict"), "a passed withdrawal simulation (v2a) counts too");
 });
 
+test("classification resolved as restricted: stays excluded, no provisional status, cap or review flag (owner 2026-11-15)", () => {
+  const before = report(withExitCheck(withPosition(3800000)));
+  const b = withExitCheck(withPosition(3800000));
+  b.holdings = b.holdings.map((h) => (h.symbol === "yRECOVERY" ? { ...h, classification: { status: "restricted", resolved_at: "2025-12-23",
+    basis: "YIP-90 passed: treasury principal funds user recovery until users are made whole or governance withdraws it", source_refs: ["YIP90"] } } : h));
+  const r = report(b);
+  const m = r.attestation.materiality;
+  const a = m.assessments.find((x) => x.kind === "classification_conflict");
+  assert.deepEqual([a.classification_status, a.score_treatment, a.review_required, a.confidence, a.verified_treasury_value_usd, a.liquid_value_usd],
+    ["resolved_restricted", "restricted_exclusion", false, "unchanged", 0, 0]);
+  assert.equal(a.resolution.status, "restricted");
+  assert.match(a.statement, /currently withdrawable\. Its classification was resolved as restricted on 2025-12-23/);
+  assert.equal(m.effect, "disclose");
+  assert.notEqual(m.review_required, true);
+  assert.equal(r.overall_score.score, before.overall_score.score, "same exclusion: the score is unchanged");
+  assert.ok(r.confidence.score >= before.confidence.score, "the conflict's confidence cap is lifted");
+  assert.ok(r.risks.some((x) => x.id === "restricted_position") && !r.risks.some((x) => x.id === "classification_conflict"));
+  assert.ok(validateReport(r).ok, validateReport(r).errors.join("; "));
+  // a resolution without a basis is not a resolution: the conflict stays open
+  const nb = withExitCheck(withPosition(3800000));
+  nb.holdings = nb.holdings.map((h) => (h.symbol === "yRECOVERY" ? { ...h, classification: { status: "restricted", resolved_at: "2025-12-23" } } : h));
+  assert.equal(report(nb).attestation.materiality.assessments.find((x) => x.kind === "classification_conflict").classification_status, "conflicted");
+});
+
 // ---- 1.2: divergent scoring (owner 2026-10-30) -------------------------------------------------------------
 const POOL_TOKEN = "0x00000000000000000000000000000000000000cc";
 const SAFE = "0x00000000000000000000000000000000000000dd";

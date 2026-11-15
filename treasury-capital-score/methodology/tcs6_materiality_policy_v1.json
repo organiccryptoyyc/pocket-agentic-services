@@ -63,7 +63,8 @@
       "material": "conservative exclusion: the position leaves verified and liquid value (it was already restricted), provisional, review required, confidence capped; no extra penalty points",
       "critical": "as material: the conservative treatment keeps the score reproducible",
       "non_material": "disclosed with review required; no score effect",
-      "resolution": "ordinary treasury capital confirmed: update the curated classification, the position counts subject to its exit result; restricted confirmed: the curated classification stays and the conflict is recorded as resolved; ambiguous: the conflict stays open"
+      "resolution": "ordinary treasury capital confirmed: update the curated classification, the position counts subject to its exit result; restricted confirmed: the curated classification stays and the conflict is recorded as resolved; ambiguous: the conflict stays open",
+      "resolved_restricted": "the holding carries classification {status: restricted, resolved_at, basis, source_refs} (curated, owner-approved): classification_status resolved_restricted, score_treatment restricted_exclusion, the position stays out of verified and liquid value at any materiality, no provisional status, no confidence cap, no review flag; the observed value and the passed exit check stay reported (owner 2026-11-15, yETH-Recovery after YIP-90)"
     },
     "obligation_visibility": {
       "active": false,

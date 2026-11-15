@@ -511,13 +511,15 @@
                   "classification_status": {
                     "type": "string",
                     "enum": [
-                      "conflicted"
+                      "conflicted",
+                      "resolved_restricted"
                     ]
                   },
                   "score_treatment": {
                     "type": "string",
                     "enum": [
                       "conservative_exclusion",
+                      "restricted_exclusion",
                       "disclosed"
                     ]
                   },
@@ -533,6 +535,35 @@
                   },
                   "resolution_event": {
                     "type": "string"
+                  },
+                  "resolution": {
+                    "type": "object",
+                    "description": "classification_conflict resolved by a curator or governance decision (restricted confirmed)",
+                    "required": [
+                      "status",
+                      "resolved_at",
+                      "basis"
+                    ],
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "restricted"
+                        ]
+                      },
+                      "resolved_at": {
+                        "type": "string"
+                      },
+                      "basis": {
+                        "type": "string"
+                      },
+                      "source_refs": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
                   },
                   "statement": {
                     "type": "string"

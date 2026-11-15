@@ -88,18 +88,34 @@ function conflicts(bundle, base, payload, policy) {
   return out;
 }
 
+// A curator or governance decision resolves a conflict (policy "resolution"): the holding carries
+// `classification: {status: "restricted", resolved_at, basis, source_refs}`. Restricted confirmed: the curated
+// classification stays, the position stays out of verified and liquid value, and the conflict is recorded as
+// resolved: no provisional status, no confidence cap, no review flag. The observed value and the passed check
+// are still reported.
+function resolvedRestricted(h) {
+  const c = h && h.classification;
+  return !!(c && typeof c === "object" && c.status === "restricted" && c.resolved_at && c.basis);
+}
+
 function conflictItem(cf, treasury, policy) {
   const { row, flags, checks } = cf;
   const value = row.fair;
   const materiality = materialityOf(value, treasury, policy);
-  const conservative = materiality !== "non_material";
+  const resolved = resolvedRestricted(row.h);
+  const conservative = !resolved && materiality !== "non_material";
   const symbol = row.h.symbol || "position";
-  const statement = `The ${symbol} position has an observed on-chain value of approximately ${usdText(value)}. The chain-level exit check `
-    + `indicates that the recorded position is currently withdrawable. Curated protocol data classifies the position as restricted `
+  const opening = `The ${symbol} position has an observed on-chain value of approximately ${usdText(value)}. The chain-level exit check `
+    + `indicates that the recorded position is currently withdrawable. `;
+  const statement = resolved
+    ? opening + `Its classification was resolved as restricted on ${row.h.classification.resolved_at}: ${String(row.h.classification.basis).replace(/\.\s*$/, "")}. `
+      + "The position is therefore excluded from verified and liquid treasury value as restricted capital; the observed value and the passed check stay reported."
+    : opening + `Curated protocol data classifies the position as restricted `
     + `(${flags.join(", ")})${row.h.note ? `: ${String(row.h.note).replace(/\.\s*$/, "")}` : ""}. These findings are ${conservative ? "materially " : ""}inconsistent for `
     + `treasury-eligibility purposes. ${conservative
       ? "The position is therefore excluded from verified and liquid treasury value pending classification resolution. The conservative score is retained, the report is marked provisional, and the conflict is preserved for review."
       : "The position is below the materiality thresholds: the conflict is disclosed and preserved for review, with no score effect."}`;
+  const excludedValue = resolved || conservative;
   return {
     failed_check_id: checks.map((c) => c.check_id).sort()[0],
     check_ids: checks.map((c) => c.check_id).sort(),
@@ -112,19 +128,23 @@ function conflictItem(cf, treasury, policy) {
     treasury_share: !(treasury > 0) ? null : Math.round((value / treasury) * 1e6) / 1e6,
     materiality,
     policy_active_for_kind: true,
-    score_effect: conservative ? `provisional; position excluded from verified and liquid value (conservative exclusion); confidence capped at ${policy.confidence_cap}; no penalty points`
+    score_effect: resolved ? "position excluded from verified and liquid value (classification resolved as restricted); no provisional status, confidence cap or penalty points"
+      : conservative ? `provisional; position excluded from verified and liquid value (conservative exclusion); confidence capped at ${policy.confidence_cap}; no penalty points`
       : "none (disclosed; review required)",
     asset_id: row.h.asset_id,
     gross_observed_value_usd: Math.round(value * 100) / 100,
-    verified_treasury_value_usd: conservative ? 0 : Math.round(row.adjusted * 100) / 100,
-    liquid_value_usd: conservative ? 0 : Math.round(row.adjusted * 100) / 100,
+    verified_treasury_value_usd: excludedValue ? 0 : Math.round(row.adjusted * 100) / 100,
+    liquid_value_usd: excludedValue ? 0 : Math.round(row.adjusted * 100) / 100,
     onchain_withdrawal_check: "passed",
     curated_classification: flags,
-    classification_status: "conflicted",
-    score_treatment: conservative ? "conservative_exclusion" : "disclosed",
-    review_required: true,
+    classification_status: resolved ? "resolved_restricted" : "conflicted",
+    score_treatment: resolved ? "restricted_exclusion" : conservative ? "conservative_exclusion" : "disclosed",
+    review_required: !resolved,
     confidence: conservative ? "capped" : "unchanged",
-    resolution_event: row.h.note ? `the decision named in the curated note: ${String(row.h.note).replace(/\.\s*$/, "")}` : "a curator or governance decision on the position's classification",
+    resolution_event: resolved ? `resolved as restricted on ${row.h.classification.resolved_at}`
+      : row.h.note ? `the decision named in the curated note: ${String(row.h.note).replace(/\.\s*$/, "")}` : "a curator or governance decision on the position's classification",
+    ...(resolved ? { resolution: { status: "restricted", resolved_at: row.h.classification.resolved_at, basis: row.h.classification.basis,
+      source_refs: Array.isArray(row.h.classification.source_refs) ? row.h.classification.source_refs : [] } } : {}),
     statement,
   };
 }
@@ -357,6 +377,9 @@ function assess(bundle, base, verdict, policy = POLICY) {
     if (item.score_treatment === "conservative_exclusion") {
       excluded.add(cf.row.h.asset_id);
       effect = RANK.provisional > RANK[effect] ? "provisional" : effect;
+    } else if (item.score_treatment === "restricted_exclusion") {
+      excluded.add(cf.row.h.asset_id);
+      if (RANK.disclose > RANK[effect]) effect = "disclose";
     } else if (RANK.disclose > RANK[effect]) effect = "disclose";
     items.push(item);
   }

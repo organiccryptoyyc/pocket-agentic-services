@@ -198,7 +198,10 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
       impact: COLLECTOR_WARNING_IMPACT[w.code] || "Values were delivered as collected; the flag asks for curator review.",
       remediation: "Curator reviews the checks the collector recorded with this evidence.",
     }));
-  const conflictRisks = mat ? mat.items.filter((i) => i.kind === "classification_conflict").map((i) => ({
+  const conflictRisks = mat ? mat.items.filter((i) => i.kind === "classification_conflict").map((i) => i.score_treatment === "restricted_exclusion" ? ({
+    id: "restricted_position", category: "liquidity", severity: "low",
+    description: `${i.statement} (${i.materiality} under ${mat.policy_id}; effect: ${i.score_effect}.)`,
+    monitoring_action: "Re-check if governance releases the position or its restriction changes; it then counts subject to its exit result." }) : ({
     id: "classification_conflict", category: "data_quality", severity: i.score_treatment === "conservative_exclusion" ? "high" : "medium",
     description: `${i.statement} (${i.materiality} under ${mat.policy_id}; effect: ${i.score_effect}.)`,
     monitoring_action: `Resolve the classification: ${i.resolution_event}. Until then the conflict stays open and both the observed value and the conservative treatment are reported.` })) : [];
