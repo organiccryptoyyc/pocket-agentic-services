@@ -121,6 +121,7 @@ function routesOf(b) {
   if (b.evidence_packet) r.push("POST /v1/evidence-packet");
   if ((b.extra_routes || []).includes("inflation_adjust")) r.push("POST /v1/inflation/adjust");
   if ((b.extra_routes || []).includes("crypto_tools")) r.push("POST /v1/tools/address", "POST /v1/tools/units");
+  if ((b.extra_routes || []).includes("token_risk")) r.push("POST /v1/token-risk");
   return r;
 }
 
@@ -145,11 +146,13 @@ function cardDescription(b) {
   const note = t.attestation_note ? `${t.attestation_note} ` : "";
   const ev = b.events_scope ? ", /v1/events" : "";
   // Build 3 (2026-11-14): the evidence packet, one sentence.
+  // Build 2 (2026-11-15): token control and exit risk, one sentence.
+  const tr = (b.extra_routes || []).includes("token_risk") ? "POST /v1/token-risk {tokens: [{chain, address}]}: who controls an established EVM token (proxy admin, owner, Safe, timelock) and what selling $10k/$100k/$1M costs on chain; Solana and memecoins: see pump-check. " : "";
   const pk = b.evidence_packet ? "POST /v1/evidence-packet {entity_id, from?, to?, kinds?, q?}: every dated, cited regulatory event for one entity in up to 366 days, with per-source coverage and hashes. " : "";
   const ent = b.entities ? ", entity_id" : "";
   const text = t.compact
-    ? (verts) => `${lead} POST /v1/brief {vertical${ent}}: one brief; /v1/overview: all briefs; /v1/verticals: the list. Verticals: ${verts}. Raw series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${ev}. ${pk}${note}Every response is one JSON object. Research signal, not investment advice.`
-    : (verts) => `${lead} POST /v1/brief {vertical${ent}} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: ${verts}. Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${ev}. ${pk}${note}Every response is a single JSON object. Research signal, not investment advice.`;
+    ? (verts) => `${lead} POST /v1/brief {vertical${ent}}: one brief; /v1/overview: all briefs; /v1/verticals: the list. Verticals: ${verts}. Raw series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${ev}. ${pk}${tr}${note}Every response is one JSON object. Research signal, not investment advice.`
+    : (verts) => `${lead} POST /v1/brief {vertical${ent}} returns one scored brief; POST /v1/overview returns every brief at once; POST /v1/verticals lists them. Verticals: ${verts}. Raw scored series: /v1/signals, /v1/signal, /v1/explain, /v1/catalog${ev}. ${pk}${tr}${note}Every response is a single JSON object. Research signal, not investment advice.`;
   const long = text(b.verticals.map((v) => `${v.id} (${(t.questions || {})[v.id] || v.question})`).join("; "));
   if (long.length <= CARD_DESCRIPTION_MAX) return long;
   const short = text(b.verticals.map((v) => v.id).join(", "));
@@ -315,6 +318,13 @@ function openapi(b) {
   if ((b.extra_routes || []).includes("crypto_tools")) {
     paths["/v1/tools/address"] = { post: { summary: "Check an address: EVM (EIP-55 checksum), Pocket/Cosmos/Bitcoin bech32, Bitcoin and Tron base58check, Solana. No network calls.", requestBody: body({ address: { type: "string" } }, ["address"]), responses: { 200: ok("Object"), 400: err } } };
     paths["/v1/tools/units"] = { post: { summary: "Convert units of one asset exactly (wei/gwei/eth, sat/btc, lamport/sol, upokt/pokt, sun/trx), or any token with 'decimals' between 'raw' and 'token'.", requestBody: body({ amount: { type: "string" }, from: { type: "string" }, to: { type: "string" }, decimals: { type: "integer" } }, ["amount", "from", "to"]), responses: { 200: ok("Object"), 400: err } } };
+  }
+  if ((b.extra_routes || []).includes("token_risk")) {
+    paths["/v1/token-risk"] = { post: {
+      summary: "Token control and exit risk for 1-10 established EVM tokens (Ethereum, Arbitrum, Base, Optimism, Polygon), from a 12-hourly on-chain snapshot: upgradeability and who holds the proxy admin, owner()/admin() (EOA, Safe threshold, timelock delay, governor), privileged functions in the verified ABI, supply change, Ethereum holder concentration, sale proceeds at $10k/$100k/$1M (Uniswap v3, Curve), stablecoin peg. Verdict low | elevated | high | unknown with flags, confidence and gaps. Uncovered tokens are queued for the next run; Solana and other chains are out_of_scope (see pump-check). Not financial advice.",
+      requestBody: body({ tokens: { type: "array", minItems: 1, maxItems: 10, items: { type: "object", properties: { chain: { type: "string", description: "ethereum, arbitrum, base, optimism or polygon (aliases eth, arb, op, matic)" }, address: { type: "string", description: "token contract, 0x..." } }, required: ["chain", "address"] } } }, ["tokens"]),
+      responses: { 200: ok("Object"), 400: err },
+    } };
   }
   if ((b.extra_routes || []).includes("inflation_adjust")) paths["/v1/inflation/adjust"] = { post: { summary: "What an amount is worth in another month, by US CPI (months the hub holds).", requestBody: body({ amount: { type: "number" }, from: { type: "string", pattern: "^\\d{4}-\\d{2}$" }, to: { type: "string", pattern: "^\\d{4}-\\d{2}$" } }, ["amount", "from"]), responses: { 200: ok("Object"), 400: err } } };
   return {

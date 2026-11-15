@@ -435,6 +435,16 @@ if (PACK.evidence_packet) {
     return withVerified(out, VF.forEvidencePacket, { entityId: entity.ticker ? input.entity : null });
   });
 }
+if ((PACK.extra_routes || []).includes("token_risk")) {
+  // Build 2: token control and exit risk for established EVM tokens, from the hub's replica of the Pi's snapshot.
+  // Same request shape as pump-check ({tokens: [{chain, address}]}, 1-10); Solana, memecoin launches and other chains
+  // are out of scope and point to pump-check.
+  const TR = require("./lib/tokenrisk");
+  routes.set("POST /v1/token-risk", async (raw) => {
+    const out = wrap(await TR.answer(obj(raw), (body) => hub("/v1/token-risk", body)));
+    return withVerified(out, VF.forTokenRisk);
+  });
+}
 if ((PACK.extra_routes || []).includes("inflation_adjust")) routes.set("POST /v1/inflation/adjust", async (raw) => wrap(await inflationAdjust(obj(raw))));
 if ((PACK.extra_routes || []).includes("crypto_tools")) {
   // Deterministic utilities: no hub, no network. Bad input is a 400 with the reason.

@@ -279,7 +279,8 @@
     "POST /v1/explain": "read",
     "POST /v1/catalog": "read",
     "POST /v1/tools/address": "read",
-    "POST /v1/tools/units": "read"
+    "POST /v1/tools/units": "read",
+    "POST /v1/token-risk": "read"
   },
   "example": {
     "method": "POST",

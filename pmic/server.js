@@ -13,6 +13,7 @@
 //   POST /v1/sources   {}                                             source health + collector status
 //   POST /v1/alerts    {open_only?, source_id?, limit?}
 //   POST /v1/prices    {assets: ["ethereum:0x..."], max_age_s?}         price bank replica (read-only)
+//   POST /v1/token-risk {tokens: [{chain, address}], max_age_s?}         token-risk replica (queues uncovered tokens)
 //   GET  /v1/version, /v1/health (also /healthz, for PSM)
 //
 // The API only reads (the database is opened read-only); bin/collect.js writes. When
@@ -95,6 +96,8 @@ function build() {
       ["POST /v1/alerts", route(Q.alerts)],
       ["POST /v1/prices", route((d, body) => require("./lib/pricebank").query(d, body))],
       ["POST /v1/attestations", route((d, body) => require("./lib/attest").query(d, body))],
+      // Build 2: the Pi's token-risk replica; an uncovered token is queued for the Pi's next run.
+      ["POST /v1/token-risk", route((d, body) => require("./lib/tokenrisk").query(d, body, { openWriter: () => db.open() }))],
     ]),
   });
 }

@@ -18,6 +18,7 @@ const HUB_PORT = 20100 + Math.floor(Math.random() * 300);
 const BUNDLES = ["pmic-macro-signals", "pmic-company-signals", "pmic-pharma-signals", "pmic-public-sector-signals", "pmic-crypto-signals"];
 const PORTS = Object.fromEntries(BUNDLES.map((b, i) => [b, HUB_PORT + 400 + i]));
 const procs = [];
+let HUB_DIR = null;
 
 function start(script, cwd, env, marker) {
   return new Promise((resolve, reject) => {
@@ -32,6 +33,7 @@ function start(script, cwd, env, marker) {
 
 before(async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pmic-packs-"));
+  HUB_DIR = dir;
   const catalog = catalogLib.load();
   const db = dbLib.open({ dataDir: dir });
   const now = new Date("2026-10-04T06:00:00Z");
@@ -671,4 +673,45 @@ test("evidence packet: coverage statuses, truncation and the window rules (unit)
   const again = EV.buildPacket({ input, entity: { entity_id: "pfe", industry: "pharma" }, cfg, lists: [[ev("2026-11-01")]], health, now });
   assert.equal(again.packet_hash, q.packet_hash);
   assert.equal(again.items[0].evidence_hash, q.items[0].evidence_hash);
+});
+
+// Build 2 (2026-11-15): POST /v1/token-risk on the crypto pack, from the hub's token-risk replica.
+test("token risk: covered, not_covered (queued) and out_of_scope tokens; bad input is a 400", async () => {
+  const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "tokenrisk-batch.json"), "utf8"));
+  const w = dbLib.open({ dataDir: HUB_DIR });
+  require("../lib/tokenrisk").applyBatch(w, FIX.body, { publicKeyHex: FIX.public_key, now: new Date(Date.parse(FIX.built_at) + 60000) });
+  w.close();
+  const r = await call("pmic-crypto-signals", "POST", "/v1/token-risk", { tokens: [
+    { chain: "eth", address: "0x" + "A0".repeat(20) },
+    { chain: "base", address: "0x" + "b1".repeat(20) },
+    { chain: "arbitrum", address: "0x" + "cc".repeat(20) },
+    { chain: "solana", address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+  ] });
+  assert.equal(r.status, 200);
+  assert.equal(r.json.service, "pmic-crypto-signals");
+  const [a, b, c, d] = r.json.results;
+  assert.equal(a.verdict, "low");
+  assert.ok(["ok", "stale"].includes(a.status));
+  assert.equal(a.input.chain, "eth");
+  assert.equal(b.verdict, "high");
+  assert.equal(c.status, "not_covered");
+  assert.equal(c.see.service, "pump-check");
+  assert.equal(d.status, "out_of_scope");
+  assert.match(r.json.disclaimer, /Not financial advice/);
+  const ENV = path.join(__dirname, "..", "..", "docs", "envelope");
+  const { validate } = await import(require("node:url").pathToFileURL(path.join(ENV, "validate.mjs")).href);
+  const schema = JSON.parse(fs.readFileSync(path.join(ENV, "pocket-agentic-envelope-v1.schema.json"), "utf8"));
+  assert.deepEqual(validate(schema, r.json.verified), []);
+  assert.equal(r.json.verified.route, "/v1/token-risk");
+  const single = await call("pmic-crypto-signals", "POST", "/v1/token-risk", { tokens: [{ chain: "base", address: "0x" + "b1".repeat(20) }] });
+  assert.equal(single.json.verified.subject.kind, "asset");
+  assert.equal(single.json.verified.assessment.label, "high");
+  // The uncovered token is now in the hub's queue for the Pi's next run.
+  const q = dbLib.open({ dataDir: HUB_DIR });
+  assert.equal(q.prepare("SELECT count FROM tokenrisk_requests WHERE asset = ?").get("arbitrum:0x" + "cc".repeat(20)).count >= 1, true);
+  q.close();
+  for (const bad of [{}, { tokens: [] }, { tokens: [{ chain: "eth" }] }, { tokens: Array(11).fill({ chain: "eth", address: "0x" + "a0".repeat(20) }) }]) {
+    assert.equal((await call("pmic-crypto-signals", "POST", "/v1/token-risk", bad)).status, 400);
+  }
+  assert.equal((await call("pmic-company-signals", "POST", "/v1/token-risk", { tokens: [{ chain: "eth", address: "0x" + "a0".repeat(20) }] })).status, 404);
 });

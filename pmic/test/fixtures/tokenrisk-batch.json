@@ -1,0 +1,9 @@
+{
+ "public_key": "d04ab232742bb4ab3a1368bd4615e4e6d0224ab71a016baf8520a332c9778737",
+ "built_at": "2026-11-15T15:28:29Z",
+ "body": {
+  "meta_json": "{\"bank\":\"tcs6-pi-tokenrisk\",\"built_at\":\"2026-11-15T15:28:29Z\",\"count\":2,\"rows_sha256\":\"ca944bbddd8bbbd935ce2065c93143534bd4f234ce2bb26e4db2b2ad867948d4\",\"version\":1794728400}",
+  "rows_json": "[{\"asset\":\"ethereum:0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0\",\"checks\":[{\"id\":\"exit_at_size\",\"method\":\"definitive\",\"result\":\"pass\",\"summary\":\"selling $100k loses 0.10%\"}],\"confidence\":\"full\",\"flags\":[],\"gaps\":[],\"observed_at\":\"2026-11-15T06:40:00Z\",\"symbol\":\"TSTA\",\"verdict\":\"low\"},{\"asset\":\"base:0xb1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1\",\"checks\":[{\"id\":\"upgradeability\",\"method\":\"definitive\",\"result\":\"fail\",\"summary\":\"an upgradeable proxy; upgrades go through a single key (EOA), with no delay\"}],\"confidence\":\"full\",\"flags\":[\"upgradeability:fail\"],\"gaps\":[],\"observed_at\":\"2026-11-15T06:40:00Z\",\"symbol\":\"TSTB\",\"verdict\":\"high\"}]",
+  "signature": "5b6bb8c32a35b904bff7a1caf01562ad1931b1ba976643243b4d511832688c181cfc06a865390250148889552a977cc9e168b5d8ae34efae399ab32b010ff209"
+ }
+}

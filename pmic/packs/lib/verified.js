@@ -171,4 +171,29 @@ function forEvidencePacket(out, ctx, nowMs = Date.now()) {
   });
 }
 
-module.exports = { forBrief, forOverview, forEvents, forAddress, forEvidencePacket, packTopic };
+// token risk: one token is about that token (asset:caip19), several about the pack's token-risk topic; one evidence
+// item per covered token (its on-chain reads at the stated block); a gap per token that was not covered or had gaps.
+const CHAIN_IDS = { ethereum: 1, arbitrum: 42161, base: 8453, optimism: 10, polygon: 137 };
+function forTokenRisk(out, ctx, nowMs = Date.now()) {
+  const rows = out.results || [];
+  const covered = rows.filter((r) => r.verdict);
+  const one = rows.length === 1 && covered.length === 1 ? covered[0] : null;
+  const subject = one
+    ? { kind: "asset", id: C.id("asset", "caip19", `eip155:${CHAIN_IDS[one.chain]}/erc20:${one.token}`), name: one.symbol || null, identifiers: { chain: one.chain, address: one.token } }
+    : topicSubject(ctx.pack, "token-risk", "Token control and exit risk", null);
+  const gaps = [];
+  for (const r of rows) {
+    if (!r.verdict) gaps.push(C.gap(`token:${r.asset || r.input.address}`, r.status, r.status === "not_covered" ? "queued for the next run" : "outside this route's chains"));
+    else for (const g of r.gaps || []) gaps.push(C.gap(`${r.asset}:${g}`, "the check could not be read", "confidence is partial"));
+  }
+  return C.build({
+    service: ctx.pack.service_id, version: ctx.version, route: "/v1/token-risk", nowMs,
+    subject, as_of: C.newest(covered.map((r) => r.observed_at)),
+    assessment: one ? C.assessment({ status: "ok", native_status: one.verdict, label: one.verdict }) : C.notScored(`${covered.length} of ${rows.length} tokens covered`),
+    evidence: covered.map((r) => C.evidence({ source_ref: `onchain:${r.asset}@${r.block}`, title: `${r.symbol || r.asset}: on-chain reads at block ${r.block}`,
+      publisher: "Pocket Network public RPC (on-chain reads on the operator's collector)", retrieved_at: r.observed_at, observation_time: r.observed_at, source_tier: 1, rights_status: "permitted_for_derived_output" })),
+    gaps,
+  });
+}
+
+module.exports = { forBrief, forOverview, forEvents, forAddress, forEvidencePacket, forTokenRisk, packTopic };
