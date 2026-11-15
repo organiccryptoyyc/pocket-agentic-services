@@ -18,7 +18,7 @@ const checks = require("./lib/checks");
 const { cached } = require("./lib/net");
 
 const SERVICE = "agent-trust";
-const VERSION = "1.3.0";
+const VERSION = "1.4.0";
 const VERSION_PATH = "/v1/version";
 const HEALTH_PATH = "/v1/health";
 
@@ -312,8 +312,67 @@ async function handleReputation(body) {
   return withMeta(value, { stale, ageMs });
 }
 
+// --- /v1/preflight: every check on one counterparty, one verdict (1.4.0) -------
+
+const preflight = require("./lib/preflight");
+const sdn = require("./lib/sdn");
+const { fetchJSON } = require("./lib/net");
+
+// brand-protection's internal lookup (its :8091 listener on the pocket-supplier network).
+// Unset: the brand_impersonation check reports not_available.
+const BP_LOOKUP_URL = (process.env.BP_LOOKUP_URL || "").replace(/\/$/, "");
+
+async function brandLookup(domain) {
+  const res = await fetchJSON(`${BP_LOOKUP_URL}/internal/domain?domain=${encodeURIComponent(domain)}`, undefined, 3000);
+  if (!res.ok) throw new Error(`brand-protection lookup answered HTTP ${res.status}`);
+  return res.body;
+}
+
+const preflightRunners = {
+  domainTrust: (domain) => handleDomainTrust({ domain }),
+  // The certificate alone, so an RDAP outage or rate limit can't take the TLS check down with it.
+  brandVerify: async (domain) => (await cached(`preflight-tls:${domain}`, 900_000, async () => {
+    let ips;
+    try {
+      ips = await checks.resolveSafely(domain);
+    } catch (e) {
+      throw toClientError(e);
+    }
+    return { domain, certificate: await checks.tlsCertInfo(domain, ips[0]) };
+  })).value,
+  sellerTrust: (url) => handleSellerTrust({ url }),
+  sanctionsName: (name) => handleSanctionsCheck({ address: name }),
+  sanctionsAddress: async (address, waitMs) => {
+    await sdn.ensure(waitMs);
+    return sdn.lookup(address);
+  },
+  reputation: async (chain, address) => {
+    try {
+      return await handleReputation({ chain, address });
+    } catch (e) {
+      if (e instanceof ClientError && e.status === 404) return { not_found: true, chain };
+      throw e;
+    }
+  },
+  brandLookup: BP_LOOKUP_URL ? brandLookup : null,
+};
+
+async function handlePreflight(body) {
+  const input = preflight.parseInput(body, checks.isValidDomain);
+  const out = await preflight.runPreflight(input, preflightRunners);
+  if (out.checks_total && out.counts.unknown === out.checks_total) {
+    throw new ClientError(422, "upstream_unavailable", "none of the checks could answer just now; try again shortly");
+  }
+  return { service: SERVICE, fetched_at: new Date().toISOString(), ...out };
+}
+
+// Load the OFAC SDN address list in the background at start, so the first preflight has it.
+if (process.env.OFAC_SDN_WARM !== "0") sdn.ensure(0);
+
 // --- wiring ------------------------------------------------------------------
 
+// 1.4.0: POST /v1/preflight (lib/preflight.js): all checks on one counterparty, one verdict; adds the
+// OFAC SDN wallet-address list (lib/sdn.js) and brand-protection's lookalike findings (BP_LOOKUP_URL).
 // 1.3.0: the RPC path (base, arbitrum, polygon; eth fallback) adds Sourcify verified source and the
 // forward-confirmed Ethereum ENS name; basic score max 35 -> 60.
 // 1.2.0: every successful answer also carries the shared `verified` block (lib/verified.js).
@@ -324,6 +383,7 @@ const routes = new Map([
   ["POST /v1/seller-trust", handleSellerTrust],
   ["POST /v1/sanctions-check", handleSanctionsCheck],
   ["POST /v1/reputation", handleReputation],
+  ["POST /v1/preflight", handlePreflight],
 ].map(([key, handler]) => [key, async (body) => withVerified(key.split(" ")[1], await handler(body), VERSION)]));
 
 const server = createServer({ service: SERVICE, version: VERSION, versionPath: VERSION_PATH, healthPath: HEALTH_PATH, routes });

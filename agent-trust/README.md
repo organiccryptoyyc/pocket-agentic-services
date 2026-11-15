@@ -41,6 +41,37 @@ packages, adapted from the `pocket-service-builder` toolkit's own
 | `/v1/seller-trust` | Composite of the above two, for a resource-server URL | No |
 | `/v1/sanctions-check` | [U.S. Consolidated Screening List](https://www.trade.gov/consolidated-screening-list) (International Trade Administration, `data.trade.gov`) — aggregates OFAC's SDN list and 10+ other U.S. restricted-party lists | **Yes** — free signup at https://developer.trade.gov |
 | `/v1/reputation` | `eth`: the public [Blockscout](https://www.blockscout.com) explorer, falling back to Pocket Network's public RPC when it does not answer. `base`, `arbitrum`, `polygon`: Pocket Network's public RPC (`*.api.pocket.network`; their explorers' free APIs sit behind a bot check), plus [Sourcify](https://sourcify.dev) for verified contract source and the address's Ethereum ENS name (read on chain, accepted only when it resolves forward to the same address); returned with `coverage: "basic"`, `score_max_possible: 60` (1.3.0) | No |
+| `/v1/preflight` (1.4.0) | Every check above that applies to one subject (`url`, `domain`, `address`, `name`), plus the [OFAC SDN list](https://ofac.treasury.gov/specially-designated-nationals-and-blocked-persons-list-sdn-human-readable-lists)'s sanctioned wallet addresses (downloaded once a day, exact match) and the lookalike findings of the brands the `brand-protection` service watches (its internal lookup, `BP_LOOKUP_URL`). One verdict; see "Preflight" below | Only the name check (same key as `/v1/sanctions-check`) |
+
+## Preflight (`POST /v1/preflight`, 1.4.0)
+
+One call runs every check that applies to one counterparty and returns one verdict.
+
+| Check | Runs when | Source | Method |
+|---|---|---|---|
+| `domain_registration` | `domain` or `url` | RDAP of the registered name (a subdomain is looked up as the name above it) | definitive (heuristic for a warn) |
+| `dns_posture` | `domain` or `url` | DNS: a domain that receives mail without SPF or DMARC is a warn | heuristic |
+| `tls_certificate` | `domain` or `url` | Live TLS handshake: expired, wrong name or untrusted issuer is a fail | definitive |
+| `brand_impersonation` | `domain` or `url` | brand-protection's stored findings: a high-risk lookalike is a fail, medium a warn; a domain outside the watch list is `not_available` | heuristic |
+| `seller_trust` | `url` | The `/v1/seller-trust` composite | heuristic |
+| `sanctions_name` | `name` | Consolidated Screening List: an exact name match is a fail, a similar name a warn | definitive / heuristic |
+| `sanctions_address` | `address` | OFAC SDN digital currency addresses, exact match (EVM addresses ignore case). Unlisted is a pass for that list only: no wallet clustering | definitive |
+| `address_reputation` | EVM `address` (`chain` defaults to `eth`) | The `/v1/reputation` check: a scam flag is a fail, little or no history a warn | heuristic |
+
+Each check answers `pass`, `warn`, `fail`, `unknown` or `not_available`, with its `method`, a `summary`, an
+`evidence_hash` and `changed_at`. Verdict: `fail` if a definitive check fails; `warn` if a heuristic check
+fails or any check warns; `unknown` if any check could not answer (unknown never counts as a pass);
+otherwise `pass`. `not_available` checks are left out. All checks run in parallel under an 8 s budget
+(`PREFLIGHT_BUDGET_MS`). With `since`, only checks whose result changed after that time come back
+(tracked in memory, so after a restart every check counts as changed once). If no check can answer, the
+route returns 422.
+
+Environment: `BP_LOOKUP_URL` (for example `http://brand-protection-backend:8091`; unset, the brand check is
+`not_available`), `OFAC_SDN_URL` (default `https://www.treasury.gov/ofac/downloads/sdn.xml`, about 30 MB,
+loaded at start and refreshed every 24 h; the last good copy is kept if a refresh fails).
+
+1.4.0 also fixes RDAP for subdomains on every route: rdap.org answers 400 or 404 for `app.example.com`, so the
+lookup now walks up (at most two labels) to the registered name and says so in `looked_up_as`.
 
 ## Operator setup: the sanctions-check API key
 
@@ -109,7 +140,7 @@ npm start                                       # POCKET_NETWORK n/a here; needs
 See `../docs/registration-runbook.md` — service id `agent-trust`,
 confirmed conflict-free against both Pocket networks' live catalogs on
 2026-09-19. Because this backend needs broad outbound access (any domain a
-caller names, plus `rdap.org`, `data.trade.gov`, `eth.blockscout.com`, `sourcify.dev`, and the
+caller names, plus `rdap.org`, `data.trade.gov`, `www.treasury.gov` (the OFAC SDN list), `eth.blockscout.com`, `sourcify.dev`, and the
 `*.api.pocket.network` RPC hosts)
 rather than a fixed allowlist, review your hosting environment's egress
 policy before staking.

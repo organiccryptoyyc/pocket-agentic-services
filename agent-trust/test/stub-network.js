@@ -30,6 +30,8 @@ global.fetch = async function stubFetch(url, init) {
   if (u.hostname === "rdap.org") {
     const domain = decodeURIComponent(u.pathname.split("/").pop());
     if (domain === "doesnotexist-agent-trust-test.example") return jsonResponse({ errorCode: 404 }, 404);
+    // rdap.org answers 400 for a subdomain (live behaviour, 2026-11-14).
+    if (domain.split(".").length > 2) return jsonResponse({ errorCode: 400, title: "Bad Request" }, 400);
     return jsonResponse({
       ldhName: domain,
       status: ["client delete prohibited", "client transfer prohibited"],
@@ -88,6 +90,27 @@ global.fetch = async function stubFetch(url, init) {
     };
     fixtures["5"] = fixtures["1"];
     return jsonResponse({ jsonrpc: "2.0", id: 1, result: fixtures[kind][method] });
+  }
+  if (u.hostname === "www.treasury.gov" && u.pathname === "/ofac/downloads/sdn.xml") {
+    // A two-entry SDN list: one entity with an ETH and an XBT address, one person without addresses.
+    const xml = `<?xml version="1.0" standalone="yes"?><sdnList><publshInformation><Publish_Date>11/13/2026</Publish_Date></publshInformation>
+<sdnEntry><uid>24003</uid><lastName>Test Wallet Holder</lastName><sdnType>Entity</sdnType><programList><program>CYBER2</program></programList>
+<idList><id><uid>1</uid><idType>Digital Currency Address - ETH</idType><idNumber>0x252A8bD2319d8a555B872990601221b3a2053bce</idNumber></id>
+<id><uid>2</uid><idType>Digital Currency Address - XBT</idType><idNumber>bc1qtestlistedaddress0000000000000000000</idNumber></id></idList></sdnEntry>
+<sdnEntry><uid>5</uid><firstName>Plain</firstName><lastName>PERSON</lastName><sdnType>Individual</sdnType></sdnEntry></sdnList>`;
+    return { ok: true, status: 200, text: async () => xml };
+  }
+  if (u.hostname === "bp-lookup.test") {
+    // brand-protection's internal lookup: one watched brand (uniswap.org) and its findings.
+    const d = u.searchParams.get("domain");
+    const brand = { brand_id: "uniswap.org", brand: "Uniswap", official_domains: ["uniswap.org"], as_of: "2026-11-14T09:30:00Z", scan_type: "full" };
+    const base = { domain: d, watched_brands: 37, index_built_at: "2026-11-14T10:00:00Z" };
+    const f = (risk, risk_level, status = "live") => ({ ...base, match: "lookalike", brand: null, findings: [{ brand_id: "uniswap.org", brand: "Uniswap", official_domains: ["uniswap.org"], report_as_of: brand.as_of, scan_type: "full", risk, risk_level, status, first_seen: "2026-11-01T09:30:00Z", changed_at: "2026-11-01T09:30:00Z", evidence_id: "a".repeat(24) }] });
+    if (d === "uniswap.org") return jsonResponse({ ...base, match: "official", brand, findings: [] });
+    if (d === "uniswap-claim.org") return jsonResponse(f(85, "high"));
+    if (d === "uniswap-help.org") return jsonResponse(f(55, "medium"));
+    if (d === "bp-down.example") return jsonResponse({ error: { code: "lookup_error", message: "stub" } }, 400);
+    return jsonResponse({ ...base, match: "none", brand: null, findings: [] });
   }
   if (realFetch) return realFetch(url, init);
   throw new Error(`stub-network: no fixture for ${url}`);

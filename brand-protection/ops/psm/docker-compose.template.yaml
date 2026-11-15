@@ -29,11 +29,15 @@ services:
       BP_INGEST_PORT: "8090"
       BP_INGEST_TOKEN: "{{INGEST_TOKEN}}"
       BP_MAX_WATCHED: "200"
+      # Internal domain lookup for agent-trust (lib/lookup.js). Never in routes.json.
+      BP_LOOKUP_HOST: 0.0.0.0
+      BP_LOOKUP_PORT: "8091"
     volumes:
       - brand-protection-data:/var/lib/brand-protection
     expose:
       - "8080"
       - "8090"
+      - "8091"
     mem_limit: 256m
     networks: [supplier]
 {{CT_SERVICE}}

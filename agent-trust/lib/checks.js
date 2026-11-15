@@ -62,10 +62,18 @@ async function resolveSafely(domain) {
 
 // --- RDAP (domain registration data) ---------------------------------------
 
-async function rdapLookup(domain) {
+// RDAP holds registered names, not subdomains: rdap.org answers 404 or 400 for
+// app.example.com. Then walk up (at most two labels) to the registered name; the
+// record says which name it describes (ldh_name, looked_up_as). 1.4.0.
+async function rdapLookup(domain, depth = 0) {
   const url = `https://rdap.org/domain/${encodeURIComponent(domain)}`;
   const res = await withRetry(() => fetchJSON(url));
   if (!res.ok) {
+    const parent = domain.split(".").slice(1).join(".");
+    if ((res.status === 404 || res.status === 400) && depth < 2 && parent.split(".").length >= 2) {
+      const up = await rdapLookup(parent, depth + 1);
+      return { ...up, looked_up_as: up.looked_up_as || parent };
+    }
     if (res.status === 404) return { registered: false };
     throw new UpstreamError(`RDAP lookup for '${domain}' failed: HTTP ${res.status}`);
   }

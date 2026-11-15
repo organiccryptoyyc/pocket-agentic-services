@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Agent Trust and Compliance API",
-    "version": "1.2.0",
-    "description": "agent-trust on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body. Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every check is a real live call (RDAP, DNS, a live TLS handshake, the U.S. Consolidated Screening List, the public Blockscout explorer, or Pocket Network's public RPC) made at request time."
+    "version": "1.4.0",
+    "description": "agent-trust on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body. Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every check is a real live call (RDAP, DNS, a live TLS handshake, the U.S. Consolidated Screening List, the public Blockscout explorer, or Pocket Network's public RPC) made at request time. POST /v1/preflight runs every check that applies to one counterparty and returns one verdict."
   },
   "servers": [
     {
@@ -465,6 +465,176 @@
           },
           "422": {
             "$ref": "#/components/responses/ClientError"
+          }
+        }
+      }
+    },
+    "/v1/preflight": {
+      "post": {
+        "summary": "Counterparty preflight: every check that applies to one domain, URL, wallet address or name, and one verdict",
+        "description": "Runs, in parallel under an 8 s budget: domain registration and DNS posture (RDAP, DNS), the TLS certificate, brand impersonation (lookalike findings of the brands watched by the brand-protection service), seller trust (url only), the U.S. Consolidated Screening List (name), the OFAC SDN list of sanctioned wallet addresses (exact match, refreshed daily), and address reputation (EVM addresses). Verdict: fail if a definitive check fails; warn if a heuristic check fails or any check warns; unknown if any check could not answer (unknown never counts as a pass); otherwise pass. not_available checks (no coverage or not applicable) are left out. With since, only checks whose result changed after that time are returned. Not legal advice.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "At least one of url, domain, address, name. One subject per call.",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "An http(s) URL; its host is the domain checked and seller trust runs too"
+                  },
+                  "domain": {
+                    "type": "string",
+                    "description": "A domain name; must equal the url host when both are given"
+                  },
+                  "address": {
+                    "type": "string",
+                    "description": "A wallet address (EVM 0x, or another chain's address for the sanctions check only)"
+                  },
+                  "chain": {
+                    "type": "string",
+                    "enum": [
+                      "eth",
+                      "base",
+                      "arbitrum",
+                      "polygon"
+                    ],
+                    "description": "Chain for the reputation check of an EVM address (default eth)"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The counterparty's person or company name, screened on the Consolidated Screening List"
+                  },
+                  "since": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Return only checks whose result changed after this time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "subject": {
+                      "type": "object"
+                    },
+                    "verdict": {
+                      "type": "string",
+                      "enum": [
+                        "pass",
+                        "warn",
+                        "fail",
+                        "unknown"
+                      ]
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "counts": {
+                      "type": "object"
+                    },
+                    "since": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "checks_total": {
+                      "type": "integer"
+                    },
+                    "checks_returned": {
+                      "type": "integer"
+                    },
+                    "checks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "domain_registration",
+                              "dns_posture",
+                              "tls_certificate",
+                              "brand_impersonation",
+                              "seller_trust",
+                              "sanctions_name",
+                              "sanctions_address",
+                              "address_reputation"
+                            ]
+                          },
+                          "result": {
+                            "type": "string",
+                            "enum": [
+                              "pass",
+                              "warn",
+                              "fail",
+                              "unknown",
+                              "not_available"
+                            ]
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "definitive",
+                              "heuristic"
+                            ]
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "data": {
+                            "type": "object"
+                          },
+                          "evidence_hash": {
+                            "type": "string",
+                            "description": "SHA-256 of the check's canonical form"
+                          },
+                          "changed_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When this backend last saw this check's result change for this subject"
+                          }
+                        }
+                      }
+                    },
+                    "evidence_hash": {
+                      "type": "string"
+                    },
+                    "as_of": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "verified": {
+                      "$ref": "#/components/schemas/Verified"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Bad input, or none of the checks could answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }

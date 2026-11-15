@@ -18,6 +18,12 @@ takedowns or interacts with suspect sites beyond one page fetch.
 
 Every response is a JSON object; bad input is a 4xx JSON error, never a 5xx.
 
+**Internal domain lookup (0.1.11).** A third listener (`lib/lookup.js`, port `BP_LOOKUP_PORT`, default
+127.0.0.1:8091; the deploy compose sets 0.0.0.0 inside the container) answers
+`GET /internal/domain?domain=<name>` with `match: official | lookalike | none`, the brand and the stored
+finding. It is read-only, never starts a scan, is not in `deploy/routes.json` (so neither Caddy nor the
+RelayMiner reach it), and serves `agent-trust`'s `/v1/preflight` over the Docker network.
+
 ## Re-check engine (`lib/recheck.js`, library only)
 
 `recheckDomain({domain, official_domains?, keywords?}, {previous?})` reads one domain live and returns a
@@ -86,7 +92,7 @@ ones (URLhaus, OpenPhish, PhishTank) do not allow use in a paid product.
 ## Running
 
 ```
-npm test                         # 9 tests, no network
+npm test                         # no network
 PORT=8080 node server.js         # API; add BP_INGEST_TOKEN to open the private ingest listener on 127.0.0.1:8090
 node ops/package-psm.js beta     # PSM deploy folder in build/brand-protection-beta (needs .secrets/beta-ingest.env)
 ```

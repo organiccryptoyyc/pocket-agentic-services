@@ -72,6 +72,28 @@ function withVerified(route, out, version, nowMs = Date.now()) {
         ? [C.evidence({ source_ref: `ens:${out.ens_name}`, title: `Ethereum ENS reverse record ${out.ens_name}, resolved forward to ${out.address}`, publisher: "ENS registry (Ethereum), via Pocket Network public RPC", url: `https://${POCKET_RPC_HOSTS.eth}`, retrieved_at: at, observation_time: at, source_tier: 1, rights_status: OK })]
         : [])],
       gaps: out.coverage === "full" ? [] : [C.gap("explorer_signals", "explorer signals (reputation flag, scam flag, public tags) are not available for this chain or the explorer did not answer; verified source comes from Sourcify and the name from ENS", `basic score, at most ${out.score_max_possible}`)] });
+  } else if (route === "/v1/preflight") {
+    const s = out.subject || {};
+    const cid = CHAIN_IDS[s.chain];
+    const ids = { ...(s.domain ? { domain: s.domain } : {}), ...(s.url ? { url: s.url } : {}), ...(s.address ? { address: s.address } : {}), ...(s.chain ? { chain: s.chain } : {}), ...(s.name ? { name: s.name } : {}) };
+    const subject = s.domain ? { ...domainSubject(s.domain), identifiers: ids }
+      : s.address ? { kind: "wallet", id: cid ? C.caip10(cid, s.address) : C.id("wallet", "address", s.address), name: s.name || null, identifiers: ids }
+      : { kind: "topic", id: C.id("topic", "csl-name", encodeURIComponent(String(s.name).toLowerCase())), name: s.name, identifiers: ids };
+    // Evidence covers every source the call read, including checks left out under `since`.
+    const ev = [];
+    if (s.domain) {
+      ev.push(rdap(s.domain, at), dns(s.domain, at), tls(s.domain, at));
+      ev.push(C.evidence({ source_ref: `brand-protection:${s.domain}`, title: `Brand Protection stored lookalike findings for ${s.domain}`, publisher: "brand-protection (Pocket service, same operator)", retrieved_at: at, observation_time: at, source_tier: 2, rights_status: OK }));
+    }
+    if (s.name) ev.push(C.evidence({ source_ref: "csl", title: "U.S. Consolidated Screening List search (OFAC SDN and 10+ other U.S. lists)", publisher: "International Trade Administration (data.trade.gov)", url: "https://www.trade.gov/consolidated-screening-list", retrieved_at: at, observation_time: at, source_tier: 1, rights_status: OK }));
+    if (s.address) ev.push(C.evidence({ source_ref: "ofac-sdn", title: "OFAC Specially Designated Nationals list, digital currency address ids", publisher: "U.S. Treasury, Office of Foreign Assets Control", url: "https://ofac.treasury.gov/specially-designated-nationals-and-blocked-persons-list-sdn-human-readable-lists", retrieved_at: at, observation_time: at, source_tier: 1, rights_status: OK }));
+    if (s.address && cid) ev.push(C.evidence({ source_ref: `rpc:${s.chain}:${s.address}`, title: `On-chain activity of ${s.address}`, publisher: s.chain === "eth" ? "Blockscout, or Pocket Network public RPC as fallback" : "Pocket Network public RPC", url: `https://${POCKET_RPC_HOSTS[s.chain]}`, retrieved_at: at, observation_time: at, source_tier: 1, rights_status: OK }));
+    const gaps = (out.checks || []).filter((c) => c.result === "unknown" || c.result === "not_available")
+      .map((c) => C.gap(c.id, c.summary, c.result === "unknown" ? "the verdict cannot be pass while this check is unknown" : "left out of the verdict"));
+    if (s.address) gaps.push(C.gap("sanctions_address_scope", "exact-address match on the OFAC SDN list; no wallet clustering", "funds one hop away from a listed wallet are not flagged"));
+    v = C.build({ ...base, as_of: out.as_of, subject,
+      assessment: C.assessment({ status: out.verdict === "unknown" ? "insufficient_data" : "ok", native_status: out.verdict, label: out.verdict }),
+      evidence: ev, gaps });
   } else {
     return out;
   }

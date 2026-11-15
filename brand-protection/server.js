@@ -21,7 +21,7 @@ const { scanBrand, brandIdFor } = require("./lib/scan");
 const { startIngest } = require("./lib/ingest");
 
 const SERVICE = "brand-protection";
-const VERSION = "0.1.10";
+const VERSION = "0.1.11";
 const QUICK = {
   deadlineMs: Number(process.env.BP_QUICK_DEADLINE_MS || 9000),
   maxCandidates: Number(process.env.BP_QUICK_MAX_CANDIDATES || 120),
@@ -180,6 +180,8 @@ async function handleWatched() {
   return { service: SERVICE, version: VERSION, fetched_at: new Date().toISOString(), count: brands.length, max_watched: store.MAX_WATCHED, brands };
 }
 
+// 0.1.11: no paid-API change; a third, internal-only listener (lib/lookup.js, :8091) answers
+// GET /internal/domain for agent-trust's /v1/preflight (never routed by Caddy or the RelayMiner).
 // 0.1.10: no API change; the image also runs ct-follow.js (certificate-log follower, own container,
 // package-psm.js --ct) and the private ingest listener serves its hits at GET /ingest/ct-hits.
 // 0.1.9: scan, lookalikes and evidence also carry the shared `verified` block (lib/verified.js).
@@ -196,5 +198,6 @@ const server = createServer({ service: SERVICE, version: VERSION, versionPath: "
 const PORT = Number(process.env.PORT || 8080);
 server.listen(PORT, "0.0.0.0", () => console.log(`${SERVICE} v${VERSION} listening on :${PORT}`));
 const ingest = startIngest();
+const lookup = require("./lib/lookup").startLookup();
 
-module.exports = { server, ingest };
+module.exports = { server, ingest, lookup };

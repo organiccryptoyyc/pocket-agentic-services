@@ -10,6 +10,7 @@ const path = require("path");
 process.env.BP_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "bp-test-"));
 process.env.PORT = "0";
 process.env.BP_INGEST_PORT = "0";
+process.env.BP_LOOKUP_PORT = "0";
 process.env.BP_INGEST_TOKEN = "test-token-not-secret";
 
 const checks = require("../lib/checks");
@@ -421,10 +422,11 @@ function call(server, method, p, body, headers = {}) {
 }
 
 test("routes: quick scan, Pi push, since filter, evidence, watched, errors", async (t) => {
-  const { server, ingest } = require("../server");
+  const { server, ingest, lookup } = require("../server");
   await new Promise((r) => (server.listening ? r() : server.once("listening", r)));
   await new Promise((r) => (ingest.listening ? r() : ingest.once("listening", r)));
-  t.after(() => { server.close(); ingest.close(); });
+  await new Promise((r) => (lookup.listening ? r() : lookup.once("listening", r)));
+  t.after(() => { server.close(); ingest.close(); lookup.close(); });
 
   const first = await call(server, "POST", "/v1/brand/scan", { brand: "Uniswap", official_domains: ["uniswap.org"] });
   assert.strictEqual(first.status, 200);
@@ -465,4 +467,22 @@ test("routes: quick scan, Pi push, since filter, evidence, watched, errors", asy
   assert.strictEqual((await call(server, "POST", "/v1/brand/scan", { official_domains: ["not a domain"] })).status, 422);
   assert.strictEqual((await call(server, "POST", "/v1/brand/scan", { official_domains: ["uniswap.org"], limit: 999 })).status, 422);
   assert.strictEqual((await call(server, "GET", "/v1/version")).body.service, "brand-protection");
+
+  // 0.1.11: internal domain lookup for agent-trust's preflight (own port, no token, read-only).
+  require("../lib/lookup").resetIndex();
+  const fake = await call(lookup, "GET", "/internal/domain?domain=UNISWAP-CLAIM.org");
+  assert.strictEqual(fake.status, 200);
+  assert.strictEqual(fake.body.match, "lookalike");
+  assert.strictEqual(fake.body.findings[0].brand_id, "uniswap.org");
+  assert.strictEqual(fake.body.findings[0].risk_level, "high");
+  assert.ok(fake.body.findings[0].evidence_id);
+  const own = await call(lookup, "GET", "/internal/domain?domain=www.uniswap.org");
+  assert.strictEqual(own.body.match, "official");
+  assert.strictEqual(own.body.brand.brand_id, "uniswap.org");
+  const unknown = await call(lookup, "GET", "/internal/domain?domain=example.com");
+  assert.strictEqual(unknown.body.match, "none");
+  assert.strictEqual(unknown.body.watched_brands, 1);
+  assert.strictEqual((await call(lookup, "GET", "/internal/domain?domain=not%20a%20domain")).status, 400);
+  assert.strictEqual((await call(lookup, "POST", "/internal/domain?domain=example.com", {})).status, 404);
+  assert.strictEqual((await call(server, "GET", "/internal/domain?domain=uniswap-claim.org")).status, 404, "never on the paid API port");
 });
