@@ -63,9 +63,35 @@ function applyBatch(db, body, { publicKeyHex = process.env.PRICEBANK_PUBLIC_KEY,
     db.prepare("DELETE FROM tokenrisk_requests WHERE asset IN (SELECT asset FROM tokenrisk_rows)").run();
     kvSet(db, "tokenrisk_replica", { version: meta.version, built_at: meta.built_at, received_at: now.toISOString(), count: rows.length, rows_sha256: sha });
   });
-  const queue = db.prepare("SELECT asset, first_requested_at, count FROM tokenrisk_requests ORDER BY first_requested_at, asset LIMIT ?").all(QUEUE_REPLY)
+  return { accepted: true, version: meta.version, count: rows.length, queue: readQueue(db) };
+}
+
+function readQueue(db) {
+  return db.prepare("SELECT asset, first_requested_at, count FROM tokenrisk_requests ORDER BY first_requested_at, asset LIMIT ?").all(QUEUE_REPLY)
     .map((q) => ({ chain: q.asset.split(":")[0], token: q.asset.split(":")[1], first_requested_at: q.first_requested_at, count: q.count }));
-  return { accepted: true, version: meta.version, count: rows.length, queue };
+}
+
+// The Pi asks for the queue when a run starts (2026-11-16), so a token asked for since the last push is checked in
+// this run, not the one after. Same key as the batches: {request_json, signature}, request_json =
+// {"kind":"tcs6-pi-tokenrisk-queue","at":ISO}, Ed25519 over request_json, at most QUEUE_REQUEST_MAX_AGE_S old.
+const QUEUE_REQUEST_MAX_AGE_S = 600;
+function queueFor(db, body, { publicKeyHex = process.env.PRICEBANK_PUBLIC_KEY, now = new Date() } = {}) {
+  if (!publicKeyHex) throw new ClientError(403, "replica_disabled", "PRICEBANK_PUBLIC_KEY is not set on the hub");
+  if (!body || typeof body.request_json !== "string" || typeof body.signature !== "string") {
+    throw new ClientError(400, "invalid_input", "body needs request_json and signature strings");
+  }
+  if (!verifySignature(publicKeyHex, body.request_json, body.signature)) {
+    throw new ClientError(401, "bad_signature", "signature does not verify with the configured key");
+  }
+  let req;
+  try { req = JSON.parse(body.request_json); } catch { throw new ClientError(400, "invalid_input", "request_json must be JSON"); }
+  if (!req || req.kind !== "tcs6-pi-tokenrisk-queue") throw new ClientError(422, "wrong_request", "request_json.kind must be tcs6-pi-tokenrisk-queue");
+  const atMs = Date.parse(req.at);
+  if (!Number.isFinite(atMs) || Math.abs(now.getTime() - atMs) / 1000 > QUEUE_REQUEST_MAX_AGE_S) {
+    throw new ClientError(422, "stale_request", `request_json.at is missing or more than ${QUEUE_REQUEST_MAX_AGE_S}s from the hub's clock`);
+  }
+  const rep = kvGet(db, "tokenrisk_replica");
+  return { queue: readQueue(db), replica_version: rep ? rep.version : null };
 }
 
 // The query API's only write: remember an uncovered token (bounded, deduplicated).
@@ -119,4 +145,4 @@ function query(db, body, { now = new Date(), openWriter = null } = {}) {
   };
 }
 
-module.exports = { applyBatch, query, CHAINS, MAX_TOKENS };
+module.exports = { applyBatch, queueFor, query, CHAINS, MAX_TOKENS };

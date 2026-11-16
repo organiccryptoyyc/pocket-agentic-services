@@ -192,12 +192,17 @@ function startIngest({ openDb, catalog }) {
         const body = await readJsonBody(req, MAX_SYNC_BYTES);
         return sendJson(res, 200, require("./tokenrisk").applyBatch(db, body));
       }
+      if (req.method === "POST" && pathname === "/ingest/tokenrisk/queue") {
+        // The Pi's run-start queue request, signed with the same key (no bearer).
+        const body = await readJsonBody(req, 16 * 1024);
+        return sendJson(res, 200, require("./tokenrisk").queueFor(db, body));
+      }
       if (req.method === "POST" && pathname === "/ingest/attestations") {
         if (!tokenOk(req.headers.authorization, token)) return sendJson(res, 401, { error: { code: "unauthorized", message: "bearer token required" } });
         const body = await readJsonBody(req, MAX_SYNC_BYTES);
         return sendJson(res, 200, attest.storeEnvelopes(db, body && body.attestations, attest.loadKeysFile()));
       }
-      if (req.method !== "POST" || pathname !== "/ingest/sync") return sendJson(res, 404, { error: { code: "not_found", message: "POST /ingest/sync, /ingest/attestations, /ingest/pricebank or /ingest/tokenrisk only" } });
+      if (req.method !== "POST" || pathname !== "/ingest/sync") return sendJson(res, 404, { error: { code: "not_found", message: "POST /ingest/sync, /ingest/attestations, /ingest/pricebank, /ingest/tokenrisk or /ingest/tokenrisk/queue only" } });
       if (!tokenOk(req.headers.authorization, token)) return sendJson(res, 401, { error: { code: "unauthorized", message: "bearer token required" } });
       const body = await readJsonBody(req, MAX_SYNC_BYTES);
       return sendJson(res, 200, apply(db, catalog, body));

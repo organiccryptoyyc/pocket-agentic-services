@@ -9,7 +9,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const dbLib = require("../lib/db");
-const { applyBatch, query } = require("../lib/tokenrisk");
+const { applyBatch, queueFor, query } = require("../lib/tokenrisk");
 
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "tokenrisk-batch.json"), "utf8"));
 const NOW = new Date(Date.parse(FIX.built_at) + 3600 * 1000);
@@ -70,4 +70,22 @@ test("reads: an old row is stale; bad input is a 400", () => {
   for (const bad of [{}, { tokens: [] }, { tokens: Array(11).fill({ chain: "ethereum", address: "0x" + "a0".repeat(20) }) }, { tokens: [{ chain: "solana", address: "x" }] }, { tokens: [{ chain: "ethereum", address: "0x12" }] }]) {
     assert.throws(() => query(db, bad, { now: NOW }), (e) => e.status === 400);
   }
+});
+
+test("run-start queue request: signed and recent gets the queue; anything else is refused", () => {
+  const { db } = fresh();
+  const key = crypto.generateKeyPairSync("ed25519");
+  const pub = rawPub(key);
+  applyBatch(db, nodeBatch(5, [{ asset: A, verdict: "low", observed_at: NOW.toISOString() }], { key }), { publicKeyHex: pub, now: NOW });
+  // (query()'s writer is opened once per process, by the first test, so the request row is written directly here.)
+  db.prepare("INSERT INTO tokenrisk_requests (asset, first_requested_at, last_requested_at, count) VALUES (?, ?, ?, 1)").run("base:0x" + "dd".repeat(20), NOW.toISOString(), NOW.toISOString());
+  const ask = (req, k = key) => { const j = JSON.stringify(req); return { request_json: j, signature: crypto.sign(null, Buffer.from(j), k.privateKey).toString("hex") }; };
+  const ok = queueFor(db, ask({ kind: "tcs6-pi-tokenrisk-queue", at: NOW.toISOString() }), { publicKeyHex: pub, now: NOW });
+  assert.deepEqual([ok.replica_version, ok.queue.map((x) => [x.chain, x.token])], [5, [["base", "0x" + "dd".repeat(20)]]]);
+  const code = (fn) => { try { fn(); return null; } catch (e) { return e.code; } };
+  const other = crypto.generateKeyPairSync("ed25519");
+  assert.equal(code(() => queueFor(db, ask({ kind: "tcs6-pi-tokenrisk-queue", at: NOW.toISOString() }, other), { publicKeyHex: pub, now: NOW })), "bad_signature");
+  assert.equal(code(() => queueFor(db, ask({ kind: "tcs6-pi-tokenrisk-queue", at: "2026-01-01T00:00:00Z" }), { publicKeyHex: pub, now: NOW })), "stale_request");
+  assert.equal(code(() => queueFor(db, ask({ kind: "tcs6-pi-pricebank", at: NOW.toISOString() }), { publicKeyHex: pub, now: NOW })), "wrong_request");
+  assert.equal(code(() => queueFor(db, {}, { publicKeyHex: pub, now: NOW })), "invalid_input");
 });
