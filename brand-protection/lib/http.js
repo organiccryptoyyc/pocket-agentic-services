@@ -54,20 +54,26 @@ function sendJson(res, status, obj) {
   res.end(payload);
 }
 
-function readJsonBody(req) {
+function readJsonBody(req, maxBytes = MAX_BODY_BYTES) {
   return new Promise((resolve, reject) => {
     let size = 0;
+    let over = false;
     const chunks = [];
     req.on("data", (c) => {
+      if (over) return;
       size += c.length;
-      if (size > MAX_BODY_BYTES) {
-        reject(new ClientError(413, "payload_too_large", `request body exceeds ${MAX_BODY_BYTES} bytes`));
-        req.destroy();
+      if (size > maxBytes) {
+        // Keep reading (and discarding) so the client gets a 413 rather than a reset connection,
+        // which Caddy reported as a bare 502 for the Wise push (2026-11-13 to 2026-11-16).
+        over = true;
+        chunks.length = 0;
+        reject(new ClientError(413, "payload_too_large", `request body exceeds ${maxBytes} bytes`));
         return;
       }
       chunks.push(c);
     });
     req.on("end", () => {
+      if (over) return;
       const text = Buffer.concat(chunks).toString("utf8");
       if (!text.trim()) return resolve({});
       try {

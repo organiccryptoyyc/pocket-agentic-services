@@ -22,6 +22,10 @@ const { CT_DIR, readHits } = require("../ct-follow");
 const MAX_RESULTS = 50;
 const MAX_CT_HITS = 20000;
 const MAX_FINDINGS = 3000;
+// The Pi's own pushes only (token-gated, not the paid port). A large brand's full result outgrew
+// the paid API's 1 MiB limit: Wise (769 lookalikes) from 2026-11-13, pocket.network from 2026-11-14.
+// 16 MiB covers MAX_FINDINGS at several KB each.
+const INGEST_MAX_BODY_BYTES = 16 * 1024 * 1024;
 // Fields holding what third parties published: page titles, redirect URLs, certificates,
 // registry and DNS answers. A random ID there isn't our key, and scanning them would let
 // any lookalike block a brand's whole report just by redirecting through such an ID.
@@ -116,7 +120,7 @@ function startIngest() {
         return sendJson(res, 200, { brands, max_watched: store.MAX_WATCHED });
       }
       if (route === "GET /ingest/ct-hits") return sendJson(res, 200, ctHits(new URL(req.url, "http://x").searchParams.get("since")));
-      const body = await readJsonBody(req);
+      const body = await readJsonBody(req, INGEST_MAX_BODY_BYTES);
       if (route === "POST /ingest/watch") {
         const list = Array.isArray(body.brands) ? body.brands : [];
         const accepted = [];

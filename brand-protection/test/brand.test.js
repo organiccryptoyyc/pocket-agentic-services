@@ -441,6 +441,12 @@ test("routes: quick scan, Pi push, since filter, evidence, watched, errors", asy
   const full = await scanBrand({ brand: "Uniswap", official_domains: ["uniswap.org"] });
   const push = await call(ingest, "POST", "/ingest/results", { results: [full] }, { Authorization: "Bearer test-token-not-secret" });
   assert.deepStrictEqual(push.body, { accepted: ["uniswap.org"], rejected: [] });
+  // 0.1.12: a push over the paid API's 1 MiB is accepted on the ingest port (Wise outgrew it), and
+  // an oversized paid request gets a 413 answer, not a reset connection.
+  const big = await call(ingest, "POST", "/ingest/results", { results: [full], pad: "x".repeat(2 * 1024 * 1024) }, { Authorization: "Bearer test-token-not-secret" });
+  assert.deepStrictEqual(big.body, { accepted: ["uniswap.org"], rejected: [] });
+  const tooBig = await call(server, "POST", "/v1/brand/scan", { official_domains: ["uniswap.org"], pad: "x".repeat(2 * 1024 * 1024) });
+  assert.strictEqual(tooBig.status, 413);
 
   const second = await call(server, "POST", "/v1/brand/scan", { official_domains: ["uniswap.org"] });
   assert.strictEqual(second.body.scan_type, "full");
