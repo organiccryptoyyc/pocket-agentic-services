@@ -547,6 +547,14 @@
               "type": "object",
               "description": "Citations per unvalued_bounds_usd item (source ids). A curated bound without a citation is not used (owner 2026-11-14). Payables: one payment cycle of a cited, approved budget."
             },
+            "address_registry": {
+              "type": "object",
+              "description": "Curated (owner 2026-11-16): the protocol's official list of treasury addresses as cited: addresses [{chain, address}], source_refs, checked_through (YYYY-MM-DD), optional registry_extras [{chain, address, reason, source_refs}] for registry rows not on the list."
+            },
+            "address_registry_check": {
+              "type": "object",
+              "description": "Written by the collector each run: matched (every official address read, every extra registry row explained), counts, missing_from_registry, unexplained_registry_rows, checked_through, source_refs. A matched, cited check within 90 days bounds scope at $0 when no value reconciliation ran."
+            },
             "legal_claims_search": {
               "type": "object",
               "description": "Dated search for legal or contingent claims (owner 2026-11-14). Needs sources of kind court_records, governance_forum and news, searched_through within 90 days of as_of, and source_refs. No findings = bounded at $0; each finding counts at its stated usd; a finding without usd leaves the item undetermined.",

@@ -175,3 +175,33 @@ test("bounding: liabilities listed is the sum of its parts, bounded only when ev
   assert.equal(reason(summed, "liabilities_listed").upper_bound_usd, 110000);
   assert.equal(reason(summed, "liabilities_listed").materiality, "material", "parts under $100k each can still be material together");
 });
+
+// Scope by address (owner 2026-11-16, Build C option A)
+const regCheck = (extra = {}) => ({ matched: true, official_count: 3, registry_include_count: 3, explained_extras: 0, missing_from_registry: [], unexplained_registry_rows: [], checked_through: "2026-09-25", source_refs: ["SRC-ADDR"], ...extra });
+
+test("address registry: a matched, cited, current official list bounds scope at $0 when no value reconciliation ran", () => {
+  const r = run({ obligation_visibility: block({ scope_reconciled: false, address_registry_check: regCheck() }) });
+  const x = reason(r, "scope_reconciled");
+  assert.equal(x.upper_bound_usd, 0);
+  assert.equal(x.materiality, "non_material");
+  assert.deepEqual(x.bound_refs, ["SRC-ADDR"]);
+  assert.match(x.bound_basis, /official list match the perimeter read exactly/);
+  assert.equal(r.overall_score.score, 84);
+});
+
+test("address registry: unmatched, uncited or stale lists leave scope undetermined", () => {
+  for (const bad of [regCheck({ matched: false, missing_from_registry: ["ethereum:0xabc"] }), regCheck({ source_refs: [] }), regCheck({ checked_through: "2026-05-01" }), regCheck({ checked_through: undefined })]) {
+    const r = run({ obligation_visibility: block({ scope_reconciled: false, address_registry_check: bad }) });
+    assert.equal(reason(r, "scope_reconciled").materiality, "undetermined");
+    assert.equal(r.overall_score.score, 74);
+  }
+});
+
+test("address registry: a value reconciliation, when present, takes precedence", () => {
+  const bundle = JSON.parse(JSON.stringify(G.input.bundle));
+  Object.assign(bundle.obligations, { policy_id: O.POLICY_ID, obligation_visibility: block({ scope_reconciled: false, address_registry_check: regCheck() }) });
+  bundle.governance = { ...(bundle.governance || {}), reconciliation_pct: 50, reconciliation: { reported_total_usd: 2e6, observed_usd_same_scope: 1e6, reported_as_of: "2026-09-30", source_refs: ["SRC-R"] } };
+  const base = S.computeBase(bundle);
+  const r = buildReport(G.input.entity, bundle, base, [base.nrt]);
+  assert.equal(reason(r, "scope_reconciled").upper_bound_usd, 1e6);
+});

@@ -74,10 +74,27 @@ function legalBound(block, asOfMs) {
   return { usd, basis: findings.length ? `legal claims search through ${s.searched_through}: ${findings.length} finding(s) at their stated amounts` : `legal claims search through ${s.searched_through}: no claims found`, refs };
 }
 
-function scopeBound(bundle) {
+// Scope by address (owner 2026-11-16, Build C option A): when no value reconciliation ran, a published
+// official list of treasury addresses that the collector found to match the perimeter it read exactly
+// (address_registry_check.matched, cited, checked within evidence_age.max_age_days) bounds scope at $0.
+function addressRegistryBound(block, asOfMs) {
+  const c = block && block.address_registry_check;
+  if (!c || typeof c !== "object") return null;
+  const refs = Array.isArray(c.source_refs) ? c.source_refs.filter((r) => typeof r === "string") : [];
+  const age = days(asOfMs, c.checked_through);
+  if (c.matched !== true || !refs.length || age === null || age < 0 || age > POLICY.evidence_age.max_age_days) {
+    const why = c.matched !== true
+      ? `${(c.missing_from_registry || []).length} official address(es) not read, ${(c.unexplained_registry_rows || []).length} registry row(s) not on the official list`
+      : `list checked through ${c.checked_through || "n/a"} (needs a check within ${POLICY.evidence_age.max_age_days} days, cited)`;
+    return { usd: NaN, basis: `address registry not reconciled (${why})`, refs };
+  }
+  return { usd: 0, basis: `address registry reconciliation: the ${c.official_count} treasury address(es) on the protocol's official list match the perimeter read exactly${c.explained_extras ? ` (plus ${c.explained_extras} cited extra row(s))` : ""}; list checked through ${c.checked_through}`, refs };
+}
+
+function scopeBound(bundle, block, asOfMs) {
   const g = bundle.governance || {};
   const rec = g.reconciliation;
-  if (!rec || !Number.isFinite(g.reconciliation_pct)) return null;
+  if (!rec || !Number.isFinite(g.reconciliation_pct)) return addressRegistryBound(block, asOfMs);
   const refs = Array.isArray(rec.source_refs) ? rec.source_refs.filter((r) => typeof r === "string") : [];
   if (rec.mode === "quantity") {
     const gapQty = Math.abs(Number(rec.reported_quantity) - Number(rec.observed_quantity_same_scope));
@@ -101,7 +118,7 @@ function gapBounds(bundle, block, asOfMs) {
   }
   const legal = legalBound(block, asOfMs);
   if (legal && !(out.legal_or_contingent_claims_covered && Number.isFinite(out.legal_or_contingent_claims_covered.usd))) out.legal_or_contingent_claims_covered = legal;
-  const scope = scopeBound(bundle);
+  const scope = scopeBound(bundle, block, asOfMs);
   if (scope && !(out.scope_reconciled && Number.isFinite(out.scope_reconciled.usd))) out.scope_reconciled = scope;
   if (!(out.liabilities_listed && Number.isFinite(out.liabilities_listed.usd))) {
     const parts = ["debt_covered", "payables_covered", "streams_and_grants_covered", "legal_or_contingent_claims_covered"];
