@@ -127,6 +127,12 @@ test("imageUrls: social card first, data: and SVG skipped, &amp; decoded, capped
   ]);
 });
 
+test("imageUrls: og:image:alt text and other og:image properties are not image URLs", () => {
+  const html = `<meta property="og:image:alt" content="Aave Staking & Earn"><meta property="og:image:width" content="1200">
+    <meta property="og:image" content="/og.png"><meta name="twitter:image:src" content="/tw.png">`;
+  assert.deepStrictEqual(pv.imageUrls(html, "https://site.example/"), ["https://site.example/og.png", "https://site.example/tw.png"]);
+});
+
 test("statement wording: the takedown line names the signer and the counts", () => {
   const ai = { format: "png", ...pv.inspectImage(png(manifest())) };
   const none = { format: "jpeg", content_credentials: false };

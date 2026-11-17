@@ -29,8 +29,9 @@ const LIMITS = [
 ];
 
 const IMG_RES = [
-  /<meta\b[^>]*(?:og:image|twitter:image)[^>]*\bcontent\s*=\s*["']([^"']+)/gi,
-  /<meta\b[^>]*\bcontent\s*=\s*["']([^"']+)["'][^>]*(?:og:image|twitter:image)/gi,
+  // og:image, og:image:url, og:image:secure_url, twitter:image(:src) only: not og:image:alt, :width, :type.
+  /<meta\b[^>]*["'](?:og:image(?::url|:secure_url)?|twitter:image(?::src)?)["'][^>]*\bcontent\s*=\s*["']([^"']+)/gi,
+  /<meta\b[^>]*\bcontent\s*=\s*["']([^"']+)["'][^>]*["'](?:og:image(?::url|:secure_url)?|twitter:image(?::src)?)["']/gi,
   /<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)/gi,
   /\bsrcset\s*=\s*["']([^"'\s,]+)/gi,
   /<link\b[^>]*\brel\s*=\s*["'][^"']*\bicon\b[^"']*["'][^>]*\bhref\s*=\s*["']([^"']+)/gi,
