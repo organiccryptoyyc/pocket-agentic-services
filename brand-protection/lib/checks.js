@@ -214,7 +214,7 @@ function tlsCertInfo(domain, ip, opts = {}) {
 
 // --- One GET, pinned to an IP we already vetted (no DNS rebinding) --------------
 
-function getPinned(urlStr, ip) {
+function getPinned(urlStr, ip, maxBytes = MAX_PAGE_BYTES) {
   return new Promise((resolve, reject) => {
     const u = new URL(urlStr);
     const mod = u.protocol === "https:" ? https : http;
@@ -235,10 +235,10 @@ function getPinned(urlStr, ip) {
       let size = 0;
       res.on("data", (c) => {
         size += c.length;
-        if (size > MAX_PAGE_BYTES) { res.destroy(); return; }
+        if (size > maxBytes) { res.destroy(); return; }
         chunks.push(c);
       });
-      res.on("close", () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks), truncated: size > MAX_PAGE_BYTES }));
+      res.on("close", () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks), truncated: size > maxBytes }));
       res.on("error", () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks), truncated: true }));
     });
     req.on("timeout", () => req.destroy(new UpstreamError(`GET ${urlStr} did not finish in ${HTTP_TIMEOUT_MS}ms`)));
@@ -248,13 +248,14 @@ function getPinned(urlStr, ip) {
 }
 
 // Follows up to 3 redirects; every new host goes through the SSRF guard again.
-async function fetchVetted(urlStr) {
+// opts.maxBytes: a larger cap for page images (provenance.js); pages keep MAX_PAGE_BYTES.
+async function fetchVetted(urlStr, opts = {}) {
   const chain = [];
   let current = urlStr;
   for (let hop = 0; hop < 4; hop++) {
     const host = new URL(current).hostname;
     const ips = await resolveSafely(host);
-    const res = await getPinned(current, ips[0]);
+    const res = await getPinned(current, ips[0], Math.min(opts.maxBytes || MAX_PAGE_BYTES, 4 * 1024 * 1024));
     chain.push({ url: current, status: res.status });
     const loc = res.headers.location;
     if (res.status >= 300 && res.status < 400 && loc && hop < 3) {

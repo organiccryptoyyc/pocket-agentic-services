@@ -56,7 +56,7 @@ async function officialFingerprint(officialDomains, keywords) {
   const base = { domains: officialDomains, title: null, icon_sha256: null, ns_sets: await officialNsSets(officialDomains) };
   for (const d of officialDomains) {
     try {
-      const page = await fingerprint.homepage(d, keywords);
+      const page = await fingerprint.homepage(d, keywords, { artwork: false });
       if (page.reachable && !page.skipped) {
         // Where the official site really lives (uniswap.org -> app.uniswap.org) counts as official too.
         const domains = page.final_host && !officialDomains.includes(page.final_host) ? [...officialDomains, page.final_host] : officialDomains;
@@ -166,6 +166,8 @@ async function scanBrand(request, opts = {}) {
       registered_at: rdap && rdap.registered_at || null,
       certificate_issuer: cert && cert.issuer_org || null,
       title: page && page.title || null,
+      // Signers of Content Credentials marking the site's images AI-generated (evidence, not scored).
+      ...(page && page.artwork_provenance && page.artwork_provenance.signed_ai_images ? { ai_artwork_signers: page.artwork_provenance.ai_signers } : {}),
       checked: deep ? "full" : "dns_only",
       evidence_id: id,
     });

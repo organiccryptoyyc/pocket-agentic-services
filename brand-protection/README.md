@@ -37,6 +37,26 @@ whether a page's claims are true. Raw page content is never kept.
 
 Try it: `node ops/recheck-cli.js <domain> [official-domain ...]`
 
+## Artwork provenance (`bp-provenance/1`, 0.1.13)
+
+For each live lookalike page (not parked or taken down), up to 4 page images (social card first) are read
+through the same SSRF guard, 2 MB each, with a 10 s budget for the whole step and robots.txt honoured on other
+hosts. For each image the evidence keeps the URL, SHA-256, format and:
+- whether it carries **C2PA Content Credentials**, and who signed them (the signing certificate's subject and issuer);
+- whether the credentials mark it **AI-generated** (IPTC `trainedAlgorithmicMedia`), and the recorded actions;
+- an unsigned IPTC/XMP AI label, recorded separately as weaker;
+- `test_certificate` for self-signed or "local use only" certificates.
+
+The result is in the evidence record (`homepage.artwork_provenance`), with a `statement` a takedown file can quote, for example:
+"1 of 2 images checked on this page carries C2PA Content Credentials signed by OpenAI OpCo, LLC (OpenAI Media
+Service) that mark it as AI-generated." A finding with such images also lists `ai_artwork_signers`.
+
+**Evidence only:** it never changes the risk score, because legitimate sites use AI images too. Signatures are read,
+not cryptographically validated, and signers are not checked against the C2PA trust list. No credentials never
+means "authentic" or "human-made": most sites don't add them, and many hosts strip them. Image bytes are never kept.
+Survey behind it (2026-11-16): 0 of 332 images on 41 official brand sites carried credentials; 21 of 960 images on 7 of
+184 lookalike sites did, mostly OpenAI-signed AI images.
+
 ## How a finding is made (`bp-risk/5`)
 
 1. **Candidates:** our own permutations in priority order: TLD swap,

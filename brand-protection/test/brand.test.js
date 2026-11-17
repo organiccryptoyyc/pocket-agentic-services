@@ -25,7 +25,7 @@ const { checkResult, tokenOk } = require("../lib/ingest");
 const ICON = "a".repeat(64);
 const WORLD = {
   "uniswap.org": { a: ["198.51.100.1"], ns: ["a.ns.cloudflare.com", "b.ns.cloudflare.com"], age: 2500, page: { title: "Uniswap Interface", icon_sha256: ICON } },
-  "uniswap-claim.org": { a: ["203.0.113.10"], mx: ["mx.uniswap-claim.org"], age: 5, certDays: 3, page: { title: "Uniswap Interface", icon_sha256: ICON, wallet_prompt: true, brand_in_title: true, brand_in_page: true } },
+  "uniswap-claim.org": { a: ["203.0.113.10"], mx: ["mx.uniswap-claim.org"], age: 5, certDays: 3, page: { title: "Uniswap Interface", icon_sha256: ICON, wallet_prompt: true, brand_in_title: true, brand_in_page: true, artwork_provenance: { method: "bp-provenance/1", signed_ai_images: 2, ai_signers: ["OpenAI OpCo, LLC (OpenAI Media Service)"], statement: "2 of 3 images checked on this page carry C2PA Content Credentials signed by OpenAI OpCo, LLC (OpenAI Media Service) that mark them as AI-generated. Signatures were read, not validated." } } },
   "uniswap.xyz": { a: ["203.0.113.11"], age: 900, page: { title: "uniswap.xyz is for sale", parked: true, brand_in_title: true, brand_in_page: true } },
   "unlswap.org": { a: ["10.0.0.5"], age: 10 },
 };
@@ -334,6 +334,9 @@ test("scanBrand finds, scores and evidences the lookalikes", async () => {
   assert.strictEqual(by["uniswap-claim.org"].risk_level, "high");
   assert.strictEqual(by["uniswap-claim.org"].fuzzer, "ct-log");
   assert.strictEqual(by["uniswap.xyz"].status, "parked");
+  assert.deepStrictEqual(by["uniswap-claim.org"].ai_artwork_signers, ["OpenAI OpCo, LLC (OpenAI Media Service)"], "AI artwork signer on the finding");
+  assert.strictEqual(by["uniswap.xyz"].ai_artwork_signers, undefined);
+  assert.match(r.evidence.find((e) => e.domain === "uniswap-claim.org").homepage.artwork_provenance.statement, /signed by OpenAI/);
   assert.strictEqual(by["unlswap.org"].status, "refused_private_address");
   assert.strictEqual(r.findings[0].domain, "uniswap-claim.org", "sorted by risk");
   assert.strictEqual(r.official_fingerprint.icon_sha256, ICON);

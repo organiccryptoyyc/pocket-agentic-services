@@ -29,7 +29,7 @@ const INGEST_MAX_BODY_BYTES = 16 * 1024 * 1024;
 // Fields holding what third parties published: page titles, redirect URLs, certificates,
 // registry and DNS answers. A random ID there isn't our key, and scanning them would let
 // any lookalike block a brand's whole report just by redirecting through such an ID.
-const THIRD_PARTY_FIELDS = new Set(["title", "reasons", "certificate_issuer", "homepage", "rdap", "certificate", "dns", "ct_log_entry", "official_fingerprint"]);
+const THIRD_PARTY_FIELDS = new Set(["title", "reasons", "certificate_issuer", "ai_artwork_signers", "homepage", "rdap", "certificate", "dns", "ct_log_entry", "official_fingerprint"]);
 const SECRET_RES = [/CG-[A-Za-z0-9]{20,}/, /\b[0-9a-f]{64}\b/, /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/];
 
 function tokenOk(header, token) {

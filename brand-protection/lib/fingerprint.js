@@ -4,6 +4,7 @@
 "use strict";
 
 const checks = require("./checks");
+const provenance = require("./provenance");
 
 const WALLET_RE = /walletconnect|connect\s*wallet|metamask|seed\s*phrase|recovery\s*phrase|secret\s*phrase|private\s*key|eth_requestaccounts|window\.ethereum|wallet\s*sync|validate\s*wallet|rectify\s*wallet/i;
 const PASSWORD_RE = /<input[^>]+type\s*=\s*["']?password/i;
@@ -96,6 +97,15 @@ async function homepage(domain, keywords, opts = {}) {
   const finalHost = new URL(page.final_url).hostname.toLowerCase();
   if (MARKETPLACE_HOSTS.some((h) => finalHost === h || finalHost.endsWith(`.${h}`))) rest.parked = true;
   if (page.status === 451) rest.taken_down = true;
+  // Who signed the page's images and whether they say AI-made (evidence only, never scored).
+  let artwork_provenance;
+  if (opts.artwork !== false && page.status === 200 && !rest.parked && !rest.taken_down) {
+    try {
+      artwork_provenance = await provenance.artwork(page.body.toString("utf8"), page.final_url);
+    } catch (e) {
+      artwork_provenance = { method: provenance.METHOD, error: "not_checked" };
+    }
+  }
   return {
     fetched_at,
     reachable: true,
@@ -109,6 +119,7 @@ async function homepage(domain, keywords, opts = {}) {
     sha256: checks.sha256(page.body),
     icon_sha256,
     ...rest,
+    ...(artwork_provenance ? { artwork_provenance } : {}),
     ...(opts.detail
       ? {
           wallet_terms: walletTerms(page.body.toString("utf8")),

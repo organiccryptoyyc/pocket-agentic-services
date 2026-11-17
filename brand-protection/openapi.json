@@ -104,6 +104,7 @@
           "registered_at": { "type": "string", "nullable": true },
           "certificate_issuer": { "type": "string", "nullable": true },
           "title": { "type": "string", "nullable": true },
+          "ai_artwork_signers": { "type": "array", "items": { "type": "string" }, "description": "Since 0.1.13. Present only when images on the lookalike's homepage carry C2PA Content Credentials marking them AI-generated: the signing organisations (e.g. \"OpenAI OpCo, LLC (OpenAI Media Service)\"). Evidence only; never changes the risk score. Full record: evidence homepage.artwork_provenance" },
           "checked": { "type": "string", "enum": ["full", "dns_only"] },
           "first_seen": { "type": "string", "format": "date-time" },
           "changed_at": { "type": "string", "format": "date-time" },
@@ -138,7 +139,7 @@
           "dns": { "type": "object" },
           "rdap": { "type": "object", "nullable": true },
           "certificate": { "type": "object", "nullable": true },
-          "homepage": { "type": "object", "nullable": true, "description": "Derived fields and a SHA-256 of the page; never the page itself" },
+          "homepage": { "type": "object", "nullable": true, "description": "Derived fields and a SHA-256 of the page; never the page itself. Since 0.1.13 it may hold artwork_provenance (bp-provenance/1): up to 4 page images with SHA-256, whether they carry C2PA Content Credentials, the signing certificate's subject and issuer, an AI-generated mark, an unsigned IPTC AI label, and a statement a takedown file can quote. Signatures are read, not validated; the trust list is not checked; it never affects the score" },
           "ct_log_entry": { "type": "object", "nullable": true }
         }
       },
