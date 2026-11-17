@@ -45,11 +45,11 @@ hosts. For each image the evidence keeps the URL, SHA-256, format and:
 - whether it carries **C2PA Content Credentials**, and who signed them (the signing certificate's subject and issuer);
 - whether the credentials mark it **AI-generated** (IPTC `trainedAlgorithmicMedia`), and the recorded actions;
 - an unsigned IPTC/XMP AI label, recorded separately as weaker;
-- `test_certificate` for self-signed or "local use only" certificates.
+- `test_certificate` for self-signed or "local use only" certificates (named by the tool, e.g. "xAI Grok Imagine", and marked not a trusted signer).
 
 The result is in the evidence record (`homepage.artwork_provenance`), with a `statement` a takedown file can quote, for example:
-"1 of 2 images checked on this page carries C2PA Content Credentials signed by OpenAI OpCo, LLC (OpenAI Media
-Service) that mark it as AI-generated." A finding with such images also lists `ai_artwork_signers`.
+"1 of 2 images checked on this page carries C2PA Content Credentials marking it as AI-generated, signed by
+OpenAI OpCo, LLC (OpenAI Media Service)." A finding with such images also lists `ai_artwork_signers`.
 
 **Evidence only:** it never changes the risk score, because legitimate sites use AI images too. Signatures are read,
 not cryptographically validated, and signers are not checked against the C2PA trust list. No credentials never

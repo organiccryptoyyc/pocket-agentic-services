@@ -244,8 +244,11 @@ function inspectImage(b, truncated = false) {
   return rec;
 }
 
-function signerName(s) {
+// "OpenAI OpCo, LLC (OpenAI Media Service)". A self-signed test certificate's organisation is
+// boilerplate ("Self-signed ephemeral certificate ..."), so it is named by its common name instead.
+function signerName(s, test = false) {
   if (!s) return "an unnamed signer";
+  if (test) return `${s.cn || s.o} (self-signed test certificate, not a trusted signer)`;
   if (s.o && s.cn && s.o !== s.cn) return `${s.o} (${s.cn})`;
   return s.o || s.cn;
 }
@@ -259,13 +262,13 @@ function statement(images) {
   const signedAi = read.filter((i) => i.content_credentials && i.ai_generated);
   const parts = [];
   if (signedAi.length) {
-    const names = [...new Set(signedAi.map((i) => signerName(i.signer) + (i.test_certificate ? " with a self-signed test certificate" : "")))];
-    parts.push(`${of(signedAi.length)} C2PA Content Credentials signed by ${names.join("; ")} that mark ${signedAi.length === 1 ? "it" : "them"} as AI-generated.`);
+    const names = [...new Set(signedAi.map((i) => signerName(i.signer, i.test_certificate)))];
+    parts.push(`${of(signedAi.length)} C2PA Content Credentials marking ${signedAi.length === 1 ? "it" : "them"} as AI-generated, signed by ${names.join("; ")}.`);
   }
   const signedOther = read.filter((i) => i.content_credentials && !i.ai_generated);
   if (signedOther.length) {
-    const names = [...new Set(signedOther.map((i) => signerName(i.signer) + (i.test_certificate ? " with a self-signed test certificate" : "")))];
-    parts.push(`${of(signedOther.length)} C2PA Content Credentials signed by ${names.join("; ")} with no AI-generated mark.`);
+    const names = [...new Set(signedOther.map((i) => signerName(i.signer, i.test_certificate)))];
+    parts.push(`${of(signedOther.length)} C2PA Content Credentials with no AI-generated mark, signed by ${names.join("; ")}.`);
   }
   const labels = read.filter((i) => !i.content_credentials && i.unsigned_ai_label);
   if (labels.length) parts.push(`${of(labels.length)} an unsigned IPTC label marking ${labels.length === 1 ? "it" : "them"} as AI-generated.`);
@@ -317,7 +320,7 @@ async function artwork(html, pageUrl, opts = {}) {
     images_read: images.filter((i) => i.format).length,
     images,
     signed_ai_images: signedAi.length,
-    ai_signers: [...new Set(signedAi.map((i) => signerName(i.signer)))],
+    ai_signers: [...new Set(signedAi.map((i) => signerName(i.signer, i.test_certificate)))],
     statement: statement(images),
     signature_validated: false,
     trust_list_checked: false,

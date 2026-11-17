@@ -94,7 +94,10 @@ test("PNG caBX after the image data is found; not-AI credentials say so", () => 
 test("self-signed ephemeral certificate is flagged as a test certificate", () => {
   const r = pv.inspectImage(jpeg(manifest({ ai: false, signer: ["Adobe Compliance Signer", "Self-signed ephemeral certificate (Content Authenticity SDK) -- LOCAL USE ONLY"], issuer: ["c2pa-ephemeral-ca.local", "Self-signed ephemeral CA (Content Authenticity SDK)"] })));
   assert.strictEqual(r.test_certificate, true);
-  assert.match(pv.statement([{ format: "jpeg", ...r }]), /self-signed test certificate/);
+  const r2 = pv.inspectImage(jpeg(manifest({ ai: true, signer: ["xAI Grok Imagine", "Self-signed ephemeral certificate (Content Authenticity SDK) -- LOCAL USE ONLY"], issuer: ["c2pa-ephemeral-ca.local", "Self-signed ephemeral CA (Content Authenticity SDK)"] })));
+  assert.strictEqual(pv.statement([{ format: "jpeg", ...r2 }]),
+    "1 of 1 image checked on this page carries C2PA Content Credentials marking it as AI-generated, signed by xAI Grok Imagine (self-signed test certificate, not a trusted signer). Signatures were read, not validated.");
+  assert.match(pv.statement([{ format: "jpeg", ...r }]), /with no AI-generated mark, signed by Adobe Compliance Signer \(self-signed test certificate/);
 });
 
 test("no credentials; an unsigned XMP AI label is recorded separately", () => {
@@ -128,7 +131,7 @@ test("statement wording: the takedown line names the signer and the counts", () 
   const ai = { format: "png", ...pv.inspectImage(png(manifest())) };
   const none = { format: "jpeg", content_credentials: false };
   assert.strictEqual(pv.statement([ai, none]),
-    "1 of 2 images checked on this page carries C2PA Content Credentials signed by OpenAI OpCo, LLC (OpenAI Media Service) that mark it as AI-generated. Signatures were read, not validated.");
+    "1 of 2 images checked on this page carries C2PA Content Credentials marking it as AI-generated, signed by OpenAI OpCo, LLC (OpenAI Media Service). Signatures were read, not validated.");
   assert.strictEqual(pv.statement([none]), "None of the 1 image checked on this page carries Content Credentials or an AI label.");
   assert.strictEqual(pv.statement([{ url: "x", error: "fetch_failed" }]), "No page images could be read.");
 });
