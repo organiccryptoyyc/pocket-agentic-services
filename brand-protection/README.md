@@ -14,6 +14,7 @@ takedowns or interacts with suspect sites beyond one page fetch.
 | `POST /v1/brand/lookalikes` | `{domain, since?, limit?}` | The watched report if the domain is watched, else a live DNS-only check (cached 1 h, not added to the watch list). |
 | `POST /v1/brand/evidence` | `{evidence_id}` | The evidence behind one finding: every source with its fetch time, DNS, RDAP, certificate, homepage summary with SHA-256, CT log entry. |
 | `GET /v1/brand/watched` | — | Brands under watch, last scan, high-risk counts. |
+| `POST /v1/brand/photo` | `{image_url}` or `{sha256, address or tx_hash}`, optional claimed `address` | Photo provenance (0.1.14, `bp-photo/1`): Content Credentials signer, the Nodle ContentSign mint on ZKsync Era that recorded the file's SHA-256, and a verdict. Never returns coordinates. |
 | `GET /v1/version`, `GET /v1/health` | — | Identity and readiness. |
 
 Every response is a JSON object; bad input is a 4xx JSON error, never a 5xx.
@@ -23,6 +24,23 @@ Every response is a JSON object; bad input is a 4xx JSON error, never a 5xx.
 `GET /internal/domain?domain=<name>` with `match: official | lookalike | none`, the brand and the stored
 finding. It is read-only, never starts a scan, is not in `deploy/routes.json` (so neither Caddy nor the
 RelayMiner reach it), and serves `agent-trust`'s `/v1/preflight` over the Docker network.
+
+## Photo provenance (`bp-photo/1`, 0.1.14)
+
+`POST /v1/brand/photo` answers "was this photo signed, by which address, and is it anchored on-chain?" from public data:
+
+1. **In the file:** the C2PA Content Credentials (`lib/provenance.js`). For a Nodle Click photo, the signer certificate's
+   common name is the user's address, issued by "Click Camera" / "ContentSign by Nodle". Signatures are read, not validated.
+2. **On-chain:** Nodle ContentSign mints on ZKsync Era (contract `0x95b3641d549f719eb5105f9550eca4a7a2f305de`). Each
+   token's IPFS metadata carries `content_hash`, the SHA-256 of the signed file. The signer's newest 25 mints are compared.
+3. **Match:** the file's SHA-256 against that `content_hash`. A screenshot, crop or re-save changes the hash.
+
+Verdicts: `signed_and_anchored`, `anchored_hash_match`, `anchor_hash_mismatch` (an edited copy), `signed_not_anchored`,
+`no_credentials` (often a screenshot), `no_credentials_not_anchored`, `not_found`.
+
+**Privacy:** `privacy_exposure` says only whether a precise location is public (the token metadata is permanent on
+IPFS); coordinates are never returned. **RPC:** Pocket's ZKsync Era node is pruned and answers old-history reads with
+empty results, so history (logs, receipts, old blocks) is read from the archive RPC `mainnet.era.zksync.io`.
 
 ## Re-check engine (`lib/recheck.js`, library only)
 

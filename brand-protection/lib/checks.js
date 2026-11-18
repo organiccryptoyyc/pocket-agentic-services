@@ -255,7 +255,9 @@ async function fetchVetted(urlStr, opts = {}) {
   for (let hop = 0; hop < 4; hop++) {
     const host = new URL(current).hostname;
     const ips = await resolveSafely(host);
-    const res = await getPinned(current, ips[0], Math.min(opts.maxBytes || MAX_PAGE_BYTES, 4 * 1024 * 1024));
+    // 4 MB ceiling; the photo check (lib/photo.js) asks for up to 16 MB, since phone photos run 3-8 MB.
+    const ceiling = opts.largeFile ? 16 * 1024 * 1024 : 4 * 1024 * 1024;
+    const res = await getPinned(current, ips[0], Math.min(opts.maxBytes || MAX_PAGE_BYTES, ceiling));
     chain.push({ url: current, status: res.status });
     const loc = res.headers.location;
     if (res.status >= 300 && res.status < 400 && loc && hop < 3) {

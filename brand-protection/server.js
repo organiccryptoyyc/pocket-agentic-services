@@ -19,9 +19,10 @@ const checks = require("./lib/checks");
 const store = require("./lib/store");
 const { scanBrand, brandIdFor } = require("./lib/scan");
 const { startIngest } = require("./lib/ingest");
+const photo = require("./lib/photo");
 
 const SERVICE = "brand-protection";
-const VERSION = "0.1.13";
+const VERSION = "0.1.14";
 const QUICK = {
   deadlineMs: Number(process.env.BP_QUICK_DEADLINE_MS || 9000),
   maxCandidates: Number(process.env.BP_QUICK_MAX_CANDIDATES || 120),
@@ -180,6 +181,22 @@ async function handleWatched() {
   return { service: SERVICE, version: VERSION, fetched_at: new Date().toISOString(), count: brands.length, max_watched: store.MAX_WATCHED, brands };
 }
 
+// POST /v1/brand/photo (0.1.14): photo provenance check (lib/photo.js, bp-photo/1). Was this photo signed,
+// by which address, and is it anchored on-chain? Never returns coordinates.
+async function handlePhoto(body) {
+  const q = body && typeof body === "object" ? body : {};
+  const unknown = Object.keys(q).filter((k) => !["image_url", "sha256", "address", "tx_hash"].includes(k));
+  if (unknown.length) throw new ClientError(422, "invalid_input", `unknown field(s): ${unknown.join(", ")}; use image_url, sha256, address, tx_hash`);
+  try {
+    const out = await photo.verify(q);
+    return { service: SERVICE, version: VERSION, fetched_at: new Date().toISOString(), ...out };
+  } catch (e) {
+    if (e instanceof ClientError) throw e;
+    if (e instanceof photo.InputError) throw new ClientError(422, "invalid_input", e.message);
+    throw new ClientError(502, "upstream_unavailable", `photo check could not finish: ${String(e.message || e).slice(0, 200)}`);
+  }
+}
+
 // 0.1.11: no paid-API change; a third, internal-only listener (lib/lookup.js, :8091) answers
 // GET /internal/domain for agent-trust's /v1/preflight (never routed by Caddy or the RelayMiner).
 // 0.1.10: no API change; the image also runs ct-follow.js (certificate-log follower, own container,
@@ -192,6 +209,7 @@ const routes = new Map([
   ["POST /v1/brand/lookalikes", verifiedRoute("/v1/brand/lookalikes", handleLookalikes)],
   ["POST /v1/brand/evidence", verifiedRoute("/v1/brand/evidence", handleEvidence)],
   ["GET /v1/brand/watched", handleWatched],
+  ["POST /v1/brand/photo", handlePhoto],
 ]);
 
 const server = createServer({ service: SERVICE, version: VERSION, versionPath: "/v1/version", healthPath: "/v1/health", routes });

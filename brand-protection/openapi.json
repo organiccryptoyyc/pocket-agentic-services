@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Brand Protection Monitor",
-    "version": "0.1.9",
+    "version": "0.1.14",
     "description": "Lookalike domains, certificates and copied homepages for a brand, with deterministic risk scores and evidence hashes. Detection and evidence only."
   },
   "paths": {
@@ -12,11 +12,28 @@
         "summary": "The watched report for a brand; queues a full scan for a brand nobody watched yet",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScanRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Report", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Report" } } } },
-          "422": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "Report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -26,18 +43,47 @@
         "summary": "Which lookalikes of one domain exist right now (watch-list report if watched, else a quick DNS-only check)",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": {
-            "type": "object", "required": ["domain"],
-            "properties": {
-              "domain": { "type": "string", "example": "uniswap.org" },
-              "since": { "type": "string", "format": "date-time" },
-              "limit": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 }
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string",
+                    "example": "uniswap.org"
+                  },
+                  "since": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 50
+                  }
+                }
+              }
             }
-          } } }
+          }
         },
         "responses": {
-          "200": { "description": "Report", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Report" } } } },
-          "422": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "Report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -47,15 +93,40 @@
         "summary": "The evidence record behind one finding",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": {
-            "type": "object", "required": ["evidence_id"],
-            "properties": { "evidence_id": { "type": "string", "pattern": "^[0-9a-f]{24}$" } }
-          } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "evidence_id"
+                ],
+                "properties": {
+                  "evidence_id": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{24}$"
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Evidence", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Evidence" } } } },
-          "404": { "$ref": "#/components/responses/Error" },
-          "422": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "Evidence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Evidence"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -63,102 +134,562 @@
       "get": {
         "operationId": "brandWatched",
         "summary": "Brands under watch",
-        "responses": { "200": { "description": "Watch list", "content": { "application/json": { "schema": { "type": "object" } } } } }
+        "responses": {
+          "200": {
+            "description": "Watch list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/v1/version": { "get": { "responses": { "200": { "description": "Service identity", "content": { "application/json": { "schema": { "type": "object" } } } } } } },
-    "/v1/health": { "get": { "responses": { "200": { "description": "Readiness", "content": { "application/json": { "schema": { "type": "object" } } } } } } }
+    "/v1/version": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Service identity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Readiness",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/brand/photo": {
+      "post": {
+        "operationId": "brandPhoto",
+        "summary": "Photo provenance check: was this photo signed, by which address, and is it anchored on-chain?",
+        "description": "Since 0.1.14 (method bp-photo/1). Reads the C2PA Content Credentials inside the file (signatures read, not validated; trust list not checked), looks up Nodle ContentSign (Click app) mints on ZKsync Era, and compares the file's SHA-256 with the mint's recorded content_hash. Give image_url (the file is fetched, up to 16 MB), or sha256 with address or tx_hash. A claimed address is checked against the result and never steers the search away from the file's own signer. Coordinates are never returned: privacy_exposure only says whether a precise location is public.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoRequest"
+              },
+              "examples": {
+                "by_url": {
+                  "value": {
+                    "image_url": "https://example.com/photo.jpg"
+                  }
+                },
+                "by_hash": {
+                  "value": {
+                    "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+                    "address": "0x1111111111111111111111111111111111111111"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Photo provenance result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "502": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
   },
   "components": {
     "responses": {
       "Error": {
         "description": "Bad input or not found",
-        "content": { "application/json": { "schema": {
-          "type": "object",
-          "properties": { "error": { "type": "object", "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } }
-        } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "schemas": {
       "ScanRequest": {
         "type": "object",
-        "required": ["official_domains"],
+        "required": [
+          "official_domains"
+        ],
         "properties": {
-          "brand": { "type": "string", "maxLength": 64, "example": "Uniswap" },
-          "official_domains": { "type": "array", "minItems": 1, "maxItems": 5, "items": { "type": "string" }, "example": ["uniswap.org"] },
-          "keywords": { "type": "array", "maxItems": 10, "items": { "type": "string", "maxLength": 40 } },
-          "since": { "type": "string", "format": "date-time", "description": "Only findings new or changed after this time" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 }
+          "brand": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "Uniswap"
+          },
+          "official_domains": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "uniswap.org"
+            ]
+          },
+          "keywords": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Only findings new or changed after this time"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          }
         }
       },
       "Finding": {
         "type": "object",
         "properties": {
-          "domain": { "type": "string" },
-          "unicode": { "type": "string", "description": "Present for IDN lookalikes" },
-          "fuzzer": { "type": "string", "enum": ["ct-log", "tld-swap", "added-word", "homoglyph", "idn-homoglyph", "omission", "transposition", "replacement", "repetition", "hyphenation", "insertion", "vowel-swap"] },
-          "risk": { "type": "number", "minimum": 0, "maximum": 100 },
-          "risk_level": { "type": "string", "enum": ["none", "low", "medium", "high", "unchecked"] },
-          "status": { "type": "string", "enum": ["copies_brand", "live", "resolves", "taken_down", "parked", "registered_not_live", "redirects_to_official", "refused_private_address", "no_longer_seen"] },
-          "reasons": { "type": "array", "items": { "type": "string" } },
-          "registered_at": { "type": "string", "nullable": true },
-          "certificate_issuer": { "type": "string", "nullable": true },
-          "title": { "type": "string", "nullable": true },
-          "ai_artwork_signers": { "type": "array", "items": { "type": "string" }, "description": "Since 0.1.13. Present only when images on the lookalike's homepage carry C2PA Content Credentials marking them AI-generated: the signing organisations (e.g. \"OpenAI OpCo, LLC (OpenAI Media Service)\"). Evidence only; never changes the risk score. Full record: evidence homepage.artwork_provenance" },
-          "checked": { "type": "string", "enum": ["full", "dns_only"] },
-          "first_seen": { "type": "string", "format": "date-time" },
-          "changed_at": { "type": "string", "format": "date-time" },
-          "evidence_id": { "type": "string" }
+          "domain": {
+            "type": "string"
+          },
+          "unicode": {
+            "type": "string",
+            "description": "Present for IDN lookalikes"
+          },
+          "fuzzer": {
+            "type": "string",
+            "enum": [
+              "ct-log",
+              "tld-swap",
+              "added-word",
+              "homoglyph",
+              "idn-homoglyph",
+              "omission",
+              "transposition",
+              "replacement",
+              "repetition",
+              "hyphenation",
+              "insertion",
+              "vowel-swap"
+            ]
+          },
+          "risk": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "unchecked"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "copies_brand",
+              "live",
+              "resolves",
+              "taken_down",
+              "parked",
+              "registered_not_live",
+              "redirects_to_official",
+              "refused_private_address",
+              "no_longer_seen"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "registered_at": {
+            "type": "string",
+            "nullable": true
+          },
+          "certificate_issuer": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "ai_artwork_signers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Since 0.1.13. Present only when images on the lookalike's homepage carry C2PA Content Credentials marking them AI-generated: the signing organisations (e.g. \"OpenAI OpCo, LLC (OpenAI Media Service)\"). Evidence only; never changes the risk score. Full record: evidence homepage.artwork_provenance"
+          },
+          "checked": {
+            "type": "string",
+            "enum": [
+              "full",
+              "dns_only"
+            ]
+          },
+          "first_seen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidence_id": {
+            "type": "string"
+          }
         }
       },
       "Report": {
         "type": "object",
         "properties": {
-          "verified": { "$ref": "#/components/schemas/Verified" },
-          "service": { "type": "string" },
-          "brand_id": { "type": "string" },
-          "brand": { "type": "string" },
-          "official_domains": { "type": "array", "items": { "type": "string" } },
-          "as_of": { "type": "string", "format": "date-time" },
-          "age_hours": { "type": "number" },
-          "scan_type": { "type": "string", "enum": ["quick", "full"] },
-          "full_scan": { "type": "string", "enum": ["done", "queued", "not_queued_watch_list_full"] },
-          "coverage": { "type": "object" },
-          "findings_total": { "type": "integer" },
-          "findings": { "type": "array", "items": { "$ref": "#/components/schemas/Finding" } }
+          "verified": {
+            "$ref": "#/components/schemas/Verified"
+          },
+          "service": {
+            "type": "string"
+          },
+          "brand_id": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "official_domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "age_hours": {
+            "type": "number"
+          },
+          "scan_type": {
+            "type": "string",
+            "enum": [
+              "quick",
+              "full"
+            ]
+          },
+          "full_scan": {
+            "type": "string",
+            "enum": [
+              "done",
+              "queued",
+              "not_queued_watch_list_full"
+            ]
+          },
+          "coverage": {
+            "type": "object"
+          },
+          "findings_total": {
+            "type": "integer"
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            }
+          }
         }
       },
       "Evidence": {
         "type": "object",
         "properties": {
-          "verified": { "$ref": "#/components/schemas/Verified" },
-          "evidence_id": { "type": "string" },
-          "domain": { "type": "string" },
-          "collected_at": { "type": "string", "format": "date-time" },
-          "sources": { "type": "array", "items": { "type": "object" } },
-          "dns": { "type": "object" },
-          "rdap": { "type": "object", "nullable": true },
-          "certificate": { "type": "object", "nullable": true },
-          "homepage": { "type": "object", "nullable": true, "description": "Derived fields and a SHA-256 of the page; never the page itself. Since 0.1.13 it may hold artwork_provenance (bp-provenance/1): up to 4 page images with SHA-256, whether they carry C2PA Content Credentials, the signing certificate's subject and issuer, an AI-generated mark, an unsigned IPTC AI label, and a statement a takedown file can quote. Signatures are read, not validated; the trust list is not checked; it never affects the score" },
-          "ct_log_entry": { "type": "object", "nullable": true }
+          "verified": {
+            "$ref": "#/components/schemas/Verified"
+          },
+          "evidence_id": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "collected_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "dns": {
+            "type": "object"
+          },
+          "rdap": {
+            "type": "object",
+            "nullable": true
+          },
+          "certificate": {
+            "type": "object",
+            "nullable": true
+          },
+          "homepage": {
+            "type": "object",
+            "nullable": true,
+            "description": "Derived fields and a SHA-256 of the page; never the page itself. Since 0.1.13 it may hold artwork_provenance (bp-provenance/1): up to 4 page images with SHA-256, whether they carry C2PA Content Credentials, the signing certificate's subject and issuer, an AI-generated mark, an unsigned IPTC AI label, and a statement a takedown file can quote. Signatures are read, not validated; the trust list is not checked; it never affects the score"
+          },
+          "ct_log_entry": {
+            "type": "object",
+            "nullable": true
+          }
         }
       },
       "Verified": {
         "type": "object",
         "description": "Since 0.1.9. The shared pocket-agentic-envelope/1 block. Scan and lookalikes: subject brand:bp:<brand_id>, linked to its official domains (official_domain, answered by agent-trust); assessment not_scored (findings are observations, not a verdict); evidence empty with evidence_more pointing to /v1/brand/evidence; gaps where a scan was quick or partial. Evidence: subject domain:dns:<lookalike>, linked lookalike_of the brand; one evidence item per lookup that answered, failed lookups as gaps. Full schema: https://github.com/organiccryptoyyc/pocket-agentic-services/blob/main/docs/envelope/pocket-agentic-envelope-v1.schema.json",
         "properties": {
-          "schema": { "type": "string", "enum": ["pocket-agentic-envelope/1"] },
-          "service": { "type": "string" },
-          "service_version": { "type": "string" },
-          "route": { "type": "string" },
-          "subject": { "type": "object" },
-          "as_of": { "type": "string" },
-          "generated_at": { "type": "string" },
-          "assessment": { "type": "object" },
-          "evidence": { "type": "array", "items": { "type": "object" } },
-          "evidence_more": { "type": "object", "nullable": true },
-          "gaps": { "type": "array", "items": { "type": "object" } },
-          "attestation_ref": { "type": "object", "nullable": true }
+          "schema": {
+            "type": "string",
+            "enum": [
+              "pocket-agentic-envelope/1"
+            ]
+          },
+          "service": {
+            "type": "string"
+          },
+          "service_version": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "object"
+          },
+          "as_of": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string"
+          },
+          "assessment": {
+            "type": "object"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "evidence_more": {
+            "type": "object",
+            "nullable": true
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "attestation_ref": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "PhotoRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "image_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "http(s) URL of the photo; fetched with private-address protection, up to 16 MB."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$",
+            "description": "SHA-256 of the file, when the file isn't sent. Needs address or tx_hash."
+          },
+          "address": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Claimed signer address (checked), or the address to search when no file is given."
+          },
+          "tx_hash": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "description": "ZKsync Era transaction of the ContentSign mint."
+          }
+        }
+      },
+      "PhotoResult": {
+        "type": "object",
+        "required": [
+          "method",
+          "verdict",
+          "statement",
+          "limits"
+        ],
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "fetched_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "method": {
+            "type": "string",
+            "const": "bp-photo/1"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "file": {
+            "type": "object",
+            "properties": {
+              "sha256": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "format": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "content_credentials": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "present, signer {cn,o}, signer_issuer {cn,o}, test_certificate, ai_generated, digital_source_type, actions, nodle_chain_assertion {address, block_header} (reported raw), signature_validated:false, trust_list_checked:false."
+          },
+          "signer_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mints_found": {
+            "type": "integer"
+          },
+          "mints_compared": {
+            "type": "integer"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "signed_and_anchored",
+              "anchored_hash_match",
+              "anchor_hash_mismatch",
+              "signed_not_anchored",
+              "no_credentials",
+              "no_credentials_not_anchored",
+              "not_found"
+            ]
+          },
+          "anchor": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "mode (address|tx_hash), chain, contract, token_id, minter, tx_hash, block, block_time, token_uri, content_hash, hash_match, application, captured_at, metadata_error."
+          },
+          "anchor_note": {
+            "type": "string"
+          },
+          "claimed_address_match": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "privacy_exposure": {
+            "type": "object",
+            "description": "precise_location_public, location_public, file_has_gps (booleans). Coordinates are never returned."
+          },
+          "statement": {
+            "type": "string"
+          },
+          "limits": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       }
     }
