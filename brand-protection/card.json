@@ -74,6 +74,6 @@
     ],
     "notes": "Bodies capped at 1 MiB; responses a few KB to ~100 KB. A quick scan takes up to ~9 s, a photo check 1-8 s (photos up to 16 MB); keep the relay timeout at 30 s or more. Gateways: type passthrough, rpc_types [\"rest\"]."
   },
-  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/e253f60f265758469c5ec9e841c6eb441a224610/brand-protection/README.md",
-  "updated": "2026-11-11"
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/f80f64f60d88b35164fa4ddab4545827eba83c52/brand-protection/README.md",
+  "updated": "2026-11-18"
 }
