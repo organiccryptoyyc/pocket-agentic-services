@@ -224,3 +224,47 @@ test("metadata summary keeps the safe fields and drops coordinates", () => {
   assert.strictEqual(ph.cidOf("ipfs://QmSyntheticTestCid1111111111111111111111111111"), "QmSyntheticTestCid1111111111111111111111111111");
   assert.strictEqual(ph.cidOf("https://evil.test/x"), null);
 });
+
+// --- 0.1.16: signature validation with c2patool (synthetic reports; the real tool runs only in the image) ---
+const cv = require("../lib/c2pa-validate");
+const report = (state, success, failure, extra = {}) => ({
+  active_manifest: "m", manifests: { m: { assertions: [{ label: "stds.exif", data: { "exif:GPSLatitude": LAT, "exif:GPSLongitude": LON } }] } },
+  validation_state: state, validation_status: failure.map((code) => ({ code, explanation: "x" })),
+  validation_results: { activeManifest: { success: success.map((code) => ({ code })), failure: failure.map((code) => ({ code })) } }, ...extra,
+});
+
+test("c2patool report summary: valid but untrusted, trusted, invalid; assertion data never copied", () => {
+  const v = cv.summarize(report("Valid", ["claimSignature.validated", "timeStamp.trusted"], ["signingCredential.untrusted"]));
+  assert.deepStrictEqual([v.ran, v.state, v.signature_valid, v.signer_on_trust_list, v.timestamp_trusted], [true, "Valid", true, false, true]);
+  assert.deepStrictEqual(v.failures, ["signingCredential.untrusted"]);
+  assert.match(v.trust_list.attribution, /CC BY 4\.0/);
+  noCoords(v);
+  const t = cv.summarize(report("Trusted", ["claimSignature.validated", "signingCredential.trusted"], []));
+  assert.deepStrictEqual([t.signature_valid, t.signer_on_trust_list], [true, true]);
+  const bad = cv.summarize(report("Invalid", [], ["assertion.dataHash.mismatch"]));
+  assert.deepStrictEqual([bad.signature_valid, bad.signer_on_trust_list, bad.failures], [false, false, ["assertion.dataHash.mismatch"]]);
+  assert.deepStrictEqual(cv.parseReport('warn: x\n{"validation_state":"Valid"}').validation_state, "Valid");
+});
+
+test("validator wiring: a valid self-issued signature is validated but not trusted; a failing one is credentials_invalid", async () => {
+  const file = jpeg(nodleManifest());
+  const w = world([{ tokenId: 102, owner: ME, hash: sha(file) }]);
+  const ok = await ph.verify({ image_url: "https://example.test/p.jpg" }, { ...w, fetchImage: async () => file, validateC2pa: async () => cv.summarize(report("Valid", ["claimSignature.validated"], ["signingCredential.untrusted"])) });
+  assert.strictEqual(ok.verdict, "signed_and_anchored");
+  assert.deepStrictEqual([ok.content_credentials.signature_validated, ok.content_credentials.trust_list_checked, ok.content_credentials.signer_on_trust_list], [true, true, false]);
+  assert.match(ok.statement, /signature was validated .*not on the C2PA trust list/);
+  assert.match(ok.limits[0], /validated with c2patool/);
+  noCoords(ok);
+  const bad = await ph.verify({ image_url: "https://example.test/p.jpg" }, { ...w, fetchImage: async () => file, validateC2pa: async () => cv.summarize(report("Invalid", [], ["assertion.dataHash.mismatch"])) });
+  assert.strictEqual(bad.verdict, "credentials_invalid");
+  assert.match(bad.statement, /fail validation \(assertion\.dataHash\.mismatch\)/);
+  assert.strictEqual(bad.content_credentials.signature_validated, false);
+  // Not installed (or it failed): nothing claimed, the old flags stay false.
+  const off = await ph.verify({ image_url: "https://example.test/p.jpg" }, { ...w, fetchImage: async () => file, validateC2pa: async () => ({ ran: false, reason: "validator not installed on this host" }) });
+  assert.deepStrictEqual([off.verdict, off.content_credentials.signature_validated, off.content_credentials.trust_list_checked], ["signed_and_anchored", false, false]);
+  assert.match(off.limits[0], /read, not validated/);
+  // A file with no credentials never runs the validator.
+  let ran = false;
+  await ph.verify({ image_url: "https://example.test/s.jpg" }, { ...world([]), fetchImage: async () => jpeg(null), validateC2pa: async () => { ran = true; return { ran: false }; } });
+  assert.strictEqual(ran, false);
+});

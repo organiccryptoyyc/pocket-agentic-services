@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Brand Protection Monitor",
-    "version": "0.1.15",
+    "version": "0.1.16",
     "description": "Lookalike domains, certificates and copied homepages for a brand, with deterministic risk scores and evidence hashes. Detection and evidence only."
   },
   "paths": {
@@ -666,7 +666,28 @@
               "object",
               "null"
             ],
-            "description": "present, signer {cn,o}, signer_issuer {cn,o}, test_certificate, ai_generated, digital_source_type, actions, nodle_chain_assertion {address, block_header} (reported raw), signature_validated:false, trust_list_checked:false."
+            "description": "present, signer {cn,o}, signer_issuer {cn,o}, test_certificate, ai_generated, digital_source_type, actions, nodle_chain_assertion {address, block_header} (reported raw), signature_validated:false, trust_list_checked:false.",
+            "properties": {
+              "signature_validated": {
+                "type": "boolean",
+                "description": "0.1.16: true when c2patool validated the signature and every signed hash (the file is unaltered since signing)."
+              },
+              "trust_list_checked": {
+                "type": "boolean",
+                "description": "0.1.16: true when the C2PA trust list was checked."
+              },
+              "signer_on_trust_list": {
+                "type": [
+                  "boolean",
+                  "null"
+                ],
+                "description": "0.1.16: whether the signing certificate chains to a root on the C2PA trust list (c2pa-org/conformance-public). false = a self-issued credential, never reported as trusted."
+              },
+              "validation": {
+                "type": "object",
+                "description": "0.1.16: the validator result: ran, tool, state (Valid, Trusted or Invalid), signature_valid, signer_on_trust_list, timestamp_trusted, failures (C2PA status codes) and trust_list (source, commit, attribution). ran:false with a reason when it could not run."
+              }
+            }
           },
           "signer_address": {
             "type": [
@@ -689,7 +710,8 @@
               "signed_not_anchored",
               "no_credentials",
               "no_credentials_not_anchored",
-              "not_found"
+              "not_found",
+              "credentials_invalid"
             ]
           },
           "anchor": {

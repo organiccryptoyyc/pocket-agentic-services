@@ -27,6 +27,16 @@ RelayMiner reach it), and serves `agent-trust`'s `/v1/preflight` over the Docker
 
 ## Photo provenance (`bp-photo/1`, 0.1.14)
 
+**0.1.16: signature validation.** When a file carries Content Credentials, the image runs c2patool 0.27.22
+(Content Authenticity Initiative, MIT/Apache-2.0) on it against the official C2PA trust list
+(c2pa-org/conformance-public, 2026-11-04 copy, CC BY 4.0), both baked in at build time with pinned SHA-256s
+(`lib/c2pa-validate.js`, Dockerfile). The answer then says whether the signature and every signed hash check out
+(`signature_validated`), whether the signer chains to a trust-list root (`signer_on_trust_list`; a self-issued
+credential such as Nodle's "ContentSign by Nodle" is reported as not on the list, never as trusted), and the C2PA
+status codes. A file whose credentials fail validation gets the verdict `credentials_invalid`. Only codes and the
+state leave the validator: assertion contents (EXIF, GPS) are never copied. The image moved from Alpine to
+Debian 13 because the c2patool build needs glibc 2.38 or newer.
+
 `POST /v1/brand/photo` answers "was this photo signed, by which address, and is it anchored on-chain?" from public data:
 
 1. **In the file:** the C2PA Content Credentials (`lib/provenance.js`). For a Nodle Click photo, the signer certificate's

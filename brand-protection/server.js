@@ -22,7 +22,7 @@ const { startIngest } = require("./lib/ingest");
 const photo = require("./lib/photo");
 
 const SERVICE = "brand-protection";
-const VERSION = "0.1.15";
+const VERSION = "0.1.16";
 const QUICK = {
   deadlineMs: Number(process.env.BP_QUICK_DEADLINE_MS || 9000),
   maxCandidates: Number(process.env.BP_QUICK_MAX_CANDIDATES || 120),

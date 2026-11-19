@@ -11,6 +11,7 @@
 
 const crypto = require("node:crypto");
 const provenance = require("./provenance");
+const c2pa = require("./c2pa-validate");
 
 const METHOD = "bp-photo/1";
 const CONTENTSIGN = "0x95b3641d549f719eb5105f9550eca4a7a2f305de";
@@ -42,6 +43,8 @@ const LIMITS = [
   `Only the ${MAX_MINTS} newest mints of an address are compared.`,
   "A screenshot, crop or re-saved copy has a different SHA-256 and usually loses its Content Credentials.",
 ];
+
+const VALIDATED_LIMIT = "Signatures and signed hashes are validated with c2patool against the C2PA trust list (c2pa-org/conformance-public, 2026-11-04 copy, CC BY 4.0); a certificate not on that list is reported as untrusted, never as trusted.";
 
 class InputError extends Error {}
 
@@ -113,8 +116,10 @@ function cidOf(uri) {
   return m ? m[1] + (m[2] || "") : null;
 }
 
-// Pure: the overall answer from the parts.
-function verdictOf({ fileGiven, credentials, signerAddress, anchor, claimed }) {
+// Pure: the overall answer from the parts. A file whose Content Credentials fail validation (signature or a
+// hashed part does not check out: forged, or altered after signing) is reported as such before anything else (0.1.16).
+function verdictOf({ fileGiven, credentials, signerAddress, anchor, claimed, validation = null }) {
+  if (fileGiven && credentials && validation && validation.ran && !validation.signature_valid) return "credentials_invalid";
   if (anchor && anchor.hash_match) {
     if (!fileGiven) return "anchored_hash_match";
     if (credentials && signerAddress && lc(signerAddress) === lc(anchor.minter)) return "signed_and_anchored";
@@ -134,6 +139,7 @@ const STATEMENTS = {
   no_credentials: () => "The file carries no Content Credentials (often a screenshot or a re-saved copy), so its origin can't be read from the file.",
   no_credentials_not_anchored: () => "The file carries no Content Credentials and no on-chain record matched its SHA-256 among the mints checked.",
   not_found: () => "No on-chain record matched among the mints checked.",
+  credentials_invalid: (r) => `The file carries Content Credentials, but they fail validation (${(r.validation.failures || []).slice(0, 4).join(", ") || r.validation.state}): the signature or a signed part of the file does not check out, so the stated origin can't be relied on.`,
 };
 
 // --- network reads (injectable) -------------------------------------------------------------------
@@ -263,9 +269,21 @@ async function verify(input, opts = {}) {
     digital_source_type: credentials.digital_source_type || null,
     actions: credentials.actions || [],
     nodle_chain_assertion: nodle,
-    signature_validated: false, trust_list_checked: false,
+    signature_validated: false, trust_list_checked: false, signer_on_trust_list: null,
   } : null;
   out.signer_address = signerAddress;
+
+  // 0.1.16: validate the signature and hashes with c2patool against the C2PA trust list (lib/c2pa-validate.js).
+  let validation = null;
+  if (bytes && credentials && credentials.content_credentials) {
+    validation = await (opts.validateC2pa || c2pa.validate)(bytes);
+    if (validation.ran) {
+      out.content_credentials.signature_validated = validation.signature_valid;
+      out.content_credentials.trust_list_checked = true;
+      out.content_credentials.signer_on_trust_list = validation.signer_on_trust_list;
+    }
+    out.content_credentials.validation = validation;
+  }
 
   // Find the anchor: the given tx first, otherwise the address's ContentSign mints.
   let anchor = null;
@@ -317,7 +335,7 @@ async function verify(input, opts = {}) {
   out.mints_compared = compared;
 
   const claimed = q.address || null;
-  const verdict = verdictOf({ fileGiven: !!bytes, credentials: !!(credentials && credentials.content_credentials), signerAddress, anchor, claimed });
+  const verdict = verdictOf({ fileGiven: !!bytes, credentials: !!(credentials && credentials.content_credentials), signerAddress, anchor, claimed, validation });
   out.verdict = verdict;
   if (anchor) {
     out.privacy_exposure = {
@@ -335,9 +353,16 @@ async function verify(input, opts = {}) {
     const by = anchor ? anchor.minter : signerAddress;
     out.claimed_address_match = by ? lc(by) === lc(claimed) : null;
   }
-  out.statement = STATEMENTS[verdict]({ ...out, anchor });
+  out.statement = STATEMENTS[verdict]({ ...out, anchor, validation });
+  if (validation && validation.ran && validation.signature_valid) {
+    out.statement += validation.signer_on_trust_list
+      ? " The Content Credentials signature was validated and the signer chains to a root on the C2PA trust list."
+      : ` The Content Credentials signature was validated (the file is unaltered since signing), but the signing certificate${credentials.signer_issuer && credentials.signer_issuer.o ? ` (issued by ${credentials.signer_issuer.o})` : ""} is not on the C2PA trust list, so it is a self-issued credential, not a trusted one.`;
+  } else if (validation && !validation.ran) {
+    out.statement += " The signature was not validated this time.";
+  }
   if (out.claimed_address_match === false) out.statement += ` It was not signed or anchored by the claimed address ${claimed}.`;
-  out.limits = LIMITS;
+  out.limits = validation && validation.ran ? [VALIDATED_LIMIT, ...LIMITS.slice(1)] : LIMITS;
   return out;
 }
 
