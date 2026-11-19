@@ -12,6 +12,17 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Packs 0.9.0 (company and pharma): /v1/events says what it searched (2026-11-19)
+
+A caller asked whether an empty lookup says what it checked. `/v1/events` returned `count: 0` with no
+sources, so "nothing happened" and "we didn't look" read the same. Every `/v1/events` answer now carries
+`searched`: the filters applied, and per source that can hold events for that entity (the bundle's
+`evidence_packet.sources` rules) its `events_returned` and `status` (`checked_ok`, `empty`, `stale`,
+`failed`, the same rule as the evidence packet), plus `complete` and notes. The route now refuses unknown
+fields with a 400: `{entity: "pfe"}` used to be ignored on pharma, returning every event unfiltered.
+Additive otherwise; cards unchanged. Crypto, macro and public-sector packs have no events route and stay
+at their versions.
+
 ## Price bank replica on pmic-hub (TCS-6 Build B, 2026-10-10)
 
 The Pi's shared price bank (`tcs6-pi-collector/pricebank`) is the canonical source of USD prices;

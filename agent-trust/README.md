@@ -73,6 +73,10 @@ loaded at start and refreshed every 24 h; the last good copy is kept if a refres
 1.4.0 also fixes RDAP for subdomains on every route: rdap.org answers 400 or 404 for `app.example.com`, so the
 lookup now walks up (at most two labels) to the registered name and says so in `looked_up_as`.
 
+1.5.0: a domain with no address records in DNS is an answer, not an outage. `/v1/domain-trust` still runs its
+registry and DNS checks and returns `resolves: false` (plus `checked`, the checks it ran); `/v1/seller-trust` and
+`/v1/brand-verify` need a server, so they return 422 `domain_not_resolvable` instead of `upstream_unavailable`.
+
 ## Operator setup: the sanctions-check API key
 
 `/v1/sanctions-check` requires `TRADE_GOV_SUBSCRIPTION_KEY` in the

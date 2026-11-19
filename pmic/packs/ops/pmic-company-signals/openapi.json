@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Company Fundamentals and Filing Risk",
-    "version": "0.8.0",
+    "version": "0.9.0",
     "description": "Scored company briefs from SEC EDGAR for 14 large US companies (Apple, Microsoft, Nvidia, Amazon, Walmart, JPMorgan, Bank of America, Exxon, Pfizer, Lilly, J&J, UnitedHealth, Netflix, Disney): fundamentals, filing risk (8-K items, 13D, Form 4), insider activity, balance sheet strength, a peer ranking, earnings quality, shareholder returns (buybacks and dividends), interest coverage, the investment cycle (capex), settlement fails (SEC fails-to-deliver) and institutional ownership (13F). Every input carries its SEC citation."
   },
   "servers": [
@@ -469,7 +469,7 @@
     },
     "/v1/events": {
       "post": {
-        "summary": "Dated events with source links.",
+        "summary": "Dated events with source links. Only entity_id, event_type, severity, since and limit are accepted (any other field is a 400). Every answer carries `searched`: the filters applied and, per source, events returned and whether the source is current (checked_ok, empty, stale or failed).",
         "requestBody": {
           "required": true,
           "content": {

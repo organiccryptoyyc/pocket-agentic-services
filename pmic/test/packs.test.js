@@ -183,6 +183,27 @@ test("company bundle: fundamentals and filing risk need a covered entity", async
   const ev = await call("pmic-company-signals", "POST", "/v1/events", { entity_id: "aapl", limit: 5 });
   assert.equal(ev.status, 200);
   assert.ok(ev.json.events.every((e) => e.entity_id === "aapl"));
+  // 0.9.0: every answer says what it searched, per source.
+  assert.equal(ev.json.searched.filters.entity_id, "aapl");
+  assert.equal(ev.json.searched.filters.limit, 5);
+  assert.ok(ev.json.searched.sources.some((s) => s.source_id === "sec"), "SEC is searched for a company");
+  assert.ok(!ev.json.searched.sources.some((s) => s.source_id === "openfda"), "openFDA is only searched for pharma companies");
+  for (const s of ev.json.searched.sources) {
+    assert.ok(["checked_ok", "empty", "stale", "failed"].includes(s.status), JSON.stringify(s));
+    assert.equal(typeof s.events_returned, "number");
+  }
+  // An empty answer still lists the sources and says nothing matched.
+  const none = (await call("pmic-company-signals", "POST", "/v1/events", { entity_id: "aapl", event_type: "no_such_type" })).json;
+  assert.equal(none.count, 0);
+  assert.ok(none.searched.sources.length >= 1);
+  assert.ok(none.searched.notes.some((n) => /No events matched/.test(n)));
+  // A misspelt field is refused, not ignored.
+  const typo = await call("pmic-company-signals", "POST", "/v1/events", { entity: "aapl" });
+  assert.equal(typo.status, 400);
+  assert.match(typo.json.error.message, /unknown field\(s\): entity/);
+  const pfe = (await call("pmic-pharma-signals", "POST", "/v1/events", { entity_id: "pfe" })).json;
+  assert.deepEqual(pfe.searched.sources.map((s) => s.source_id).sort(), ["ctgov", "fdawl", "openfda"]);
+  assert.equal((await call("pmic-pharma-signals", "POST", "/v1/events", { entity: "pfe" })).status, 400, "pharma refuses the typo too");
 });
 
 test("company batch 2: insider activity, balance sheet and peer ranking", async () => {

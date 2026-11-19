@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Brand Protection Monitor",
-    "version": "0.1.14",
+    "version": "0.1.15",
     "description": "Lookalike domains, certificates and copied homepages for a brand, with deterministic risk scores and evidence hashes. Detection and evidence only."
   },
   "paths": {
@@ -454,6 +454,37 @@
             "items": {
               "$ref": "#/components/schemas/Finding"
             }
+          },
+          "searched": {
+            "type": "object",
+            "description": "What the scan read (0.1.15): scan_type, as_of, lookalike_names_generated, sources (check, what, where, and how many names each one checked or how many certificate-log hits it used), complete, and for a quick scan not_checked. An empty findings list is read against this block.",
+            "properties": {
+              "scan_type": {
+                "type": "string"
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "lookalike_names_generated": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "complete": {
+                "type": "boolean"
+              },
+              "not_checked": {
+                "type": "string"
+              }
+            }
           }
         }
       },
@@ -688,6 +719,45 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "searched": {
+            "type": "object",
+            "description": "What the check searched (0.1.15): chain, contract, by (tx_hash, file_signer_address or given_address), address, through_block (the archive block the mint search was pinned to; null for a tx_hash lookup), history_rpc and the IPFS metadata gateways.",
+            "properties": {
+              "chain": {
+                "type": "string"
+              },
+              "contract": {
+                "type": "string"
+              },
+              "by": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "address": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "through_block": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "history_rpc": {
+                "type": "string"
+              },
+              "metadata_gateways": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             }
           }
         }

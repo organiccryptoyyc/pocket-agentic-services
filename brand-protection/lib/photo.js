@@ -21,7 +21,8 @@ const CHAIN = "zksync-era";
 // Pocket first.
 const ARCHIVE_RPC = "https://mainnet.era.zksync.io";
 const STATE_RPCS = ["https://zksync-era.api.pocket.network", ARCHIVE_RPC];
-const HISTORY_METHODS = new Set(["eth_getLogs", "eth_getTransactionReceipt", "eth_getBlockByNumber", "eth_getTransactionByHash"]);
+// eth_blockNumber goes to the archive too (0.1.15): it pins the eth_getLogs range there, on the same node.
+const HISTORY_METHODS = new Set(["eth_getLogs", "eth_getTransactionReceipt", "eth_getBlockByNumber", "eth_getTransactionByHash", "eth_blockNumber"]);
 // Neutral public gateways only. Nodle's own gateway (nodle-community-nfts.myfilebase.com) is NOT used:
 // Nodle's legal notices (nodle.com/legal-notices, "Data Mining") bar automated extraction from their site
 // without written authorization, so nothing Nodle-controlled is read until legal@nodle.com authorizes it
@@ -269,6 +270,17 @@ async function verify(input, opts = {}) {
   // Find the anchor: the given tx first, otherwise the address's ContentSign mints.
   let anchor = null;
   let compared = 0;
+  // What this answer searched (0.1.15), so a no-match can be replayed: chain, contract, how, and up to which block.
+  const searched = {
+    chain: "ZKsync Era (chain 324)",
+    contract: CONTENTSIGN,
+    by: q.tx_hash ? "tx_hash" : null,
+    address: null,
+    through_block: null,
+    history_rpc: ARCHIVE_RPC,
+    metadata_gateways: IPFS_GATEWAYS.map((g) => new URL(g).host),
+  };
+  out.searched = searched;
   if (q.tx_hash) {
     const rc = await rpc("eth_getTransactionReceipt", [q.tx_hash]);
     const mint = rc && (rc.logs || []).find((l) => lc(l.address) === CONTENTSIGN && l.topics && l.topics[0] === TRANSFER && /^0x0{64}$/.test(l.topics[1]));
@@ -285,7 +297,11 @@ async function verify(input, opts = {}) {
     // allowed to steer the search away from the real anchor.
     const who = signerAddress || q.address;
     if (who) {
-      const logs = (await rpc("eth_getLogs", [{ address: CONTENTSIGN, fromBlock: "0x0", toBlock: "latest", topics: [TRANSFER, "0x" + "0".repeat(64), "0x" + pad32(who)] }])) || [];
+      // Pin the search to a block number (from the same archive node) so the answer can say how far it looked.
+      const tip = await rpc("eth_blockNumber", []);
+      const toBlock = typeof tip === "string" && /^0x[0-9a-f]+$/i.test(tip) ? tip : "latest";
+      Object.assign(searched, { by: signerAddress ? "file_signer_address" : "given_address", address: who, through_block: toBlock === "latest" ? null : Number(BigInt(toBlock)) });
+      const logs = (await rpc("eth_getLogs", [{ address: CONTENTSIGN, fromBlock: "0x0", toBlock, topics: [TRANSFER, "0x" + "0".repeat(64), "0x" + pad32(who)] }])) || [];
       const newest = logs.slice(-MAX_MINTS).reverse();
       out.mints_found = logs.length;
       for (const log of newest) {

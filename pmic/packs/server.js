@@ -406,12 +406,55 @@ const routes = new Map([
   ["POST /v1/explain", async (raw) => { const b = obj(raw); await inScope(b.series_id); return wrap(await hub("/v1/explain", { series_id: b.series_id, horizon: horizonOf(b) })); }],
   ["POST /v1/catalog", async (raw) => wrap(await catalog(obj(raw)))],
 ]);
+// The fields /v1/events reads. Anything else is refused (0.9.0): a misspelt filter such as 'entity'
+// used to be ignored, so the caller got every event back unfiltered.
+const EVENT_FIELDS = ["entity_id", "event_type", "severity", "since", "limit"];
+
+// What a /v1/events answer searched (0.9.0): the filters it applied and, per source that can hold
+// events for this scope, how many it returned and whether that source is current. An empty list
+// then says "these sources were read and are current" or "this source is stale", never just 0.
+async function eventsSearched(b, entity, events) {
+  const filters = Object.fromEntries(EVENT_FIELDS.map((k) => [k, b[k] === undefined ? null : b[k]]));
+  if (entity) filters.entity_id = entity;
+  const cfg = PACK.evidence_packet;
+  if (!cfg) return { filters, scope: PACK.events_scope, sources: null };
+  const EV = require("./lib/evidence");
+  const ids = entity
+    ? EV.sourcesFor(cfg, { entity_id: entity, industry: (entityCache.map && entityCache.map.get(entity) || {}).industry || null })
+    : [...new Set(cfg.sources.map((s) => s.source_id))];
+  const src = await hubOptional("/v1/sources", {}).catch(() => null);
+  const health = new Map(((src && src.sources) || []).map((s) => [s.source_id, s]));
+  const now = Date.now();
+  const sources = ids.map((id) => {
+    const line = EV.coverageLine(id, events.filter((e) => e.source_id === id).length, health, now, (src && src.collector) || null);
+    const { items_in_window, ...rest } = line;
+    return { ...rest, events_returned: items_in_window };
+  });
+  const limit = Number.isInteger(b.limit) ? b.limit : null;
+  const notes = [];
+  if (!events.length) notes.push("No events matched these filters. Each source listed was searched; a source marked stale or failed may be missing recent events.");
+  if (limit && events.length >= limit) notes.push(`the list stopped at 'limit' (${limit}); older events may exist.`);
+  const bad = sources.filter((s) => s.status === "stale" || s.status === "failed");
+  if (bad.length) notes.push(`not current: ${bad.map((s) => `${s.source_id} (${s.status})`).join(", ")}.`);
+  return { filters, scope: PACK.events_scope, sources, complete: !bad.length && !(limit && events.length >= limit), notes };
+}
+
 if (PACK.events_scope) {
   // Bundles without an industry scope (company) only answer for one of their own entities.
   routes.set("POST /v1/events", async (raw) => {
     const b = obj(raw);
+    const unknown = Object.keys(b).filter((k) => !EVENT_FIELDS.includes(k));
+    if (unknown.length) throw new ClientError(400, "invalid_input", `unknown field(s): ${unknown.join(", ")}; /v1/events takes ${EVENT_FIELDS.join(", ")}`);
     const entity = entityOf(b, !PACK.events_scope.industry);
-    const out = wrap(await hub("/v1/events", { ...pick(b), ...PACK.events_scope, ...(entity ? { entity_id: entity } : {}) }));
+    if (entity) await entityInfo(entity).catch(() => null); // loads industry for the source list
+    const res = await hub("/v1/events", { ...pick(b), ...PACK.events_scope, ...(entity ? { entity_id: entity } : {}) });
+    let searched = null;
+    try {
+      searched = await eventsSearched(b, entity, res.events || []);
+    } catch (e) {
+      console.error(JSON.stringify({ searched_error: String(e && e.message) }));
+    }
+    const out = wrap({ ...res, ...(searched ? { searched } : {}) });
     return withVerified(out, VF.forEvents, { entityId: entity });
   });
 }

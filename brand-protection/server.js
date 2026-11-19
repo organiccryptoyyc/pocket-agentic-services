@@ -22,7 +22,7 @@ const { startIngest } = require("./lib/ingest");
 const photo = require("./lib/photo");
 
 const SERVICE = "brand-protection";
-const VERSION = "0.1.14";
+const VERSION = "0.1.15";
 const QUICK = {
   deadlineMs: Number(process.env.BP_QUICK_DEADLINE_MS || 9000),
   maxCandidates: Number(process.env.BP_QUICK_MAX_CANDIDATES || 120),
@@ -74,6 +74,31 @@ function sinceAndLimit(body) {
 
 // --- output -----------------------------------------------------------------
 
+// What a scan read (0.1.15), so "no findings" says where we looked. Full scans run on the collector;
+// quick scans run here, DNS only. Counts are in `coverage`; this names the sources behind them.
+function searchedFor(doc) {
+  const c = doc.coverage || {};
+  const full = doc.scan_type === "full";
+  const sources = [
+    { check: "dns", what: "address records for every generated lookalike name", where: full ? "the collector's DNS resolver" : "this service's DNS resolver", names_checked: c.candidates_dns_checked ?? null, errors: c.dns_errors ?? null },
+  ];
+  if (full) {
+    sources.push(
+      { check: "registry", what: "registration date and registrar of each existing lookalike", where: "each TLD's RDAP server, found through IANA's bootstrap list (data.iana.org/rdap/dns.json)", names_checked: c.full_checks ?? null },
+      { check: "certificate_and_homepage", what: "TLS certificate and homepage of each existing lookalike", where: "read directly from each lookalike domain", names_checked: c.full_checks ?? null },
+      { check: "certificate_transparency", what: "names in new certificates that contain the brand", where: "Let's Encrypt and Google Certificate Transparency logs, followed continuously by the service", hits_used: c.ct_hits ?? null },
+    );
+  }
+  return {
+    scan_type: doc.scan_type,
+    as_of: doc.as_of,
+    lookalike_names_generated: c.candidates_generated ?? null,
+    sources,
+    complete: c.partial === false,
+    ...(full ? {} : { not_checked: "registry, certificate, homepage and certificate-log checks (they run in the collector's full scan)" }),
+  };
+}
+
 function report(doc, { since, limit }, extra = {}) {
   let findings = doc.findings;
   if (since !== null) findings = findings.filter((f) => Date.parse(f.changed_at || f.first_seen) > since);
@@ -92,6 +117,7 @@ function report(doc, { since, limit }, extra = {}) {
     collector_warnings: doc.collector_warnings || [],
     method: doc.method,
     coverage: doc.coverage,
+    searched: searchedFor(doc),
     since: since === null ? null : new Date(since).toISOString(),
     findings_total: findings.length,
     findings_returned: Math.min(limit, findings.length),

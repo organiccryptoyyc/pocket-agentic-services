@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "POKT Network Intelligence API",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "description": "pokt-network-intel on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body (query params and headers are not read). Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every field is fetched live from Pocket's own GraphQL indexer (https://data.pocket.network/graphql) and Cosmos LCD (https://sauron-api.infra.pocket.network) at request time; nothing is a hardcoded constant. Every POST response carries the Meta envelope (service, network, fetched_at, cache). Cache lifetimes: pulse 15s; suppliers and applications 30s; validators, throughput, service-demand and supplier-trust 60s; tokenomics 1h. If a live refresh fails, the last good value is served with cache.stale=true and cache.age_ms set, for at most POCKET_MAX_STALE_MS (default 1 hour, reported by /v1/version as max_stale_ms); beyond that the call returns 422. Two suppliers can therefore return different bytes for the same request.",
     "license": {
       "name": "Apache-2.0",
@@ -378,7 +378,38 @@
                       "$ref": "#/components/schemas/Meta"
                     },
                     {
-                      "type": "object"
+                      "type": "object",
+                      "properties": {
+                        "searched": {
+                          "type": "object",
+                          "description": "What the answer read (1.2.0): the source, and the indexer height and time it reflects.",
+                          "properties": {
+                            "source": {
+                              "type": "string"
+                            },
+                            "indexer_height": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ]
+                            },
+                            "indexer_time": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            }
+                          }
+                        },
+                        "service_registered": {
+                          "type": "boolean",
+                          "description": "With service_id: whether that service is registered on this network (1.2.0). false explains an empty list."
+                        },
+                        "note": {
+                          "type": "string"
+                        }
+                      }
                     }
                   ]
                 }
@@ -512,7 +543,38 @@
                       "$ref": "#/components/schemas/Meta"
                     },
                     {
-                      "type": "object"
+                      "type": "object",
+                      "properties": {
+                        "searched": {
+                          "type": "object",
+                          "description": "What the answer read (1.2.0): the source, and the indexer height and time it reflects.",
+                          "properties": {
+                            "source": {
+                              "type": "string"
+                            },
+                            "indexer_height": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ]
+                            },
+                            "indexer_time": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            }
+                          }
+                        },
+                        "service_registered": {
+                          "type": "boolean",
+                          "description": "With service_id: whether that service is registered on this network (1.2.0). false explains an empty list."
+                        },
+                        "note": {
+                          "type": "string"
+                        }
+                      }
                     }
                   ]
                 }
@@ -587,6 +649,35 @@
                               }
                             }
                           }
+                        },
+                        "searched": {
+                          "type": "object",
+                          "description": "What the answer read (1.2.0): the source, and the indexer height and time it reflects.",
+                          "properties": {
+                            "source": {
+                              "type": "string"
+                            },
+                            "indexer_height": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ]
+                            },
+                            "indexer_time": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            }
+                          }
+                        },
+                        "not_registered": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Requested service ids that are not registered on this network (1.2.0)."
                         }
                       }
                     }

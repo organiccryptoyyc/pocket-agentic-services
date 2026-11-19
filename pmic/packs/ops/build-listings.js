@@ -306,7 +306,7 @@ function openapi(b) {
     "/v1/version": { get: { summary: "Service identity.", responses: { 200: ok("Object") } } },
     "/v1/health": { get: { summary: "Readiness.", responses: { 200: ok("Object") } } },
   };
-  if (b.events_scope) paths["/v1/events"] = { post: { summary: "Dated events with source links.", requestBody: body({ ...E, event_type: { type: "string" }, severity: { type: "string", enum: ["low", "medium", "high"] }, since: { type: "string", format: "date" }, limit: { type: "integer" } }), responses: { 200: ok("Object"), 400: err } } };
+  if (b.events_scope) paths["/v1/events"] = { post: { summary: "Dated events with source links. Only entity_id, event_type, severity, since and limit are accepted (any other field is a 400). Every answer carries `searched`: the filters applied and, per source, events returned and whether the source is current (checked_ok, empty, stale or failed).", requestBody: body({ ...E, event_type: { type: "string" }, severity: { type: "string", enum: ["low", "medium", "high"] }, since: { type: "string", format: "date" }, limit: { type: "integer" } }), responses: { 200: ok("Object"), 400: err } } };
   if (b.evidence_packet) {
     const P = b.evidence_packet;
     paths["/v1/evidence-packet"] = { post: {

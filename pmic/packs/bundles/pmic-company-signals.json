@@ -2,7 +2,7 @@
   "_comment": "Company verticals take an entity_id (lower-case ticker). Members are expanded per company from the metric list; metrics a company does not report are left out of that company's score rather than counted as missing.",
   "service_id": "pmic-company-signals",
   "display_name": "PMIC Company Fundamentals and Filing Risk",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "evidence_packet": {
     "_comment": "POST /v1/evidence-packet (0.8.0): every dated SEC filing and insider/ownership event for one company in a window of up to 366 days; pharma companies also get openFDA, ClinicalTrials.gov and FDA warning-letter events.",
     "entities": ["aapl", "msft", "nvda", "amzn", "wmt", "jpm", "bac", "xom", "pfe", "lly", "jnj", "unh", "nflx", "dis"],

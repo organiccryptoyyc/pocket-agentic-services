@@ -18,7 +18,7 @@ const checks = require("./lib/checks");
 const { cached } = require("./lib/net");
 
 const SERVICE = "agent-trust";
-const VERSION = "1.4.0";
+const VERSION = "1.5.0";
 const VERSION_PATH = "/v1/version";
 const HEALTH_PATH = "/v1/health";
 
@@ -49,6 +49,8 @@ function withMeta(payload, cacheInfo) {
 
 function toClientError(e) {
   if (e.isSsrfGuard) return new ClientError(422, "refused_target", e.message);
+  // 1.5.0: a domain with no address records was reported as upstream_unavailable, which read like our outage.
+  if (e.notFound) return new ClientError(422, "domain_not_resolvable", `${e.message}. The domain has no address records in DNS (checked ${new Date().toISOString()}), so there is no server to check. This is an answer about the domain, not an outage; /v1/domain-trust still reports its registration.`);
   if (e.notConfigured) return new ClientError(422, "not_configured", e.message);
   if (e.isClientError) return new ClientError(422, "invalid_input", e.message);
   return e; // let http.js's catch-all turn any other UpstreamError into a sanitized 422
@@ -107,14 +109,28 @@ async function handleDomainTrust(body) {
   const domain = requireDomain(body);
   const cacheKey = `domain-trust:${domain}`;
   const { value, stale, ageMs } = await cached(cacheKey, 3_600_000, async () => {
+    // This route never connects to the domain (registry and DNS only), so a domain with no address
+    // records still gets an answer (1.5.0); before, it was a 422 upstream_unavailable.
+    let resolves = true;
     try {
       await checks.resolveSafely(domain);
     } catch (e) {
-      throw toClientError(e);
+      if (!e.notFound) throw toClientError(e);
+      resolves = false;
     }
     const [rdap, dns] = await Promise.all([checks.rdapLookup(domain), checks.dnsSignals(domain)]);
     const { score, reasons } = scoreDomainTrust(rdap, dns);
-    return { domain, trust_score: score, trust_score_scale: "0-100, higher is more trustworthy", registration: rdap, dns, reasons };
+    if (!resolves) reasons.unshift("the domain has no address records in DNS (it does not resolve), so it serves no website");
+    return {
+      domain,
+      trust_score: score,
+      trust_score_scale: "0-100, higher is more trustworthy",
+      resolves,
+      registration: rdap,
+      dns,
+      reasons,
+      checked: ["DNS address lookup (A/AAAA)", "registration via RDAP (rdap.org)", "DNS MX, SPF and DMARC records"],
+    };
   });
   return withMeta(value, { stale, ageMs });
 }

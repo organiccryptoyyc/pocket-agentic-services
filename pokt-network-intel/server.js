@@ -17,7 +17,7 @@ const { createServer, ClientError } = require("./lib/http");
 const pocket = require("./lib/pocket");
 
 const SERVICE = "pokt-network-intel";
-const VERSION = "1.1.1";
+const VERSION = "1.2.0";
 const VERSION_PATH = "/v1/version";
 const HEALTH_PATH = "/v1/health";
 
@@ -207,6 +207,34 @@ async function serviceSummary(ids) {
   return new Map((data.getServiceSummaryList || []).map((r) => [r.serviceId, r]));
 }
 
+/**
+ * Which of these service ids are registered, with the indexer height the answer reflects (1.2.0).
+ * A per-service list that comes back empty then says whether the service exists at all.
+ */
+async function serviceLookup(ids) {
+  const data = await pocket.graphql(
+    `query($ids:[String!]) {
+      services(filter:{id:{in:$ids}}) { nodes { id name computeUnitsPerRelay } }
+      _metadata { lastProcessedHeight lastProcessedTimestamp }
+    }`,
+    { ids }
+  );
+  const meta = data._metadata || {};
+  const ts = Number(meta.lastProcessedTimestamp);
+  return {
+    services: new Map((data.services?.nodes || []).map((s) => [s.id, s])),
+    searched: {
+      source: `Pocket Network ${pocket.NETWORK} indexer (GraphQL)`,
+      indexer_height: meta.lastProcessedHeight ?? null,
+      indexer_time: Number.isFinite(ts) && ts > 0 ? new Date(ts).toISOString() : null,
+    },
+  };
+}
+
+function notRegisteredNote(serviceId) {
+  return `No service with id '${serviceId}' is registered on ${pocket.NETWORK}, so the list is empty. Service ids are exact and case-sensitive; /v1/service-demand with no body lists registered services.`;
+}
+
 // --- /v1/suppliers: indexer suppliers, network-wide or per-service --------
 
 async function handleSuppliers(body) {
@@ -219,7 +247,8 @@ async function handleSuppliers(body) {
     if (serviceId) {
       // One row per Staked supplier with a live config for the service, ordered by supplier id.
       // The function pages by key (at most 1,000 rows a call), so walk to offset+limit.
-      const summary = await serviceSummary([serviceId]);
+      const [summary, look] = await Promise.all([serviceSummary([serviceId]), serviceLookup([serviceId])]);
+      const registered = look.services.has(serviceId);
       const want = offset + limit;
       const rows = [];
       let after = null;
@@ -242,9 +271,12 @@ async function handleSuppliers(body) {
       const counts = await supplierServiceCounts(slice.map((r) => r.supplierId));
       return {
         service_id: serviceId,
+        service_registered: registered,
         total_count: toNum(summary.get(serviceId)?.stakedSuppliers),
         limit,
         offset,
+        searched: look.searched,
+        ...(registered ? {} : { note: notRegisteredNote(serviceId) }),
         suppliers: slice.map((r) => ({
           operator_id: r.supplierId,
           activated_at_height: r.activatedAtHeight,
@@ -333,8 +365,9 @@ async function handleApplications(body) {
   const cacheKey = `applications:${serviceId || "*"}:${limit}:${offset}`;
   const { value, stale, ageMs } = await pocket.cached(cacheKey, 30_000, async () => {
     if (serviceId) {
-      const [summary, data] = await Promise.all([
+      const [summary, look, data] = await Promise.all([
         serviceSummary([serviceId]),
+        serviceLookup([serviceId]),
         pocket.graphql(
           `query($sid:[String!], $n:Int!, $off:Int!) {
             getApplicationFleetList(services:$sid, rowLimit:$n, rowOffset:$off) { applicationId stakeStatus stakeUpokt }
@@ -342,11 +375,15 @@ async function handleApplications(body) {
           { sid: [serviceId], n: limit, off: offset }
         ),
       ]);
+      const registered = look.services.has(serviceId);
       return {
         service_id: serviceId,
+        service_registered: registered,
         total_count: toNum(summary.get(serviceId)?.stakedApplications),
         limit,
         offset,
+        searched: look.searched,
+        ...(registered ? {} : { note: notRegisteredNote(serviceId) }),
         applications: (data.getApplicationFleetList || []).map((n) => ({
           account_id: n.applicationId,
           stake_upokt: n.stakeUpokt,
@@ -403,24 +440,22 @@ async function handleServiceDemand(body) {
       const listing = await pocket.graphql(`query { services(first:30) { nodes { id } } }`);
       ids = listing.services.nodes.map((s) => s.id);
     }
-    const [summary, named] = await Promise.all([
-      serviceSummary(ids),
-      pocket.graphql(
-        `query($ids:[String!]) { services(filter:{id:{in:$ids}}) { nodes { id name computeUnitsPerRelay } } }`,
-        { ids }
-      ),
-    ]);
-    const meta = new Map((named.services?.nodes || []).map((s) => [s.id, s]));
+    const [summary, look] = await Promise.all([serviceSummary(ids), serviceLookup(ids)]);
+    const meta = look.services;
     const rows = ids.map((id) => ({
       service_id: id,
+      registered: meta.has(id),
       name: meta.get(id)?.name ?? null,
       compute_units_per_relay: meta.get(id)?.computeUnitsPerRelay ?? null,
       active_suppliers: toNum(summary.get(id)?.stakedSuppliers),
       active_applications: toNum(summary.get(id)?.stakedApplications),
     }));
     rows.sort((a, b) => (b.active_suppliers - a.active_suppliers) || (b.active_applications - a.active_applications));
+    const missing = rows.filter((r) => !r.registered).map((r) => r.service_id);
     return {
       requested: !!serviceIds,
+      searched: look.searched,
+      ...(missing.length ? { not_registered: missing } : {}),
       services: rows,
       note: "active_suppliers/active_applications are current Staked-actor counts for the service " +
         "(a live supply/demand proxy), not settled relay volume; combine with /v1/throughput for a " +

@@ -436,6 +436,10 @@ test("routes: quick scan, Pi push, since filter, evidence, watched, errors", asy
   assert.strictEqual(first.body.scan_type, "quick");
   assert.strictEqual(first.body.full_scan, "queued");
   assert.ok(first.body.findings.every((f) => f.checked === "dns_only"));
+  // 0.1.15: a quick scan names what it read and what it did not.
+  assert.deepStrictEqual(first.body.searched.sources.map((s) => s.check), ["dns"]);
+  assert.match(first.body.searched.not_checked, /registry, certificate/);
+  assert.strictEqual(first.body.searched.lookalike_names_generated, first.body.coverage.candidates_generated);
 
   assert.strictEqual((await call(ingest, "GET", "/ingest/watch")).status, 401);
   const watch = await call(ingest, "GET", "/ingest/watch", undefined, { Authorization: "Bearer test-token-not-secret" });
@@ -458,6 +462,11 @@ test("routes: quick scan, Pi push, since filter, evidence, watched, errors", asy
 
   const none = await call(server, "POST", "/v1/brand/scan", { official_domains: ["uniswap.org"], since: new Date(Date.now() + 60_000).toISOString() });
   assert.strictEqual(none.body.findings_total, 0);
+  // An empty answer from a full scan still lists every source behind it.
+  assert.deepStrictEqual(none.body.searched.sources.map((s) => s.check), ["dns", "registry", "certificate_and_homepage", "certificate_transparency"]);
+  assert.strictEqual(none.body.searched.scan_type, "full");
+  assert.strictEqual(none.body.searched.as_of, none.body.as_of);
+  assert.ok(!("not_checked" in none.body.searched));
 
   const ev = await call(server, "POST", "/v1/brand/evidence", { evidence_id: second.body.findings[0].evidence_id });
   assert.strictEqual(ev.status, 200);

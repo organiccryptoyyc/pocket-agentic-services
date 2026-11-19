@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Agent Trust and Compliance API",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "agent-trust on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body. Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every check is a real live call (RDAP, DNS, a live TLS handshake, the U.S. Consolidated Screening List, the public Blockscout explorer, or Pocket Network's public RPC) made at request time. POST /v1/preflight runs every check that applies to one counterparty and returns one verdict."
   },
   "servers": [
@@ -94,6 +94,10 @@
                     "trust_score": {
                       "type": "number"
                     },
+                    "resolves": {
+                      "type": "boolean",
+                      "description": "false when the domain has no address records in DNS (1.5.0). The registry and DNS checks still run, so the answer says whether the name is registered."
+                    },
                     "registration": {
                       "type": "object"
                     },
@@ -108,6 +112,13 @@
                     },
                     "verified": {
                       "$ref": "#/components/schemas/Verified"
+                    },
+                    "checked": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The checks this answer ran (1.5.0)."
                     }
                   }
                 }
@@ -184,7 +195,8 @@
           "422": {
             "$ref": "#/components/responses/ClientError"
           }
-        }
+        },
+        "description": "A domain with no address records in DNS returns 422 with code domain_not_resolvable (1.5.0; was upstream_unavailable)."
       }
     },
     "/v1/seller-trust": {
@@ -242,7 +254,8 @@
           "422": {
             "$ref": "#/components/responses/ClientError"
           }
-        }
+        },
+        "description": "A domain with no address records in DNS returns 422 with code domain_not_resolvable (1.5.0; was upstream_unavailable)."
       }
     },
     "/v1/sanctions-check": {

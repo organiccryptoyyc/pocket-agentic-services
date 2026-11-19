@@ -48,7 +48,11 @@ async function resolveSafely(domain) {
   try {
     addresses = await dns.lookup(domain, { all: true, verbatim: true });
   } catch (e) {
-    throw new UpstreamError(`could not resolve '${domain}': ${e.code || e.message}`);
+    const err = new UpstreamError(`could not resolve '${domain}': ${e.code || e.message}`);
+    // ENOTFOUND is an answer about the domain (no address records), not an outage: callers report it as such.
+    // EAI_AGAIN and other codes stay upstream failures.
+    if (e.code === "ENOTFOUND") err.notFound = true;
+    throw err;
   }
   if (addresses.length === 0) throw new UpstreamError(`no addresses for '${domain}'`);
   const bad = addresses.find((a) => isPrivateOrReservedIp(a.address));

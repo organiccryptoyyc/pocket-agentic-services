@@ -73,6 +73,7 @@ function world(mints, { calls = [] } = {}) {
       return { status: "0x1", logs: [logFor(mints[0], 0)] };
     }
     if (method === "eth_getBlockByNumber") return { timestamp: "0x" + (1767225000).toString(16) };
+    if (method === "eth_blockNumber") return "0x" + (5000).toString(16);
     throw new Error("unexpected " + method);
   };
   const fetchJson = async (cid) => {
@@ -171,6 +172,26 @@ test(`at most ${ph.MAX_MINTS} newest mints are compared`, async () => {
   assert.strictEqual(r.mints_found, 30);
   assert.strictEqual(r.mints_compared, ph.MAX_MINTS);
   assert.strictEqual(r.verdict, "not_found");
+  // 0.1.15: a no-match says exactly what was searched, up to which block.
+  assert.deepStrictEqual(r.searched, {
+    chain: "ZKsync Era (chain 324)", contract: ph.CONTENTSIGN, by: "given_address", address: ME, through_block: 5000,
+    history_rpc: "https://mainnet.era.zksync.io", metadata_gateways: ["ipfs.filebase.io", "gateway.pinata.cloud"],
+  });
+});
+
+test("the mint search is pinned to the archive's current block", async () => {
+  const seen = [];
+  const w = world([{ tokenId: 7, owner: ME, hash: "33".repeat(32) }]);
+  const rpc = async (m, p) => { if (m === "eth_getLogs") seen.push(p[0].toBlock); return w.rpc(m, p); };
+  const r = await ph.verify({ sha256: "33".repeat(32), address: ME }, { ...w, rpc });
+  assert.deepStrictEqual(seen, ["0x1388"]);
+  assert.strictEqual(r.searched.through_block, 5000);
+  const file = jpeg(nodleManifest());
+  const s = await ph.verify({ image_url: "https://example.test/p.jpg" }, { ...world([{ tokenId: 9, owner: ME, hash: sha(file) }]), fetchImage: async () => file });
+  assert.strictEqual(s.searched.by, "file_signer_address");
+  const t = await ph.verify({ image_url: "https://example.test/p.jpg", tx_hash: "0x" + "09".repeat(32) }, { ...world([]), fetchImage: async () => file });
+  assert.strictEqual(t.searched.by, "tx_hash");
+  assert.strictEqual(t.searched.through_block, null);
 });
 
 test("input checks", async () => {
@@ -191,7 +212,7 @@ test("GPS detection: EXIF GPS pointer or manifest GPS fields; clean files say fa
 });
 
 test("history reads go to the archive RPC only (Pocket's ZKsync node is pruned and answers empty)", () => {
-  for (const m of ["eth_getLogs", "eth_getTransactionReceipt", "eth_getBlockByNumber"]) assert.deepStrictEqual(ph.rpcUrlsFor(m), ["https://mainnet.era.zksync.io"]);
+  for (const m of ["eth_getLogs", "eth_getTransactionReceipt", "eth_getBlockByNumber", "eth_blockNumber"]) assert.deepStrictEqual(ph.rpcUrlsFor(m), ["https://mainnet.era.zksync.io"]);
   assert.strictEqual(ph.rpcUrlsFor("eth_call")[0], "https://zksync-era.api.pocket.network");
 });
 

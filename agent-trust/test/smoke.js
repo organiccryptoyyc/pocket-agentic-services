@@ -62,6 +62,20 @@ async function main() {
   assert.strictEqual(sc.status, 200);
   assert.strictEqual(sc.body.sanctioned, true);
 
+  // 1.5.0: a domain that does not resolve is an answer, not an outage.
+  const gone = await req("/v1/domain-trust", { domain: "doesnotexist-agent-trust-test.example" });
+  assert.strictEqual(gone.status, 200, JSON.stringify(gone.body));
+  assert.strictEqual(gone.body.resolves, false);
+  assert.strictEqual(gone.body.registration.registered, false);
+  assert.strictEqual(gone.body.trust_score, 0);
+  assert.match(gone.body.reasons[0], /no address records/);
+  assert.ok(Array.isArray(gone.body.checked) && gone.body.checked.length === 3, "says what it checked");
+  assert.strictEqual(dt.body.resolves, true);
+  const goneSeller = await req("/v1/seller-trust", { url: "https://doesnotexist-agent-trust-test.example/v1/x" });
+  assert.strictEqual(goneSeller.status, 422);
+  assert.strictEqual(goneSeller.body.error.code, "domain_not_resolvable");
+  assert.match(goneSeller.body.error.message, /not an outage/);
+
   const badDomain = await req("/v1/domain-trust", { domain: "not a domain" });
   assert.strictEqual(badDomain.status, 422);
   assert.ok(badDomain.status < 500, "must never be a 5xx");

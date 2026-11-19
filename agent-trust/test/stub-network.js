@@ -149,12 +149,21 @@ dnsMod.promises.lookup = async function stubLookup(hostname, opts) {
   return result;
 };
 
-dnsMod.promises.resolveMx = async () => [{ exchange: "mx1.example.net", priority: 10 }];
+const MISSING = /(^|\.)doesnotexist-agent-trust-test\.example$/;
+const notFound = () => Object.assign(new Error("queryMx ENOTFOUND"), { code: "ENOTFOUND" });
+dnsMod.promises.resolveMx = async (hostname) => {
+  if (MISSING.test(hostname)) throw notFound();
+  return [{ exchange: "mx1.example.net", priority: 10 }];
+};
 dnsMod.promises.resolveTxt = async (hostname) => {
+  if (MISSING.test(hostname)) throw notFound();
   if (hostname.startsWith("_dmarc.")) return [["v=DMARC1; p=reject"]];
   return [["v=spf1 include:_spf.example.net ~all"]];
 };
-dnsMod.promises.resolve4 = async () => ["93.184.216.34"];
+dnsMod.promises.resolve4 = async (hostname) => {
+  if (MISSING.test(hostname)) throw notFound();
+  return ["93.184.216.34"];
+};
 
 // --- tls stub --------------------------------------------------------------------
 
