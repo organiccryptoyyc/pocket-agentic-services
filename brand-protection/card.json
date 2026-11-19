@@ -1,6 +1,6 @@
 {
   "schema": "pocket-service-card/v1",
-  "description": "Brand Protection Monitor. Finds lookalike domains of a brand (typos, IDN homoglyphs, TLD swaps, added words like -airdrop), checks which exist, and reads their registry (RDAP), TLS certificate and homepage. Each finding has a deterministic 0-100 risk score with plain reasons and an evidence record with fetch times and SHA-256 hashes. POST /v1/brand/scan (official_domains[], brand?, keywords[]?, since?, limit?): the watched report; an unwatched brand gets a quick DNS-only scan now and a full scan next collector cycle. POST /v1/brand/lookalikes (domain): lookalikes that exist now. POST /v1/brand/evidence (evidence_id): the evidence behind one finding. GET /v1/brand/watched: brands under watch. POST /v1/brand/photo (image_url, or sha256 with address or tx_hash): was this exact photo signed (C2PA) and anchored on-chain (Nodle ContentSign, ZKsync Era), by which address, or is it an altered copy; never returns coordinates. Every response is a JSON object. Detection and evidence only; no takedowns.",
+  "description": "Brand Protection Monitor. Finds lookalike domains of a brand (typos, IDN homoglyphs, TLD swaps, added words like -airdrop), checks which exist, and reads their registry (RDAP), TLS certificate and homepage. Each finding has a deterministic 0-100 risk score with plain reasons and an evidence record with fetch times and SHA-256 hashes. POST /v1/brand/scan (official_domains[], brand?, keywords[]?, since?, limit?): the watched report; an unwatched brand gets a quick DNS-only scan now and a full scan next collector cycle. POST /v1/brand/lookalikes (domain): lookalikes that exist now. POST /v1/brand/evidence (evidence_id): the evidence behind one finding. GET /v1/brand/watched: brands under watch. POST /v1/brand/photo (image_url, or sha256 with address or tx_hash): was this exact photo signed (C2PA; signature validated, signer checked against the C2PA trust list) and anchored on-chain (Nodle ContentSign, ZKsync Era), by which address, or is it an altered copy; never returns coordinates. Every response is a JSON object. Detection and evidence only; no takedowns.",
   "rpc_types": [
     {
       "type": "REST",
@@ -19,8 +19,8 @@
     {
       "kind": "openapi",
       "api": "brand-protection-scan",
-      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/396e202c731b58a9a6419735ea8f0be785bdd0a6/brand-protection/openapi.json",
-      "sha256": "849367955bc23599f87e8963aba2f3d49edfd8cf5e409a831a13288ddb5d57a1",
+      "url": "https://raw.githubusercontent.com/organiccryptoyyc/pocket-agentic-services/f921828df13e5979d05997b4c7477cd6600dd020/brand-protection/openapi.json",
+      "sha256": "563293150a410fe2e4e1a11bbfd417a07a03cbb7a20ab00a70a269c59bcccde6",
       "notes": "Covers all routes in one document."
     }
   ],
@@ -31,7 +31,7 @@
     "implementations": [
       "brand-protection >= 0.1"
     ],
-    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/396e202c731b58a9a6419735ea8f0be785bdd0a6/brand-protection",
+    "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/f921828df13e5979d05997b4c7477cd6600dd020/brand-protection",
     "min_disk_gb": 1,
     "min_ram_gb": 1,
     "healthcheck": [
@@ -74,6 +74,6 @@
     ],
     "notes": "Bodies capped at 1 MiB; responses a few KB to ~100 KB. A quick scan takes up to ~9 s, a photo check 1-8 s (photos up to 16 MB); keep the relay timeout at 30 s or more. Gateways: type passthrough, rpc_types [\"rest\"]."
   },
-  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/396e202c731b58a9a6419735ea8f0be785bdd0a6/brand-protection/README.md",
+  "docs": "https://github.com/organiccryptoyyc/pocket-agentic-services/blob/f921828df13e5979d05997b4c7477cd6600dd020/brand-protection/README.md",
   "updated": "2026-11-19"
 }
