@@ -12,6 +12,19 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Packs 0.9.1 / 0.5.1 / 0.8.1 / 0.6.1: hourly route counts (2026-11-20)
+
+The chain shows one outside app polling pmic-crypto-signals about every 11 minutes since 2026-11-09
+(~125 relays a day, against ~2 a day on the other packs), but not which route or brief it asks for.
+Every pack now counts its calls per UTC hour (`packs/lib/usage.js`): the route, plus the brief
+`vertical` or signal `series_id` once validated against the pack's own lists, and the status class,
+with a count and average handling time. Health and version probes count as `probe`; unknown paths as
+`unmatched`, so no caller text reaches the log. Nothing about the caller is kept (no address, header,
+body or app id). One JSON line per finished hour goes to stdout, plus the unfinished hour on shutdown:
+`docker logs pmic-crypto-signals-backend 2>&1 | grep '"usage"'`. Responses are unchanged; patch bump on
+all five packs (company 0.9.1, pharma 0.9.1, crypto 0.5.1, macro 0.8.1, public-sector 0.6.1); cards
+unchanged (build-listings: card_changed false).
+
 ## Packs 0.9.0 (company and pharma): /v1/events says what it searched (2026-11-19)
 
 A caller asked whether an empty lookup says what it checked. `/v1/events` returned `count: 0` with no

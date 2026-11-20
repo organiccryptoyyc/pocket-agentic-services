@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Crypto Signals",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "description": "Scored crypto briefs from public chain state read through Pocket Network's own RPC endpoints, the Pocket chain and CFTC data: USDT and USDC supply by chain, crypto liquidity, CME bitcoin and ether futures positioning, on-chain ETH and BTC prices, Ethereum and L2 fees, Pocket Network health and staking. Plus address checks and unit conversion. Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and a citation for every input. Not investment advice."
   },
   "servers": [

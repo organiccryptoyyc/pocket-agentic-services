@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Pharma Safety and Approval Signals",
-    "version": "0.9.0",
+    "version": "0.9.1",
     "description": "Scored drug-market and company safety briefs from openFDA, FDA and BLS: drug recalls, adverse event reports, label changes and approvals for the US drug market and for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipelines (ClinicalTrials.gov), drug shortages, medical device recalls and adverse events, FDA warning letters, and drug price inflation (CPI and PPI). Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and citations."
   },
   "servers": [

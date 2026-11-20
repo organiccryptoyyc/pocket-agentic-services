@@ -88,11 +88,18 @@ function readJsonBody(req, maxBytes = MAX_BODY_BYTES) {
  * routes: Map<"METHOD /path", async (body, req) => jsonSerializableObject>
  * GET routes receive body === undefined.
  */
-function createServer({ service, version, versionPath, healthPath, routes, health }) {
+function createServer({ service, version, versionPath, healthPath, routes, health, onDone }) {
   return http.createServer(async (req, res) => {
+    // onDone (packs 0.10.0): called once per finished response with the path and status, for
+    // the hourly route counts in lib/usage.js. It never sees headers or bodies.
+    if (onDone) {
+      const started = Date.now();
+      res.on("finish", () => { try { onDone(req, res.statusCode, Date.now() - started); } catch { /* counting never breaks a response */ } });
+    }
     try {
       const url = new URL(req.url, "http://localhost");
       const path = url.pathname;
+      req.usagePath = path;
 
       if (path === "/" && (req.method === "GET" || req.method === "HEAD")) {
         return sendJson(res, 200, { service, status: "ok" });

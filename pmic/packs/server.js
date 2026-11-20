@@ -389,9 +389,10 @@ async function overview(body) {
 
 const routes = new Map([
   ["POST /v1/verticals", async () => wrap(verticalList())],
-  ["POST /v1/brief", async (raw) => {
+  ["POST /v1/brief", async (raw, req) => {
     const b = obj(raw);
     const v = verticalOf(b);
+    req.usageTag = `vertical=${b.vertical}`;
     const entity = entityOf(b, needsEntity(v));
     const countries = countriesOf(b);
     const out = wrap(await withAttestation(await brief(v, { horizon: horizonOf(b), entity, countries })));
@@ -402,8 +403,8 @@ const routes = new Map([
     return withVerified(out, VF.forOverview, { entityId: out.entity ? out.entity.entity_id : null });
   }],
   ["POST /v1/signals", async (raw) => wrap(await signals(obj(raw)))],
-  ["POST /v1/signal", async (raw) => { const b = obj(raw); await inScope(b.series_id); return wrap(await withAttestation(await hub("/v1/signal", { series_id: b.series_id }))); }],
-  ["POST /v1/explain", async (raw) => { const b = obj(raw); await inScope(b.series_id); return wrap(await hub("/v1/explain", { series_id: b.series_id, horizon: horizonOf(b) })); }],
+  ["POST /v1/signal", async (raw, req) => { const b = obj(raw); await inScope(b.series_id); req.usageTag = `series=${b.series_id}`; return wrap(await withAttestation(await hub("/v1/signal", { series_id: b.series_id }))); }],
+  ["POST /v1/explain", async (raw, req) => { const b = obj(raw); await inScope(b.series_id); req.usageTag = `series=${b.series_id}`; return wrap(await hub("/v1/explain", { series_id: b.series_id, horizon: horizonOf(b) })); }],
   ["POST /v1/catalog", async (raw) => wrap(await catalog(obj(raw)))],
 ]);
 // The fields /v1/events reads. Anything else is refused (0.9.0): a misspelt filter such as 'entity'
@@ -539,9 +540,19 @@ function health() {
   return { service: PACK.service_id, version: PACK.version, verticals: PACK.verticals.map((v) => v.id), hub: HUB.replace(/\/\/[^@]*@/, "//") };
 }
 
+// Hourly route counts (0.10.0): aggregate only, see lib/usage.js.
+const U = require("./lib/usage");
+const PROBE_PATHS = ["/", "/v1/version", "/v1/health", "/healthz"];
+function usageDone(usage) {
+  return (req, status, ms) => usage.record(U.keyFor(req.method, req.usagePath, { routes, probePaths: PROBE_PATHS, tag: req.usageTag }), status, ms);
+}
+
 if (require.main === module) {
-  createServer({ service: PACK.service_id, version: PACK.version, versionPath: "/v1/version", healthPath: "/v1/health", routes, health })
+  const usage = U.createUsage({ service: PACK.service_id, version: PACK.version });
+  setInterval(usage.tick, 60 * 1000).unref();
+  for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { usage.flush(); process.exit(0); });
+  createServer({ service: PACK.service_id, version: PACK.version, versionPath: "/v1/version", healthPath: "/v1/health", routes, health, onDone: usageDone(usage) })
     .listen(PORT, () => console.log(JSON.stringify({ service: PACK.service_id, version: PACK.version, port: PORT, hub: HUB, listening: true })));
 }
 
-module.exports = { routes, PACK };
+module.exports = { routes, PACK, usageDone, PROBE_PATHS };
