@@ -22,7 +22,16 @@ Reference client and worker: the `pocket-confidential` worker repository (`src/p
 
 | `service` | Version | What it returns |
 |---|---|---|
-| `treasury-stress` | 0.1.0 | Mild and severe 30-day shocks against the customer's liquidity floor and limits. Ranges, not exact figures, by default. |
+| `treasury-stress` | 0.2.0 | Mild and severe 30-day shocks against the customer's liquidity floor and limits, plus a `current` scenario: the mild set scaled by today's conditions from public Pocket signals (PMIC macro-regime and credit-stress; PMIC crypto-liquidity, stablecoin-supply and crypto-prices). Ranges, not exact figures, by default. |
+
+### Live signals
+
+The queue fetches those five scored briefs from our own PMIC services on the internal network (cached 30
+minutes) and attaches the same bundle to every batch of sealed requests, so the signals reveal nothing about a
+customer. The job lists each signal it used in the evidence (`signals_used`: id, as-of date, fetch time and the
+brief's sha256). If fewer than two signals are fresh, the `current` scenario is left out and a gap says so.
+Dossier exit liquidity and TCS-6 peer data would need the customer's tokens or entity, so they are not used.
+`GET /v1/health` shows how many signals were usable at the last fetch.
 
 `treasury-stress` input: `positions[]` (1-500; `class`: stable, major, alt, lp, own_token; `amount_usd`;
 `liquid`; optional `lockup_days`), `liquidity_floor_usd`, optional `horizon_days` (default 30), `limits`

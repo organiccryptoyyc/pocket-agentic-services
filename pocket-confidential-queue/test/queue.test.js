@@ -7,6 +7,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const crypto = require("crypto");
+const http = require("http");
 const { createApp } = require("../server");
 const { canonical, sha256hex, PROTOCOL, CIPHER, EVIDENCE_SCHEMA } = require("../lib/verify");
 
@@ -130,5 +131,53 @@ test("an unfinished lease comes back after 2 minutes; errors are stored as codes
     assert.deepStrictEqual([r.body.status, r.body.error.code], ["error", "decrypt_failed"]);
   } finally {
     q.close();
+  }
+});
+
+test("signals: public briefs ride along with leased work, cached, failures marked unavailable", async () => {
+  const { createSignals } = require("../lib/signals");
+  let calls = 0;
+  const src = http.createServer((req, res) => {
+    let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => {
+      calls++;
+      const { vertical } = JSON.parse(b);
+      if (vertical === "broken") { res.writeHead(503); return res.end("{}"); }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ service: "pmic-macro-signals", vertical, status: "ok", score: 42, label: "moderate", trend: "flat", confidence: { score: 70, label: "medium" }, verified: { as_of: "2026-11-01" } }));
+    });
+  });
+  await new Promise((r) => src.listen(0, "127.0.0.1", r));
+  let t = Date.parse("2026-11-20T00:00:00Z");
+  const signals = createSignals({ sources: [{ service: "pmic-macro-signals", base: `http://127.0.0.1:${src.address().port}`, verticals: ["macro-regime", "broken"] }], now: () => t });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cq-"));
+  const app = createApp({ dataDir: dir, jobToken: TOKEN, now: () => t, signals });
+  await new Promise((r) => app.publicServer.listen(0, "127.0.0.1", r));
+  await new Promise((r) => app.jobServer.listen(0, "127.0.0.1", r));
+  const pub = `http://127.0.0.1:${app.publicServer.address().port}`;
+  const job = `http://127.0.0.1:${app.jobServer.address().port}`;
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` };
+  try {
+    const k = jobKey();
+    await fetch(`${job}/job/keys`, { method: "POST", headers: H, body: JSON.stringify(announcement(k, ENC, t)) });
+    // No work: no signals fetched.
+    const empty = await (await fetch(`${job}/job/requests?to=${ENC}`, { headers: H })).json();
+    assert.strictEqual(empty.signals, null);
+    assert.strictEqual(calls, 0);
+    await fetch(`${pub}/v1/submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request: sealedRequest(ENC, "e".repeat(24)) }) });
+    const got = await (await fetch(`${job}/job/requests?to=${ENC}`, { headers: H })).json();
+    assert.strictEqual(got.requests.length, 1);
+    const byId = Object.fromEntries(got.signals.items.map((i) => [i.id, i]));
+    assert.strictEqual(byId["pmic-macro-signals:macro-regime"].score, 42);
+    assert.strictEqual(byId["pmic-macro-signals:macro-regime"].as_of, "2026-11-01");
+    assert.match(byId["pmic-macro-signals:macro-regime"].brief_sha256, /^[0-9a-f]{64}$/);
+    assert.strictEqual(byId["pmic-macro-signals:broken"].status, "unavailable");
+    assert.strictEqual(calls, 2);
+    // Cached for 30 minutes, then refreshed.
+    await signals.get(); assert.strictEqual(calls, 2);
+    t += 31 * 60_000; await signals.get(); assert.strictEqual(calls, 4);
+    const h = await (await fetch(`${pub}/v1/health`)).json();
+    assert.deepStrictEqual([h.signals.ok, h.signals.total], [1, 2]);
+  } finally {
+    app.publicServer.close(); app.jobServer.close(); src.close();
   }
 });

@@ -20,9 +20,10 @@ const crypto = require("crypto");
 const path = require("path");
 const { checkAnnouncement, checkRequest, checkSealed } = require("./lib/verify");
 const { createStore } = require("./lib/store");
+const { createSignals, defaultSources } = require("./lib/signals");
 
 const SERVICE = "pocket-confidential-queue";
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 const MAX_BODY = 256 * 1024;
 const MAX_REQUEST = 128 * 1024;
 
@@ -59,7 +60,7 @@ function tokenOk(header, token) {
 
 const err = (res, status, code, message) => send(res, status, { error: { code, message } });
 
-function createApp({ dataDir, jobToken, now = () => Date.now() }) {
+function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }) {
   const store = createStore(dataDir, now);
 
   async function publicHandler(req, res) {
@@ -67,7 +68,10 @@ function createApp({ dataDir, jobToken, now = () => Date.now() }) {
       const url = new URL(req.url, "http://x");
       const route = `${req.method} ${url.pathname}`;
       if (route === "GET /v1/version") return send(res, 200, { service: SERVICE, version: VERSION, protocol: "pocket-confidential/0.1" });
-      if (route === "GET /v1/health") return send(res, 200, { service: SERVICE, status: "ok", key_available: Boolean(store.currentAnnouncement()) });
+      if (route === "GET /v1/health") {
+        const b = signals && signals.peek();
+        return send(res, 200, { service: SERVICE, status: "ok", key_available: Boolean(store.currentAnnouncement()), signals: b ? { fetched_at: b.fetched_at, ok: b.items.filter((i) => i.status === "ok").length, total: b.items.length } : null });
+      }
       if (route === "GET /v1/key") {
         const a = store.currentAnnouncement();
         if (!a) return err(res, 503, "no_key", "no confidential worker is online; try again later");
@@ -116,7 +120,10 @@ function createApp({ dataDir, jobToken, now = () => Date.now() }) {
         const to = url.searchParams.get("to") || "";
         if (!store.announcementFor(to)) return err(res, 409, "unknown_key", "publish the key announcement first");
         const max = Math.min(50, Math.max(1, Number(url.searchParams.get("max")) || 10));
-        return send(res, 200, { requests: store.lease(to, max) });
+        const leased = store.lease(to, max);
+        // Public market signals ride along with work, identical for every customer.
+        const bundle = leased.length && signals ? await signals.get() : null;
+        return send(res, 200, { requests: leased, signals: bundle });
       }
       const body = await readJson(req);
       const id = String(body.request_id || "");
@@ -149,7 +156,9 @@ if (require.main === module) {
     console.error(JSON.stringify({ fatal: "CQ_JOB_TOKEN missing or shorter than 32 characters" }));
     process.exit(1);
   }
-  const app = createApp({ dataDir: path.resolve(process.env.CQ_DATA_DIR || "/var/lib/pocket-confidential-queue"), jobToken: token });
+  const signals = createSignals({ sources: defaultSources(process.env.CQ_NETWORK === "beta" ? "beta" : "main") });
+  const app = createApp({ dataDir: path.resolve(process.env.CQ_DATA_DIR || "/var/lib/pocket-confidential-queue"), jobToken: token, signals });
+  signals.get().catch(() => {}); // warm the cache at start
   const port = Number(process.env.PORT || 8080);
   const jobPort = Number(process.env.CQ_JOB_PORT || 8090);
   app.publicServer.listen(port, "0.0.0.0", () => console.log(JSON.stringify({ service: SERVICE, version: VERSION, listening: port })));
