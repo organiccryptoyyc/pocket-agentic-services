@@ -38,11 +38,30 @@ Dossier exit liquidity and TCS-6 peer data would need the customer's tokens or e
 (`min_stable_share`, `max_single_share`), `scenarios` (custom shocks, -1 to 1 per class) and
 `disclosure` (`range`, the default, or `exact`).
 
+## How to verify a result
+
+1. **Signature.** Check the Ed25519 signature over `{result, evidence}` with
+   `evidence.job_ed25519_public_key`, and that `evidence.input_commitment` matches the request you sealed.
+2. **The key on chain.** Without a Liskov account, run PROOF's public recipe
+   (<https://docs.proof.computer/liskov/operate/verify-job-keys>, script
+   `examples/liskov-v1/verify-job-key` in <https://github.com/proof-computer/docs>) with
+   `evidence.acurast_origin`, `evidence.acurast_job_id`, `evidence.job_ed25519_public_key` and
+   `evidence.artifact_digest`. It checks on the Acurast chain that this job published that key, that the job
+   ran that artifact, and that the processor presented a Google-rooted attestation when it joined Acurast.
+   Acurast deletes a job's records about an hour after the job ends, so use an archive node (the script's
+   default, `wss://archive.mainnet.acurast.com`); it finds the blocks from the job id.
+3. **The build.** `artifact_digest` names the exact attested build; the signed key announcement from
+   `GET /v1/key` carries the same digest. A new build means a new key.
+
 ## Limits and honesty
 
-- The signature proves which job key signed a result for a committed input. Tie that key to the Liskov
-  runtime evidence for the deployment; the signature alone does not prove a TEE ran it. Hardware-backed
-  confidentiality under the platform's threat model, not an absolute guarantee.
+- The safe claim: a result is signed by the key that the attested Acurast processor published on chain for
+  this job. The key is held by Acurast's processor app; it is **not hardware-attested**. The processor
+  attestation covers the processor's account, not the job key.
+- One key serves every job of the same release on the same processor. A new release is the rotation; nothing on
+  chain revokes an old key.
+- The policy digest is not on chain; today only Liskov can vouch for it.
+- Confidentiality rests on the platform under its threat model; it is not an absolute guarantee.
 - Results are signed, not encrypted. Anyone holding a `request_id` can read its result for 24 hours, so keep
   it private.
 - Requests up to 128 KiB; at most 1,000 pending; results kept 24 hours.
