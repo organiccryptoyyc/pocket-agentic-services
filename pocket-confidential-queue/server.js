@@ -23,7 +23,7 @@ const { createStore } = require("./lib/store");
 const { createSignals, defaultSources } = require("./lib/signals");
 
 const SERVICE = "pocket-confidential-queue";
-const VERSION = "0.2.0";
+const VERSION = "0.2.1";
 const MAX_BODY = 256 * 1024;
 const MAX_REQUEST = 128 * 1024;
 
@@ -75,7 +75,7 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }
       if (route === "GET /v1/key") {
         const a = store.currentAnnouncement();
         if (!a) return err(res, 503, "no_key", "no confidential worker is online; try again later");
-        return send(res, 200, { service: SERVICE, ...a, note: "Check the signature, then check job_ed25519_public_key and artifact_digest against the Liskov runtime evidence before sealing a request to encryption_public_key." });
+        return send(res, 200, { service: SERVICE, ...a, note: "Check the signature, then check on chain that Acurast job acurast_origin + acurast_job_id published job_ed25519_public_key and ran artifact_digest (no Liskov account needed: https://docs.proof.computer/liskov/operate/verify-job-keys) before sealing a request to encryption_public_key." });
       }
       if (route === "POST /v1/submit") {
         const body = await readJson(req);
