@@ -290,7 +290,7 @@ function oas30(schema) {
 }
 
 function openapi(b) {
-  const err = { description: "Bad input: JSON object with error {code, message}.", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } };
+  const err = { description: "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } };
   const ok = (ref) => ({ description: "OK", content: { "application/json": { schema: { $ref: `#/components/schemas/${ref}` } } } });
   const body = (props, required = []) => ({ required: true, content: { "application/json": { schema: { type: "object", properties: props, required } } } });
   const H = { type: "string", enum: ["7d", "30d", "90d", "365d"] };
@@ -335,7 +335,7 @@ function openapi(b) {
     components: {
       schemas: {
         Object: { type: "object" },
-        Error: { type: "object", properties: { error: { type: "object", properties: { code: { type: "string" }, message: { type: "string" } } } } },
+        Error: { type: "object", properties: { error: { type: "object", properties: { code: { type: "string" }, message: { type: "string" }, field: { type: "string", description: "The input field that needs fixing." }, valid: { type: "array", items: { type: "string" }, description: "The accepted values for that field." }, valid_sample: { type: "array", items: { type: "string" }, description: "Some real series ids (all of them: POST /v1/catalog)." }, valid_count: { type: "integer" }, valid_units: { type: "array", items: { type: "string" } }, valid_range: { type: "array", items: { type: "integer" } }, see: { type: "string", description: "The route that lists the accepted values." }, example: { type: "object", description: "A request body that works on this route, as sent." }, routes: { type: "array", items: { type: "string" }, description: "On a 404: the routes this service answers." } } } } },
         Brief: (() => { const br = oas30(briefFor(b)); br.properties.attestation = { $ref: "#/components/schemas/Attestation" }; return br; })(),
         Attestation: ATTESTATION_OAS,
       },

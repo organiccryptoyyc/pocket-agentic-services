@@ -12,6 +12,17 @@
   Skipped items stay listed with the reason, so we know why they weren't chosen.
 - Never merge to `main` without the owner's go-ahead.
 
+## Packs 0.9.2 / 0.5.2 / 0.8.2 / 0.6.2: errors say how to fix the call (2026-11-21)
+
+The first 24 hours of route counts showed one automated caller walking the whole crypto API about
+6 times an hour; about 10 of its calls failed (unit converter, brief without a vertical, explain
+without a series id, signals list). A 400 already named the fix in prose; an agent needs it as
+data. Every 4xx now adds, where known: `field`, `valid` (the accepted values), `see` (the route that
+lists them), for series ids `valid_count` and `valid_sample` (12 real ids), for the unit converter
+`valid_units`, and on every route an `example` body that works as sent. A 404 lists the routes the
+service answers (and no longer echoes markup from the path). `code` and `message` are unchanged, so
+existing callers are unaffected; the openapi `Error` schema documents the new fields. Cards unchanged.
+
 ## Packs 0.9.1 / 0.5.1 / 0.8.1 / 0.6.1: hourly route counts (2026-11-20)
 
 The chain shows one outside app polling pmic-crypto-signals about every 11 minutes since 2026-11-09

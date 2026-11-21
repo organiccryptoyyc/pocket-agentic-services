@@ -2,7 +2,7 @@
   "_comment": "Public sector verticals: product safety recalls, political money and federal spending, from free US government APIs (CPSC, NHTSA, FDA, FEC, Senate LDA, USAspending, Treasury). Batch 2's one new service.",
   "service_id": "pmic-public-sector-signals",
   "display_name": "PMIC Public Sector Signals",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "evidence_packet": {
     "_comment": "POST /v1/evidence-packet (0.6.0): dated public laws, significant federal rules, product and vehicle recalls, disaster declarations and earthquakes, and exploited vulnerabilities, each from its official source.",
     "entities": ["us-congress", "us-federal", "us-consumer-products", "us-vehicles", "us-hazards", "us-cyber"],

@@ -180,4 +180,4 @@ function unitConvert(body) {
   return { asset, amount, from: body.from, to: body.to, result: fromUnits(raw, toDec), exact: true };
 }
 
-module.exports = { keccak256, eip55, bech32, b58check, addressCheck, unitConvert };
+module.exports = { keccak256, eip55, bech32, b58check, addressCheck, unitConvert, UNITS };

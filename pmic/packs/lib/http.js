@@ -18,10 +18,13 @@ const http = require("http");
 const MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MiB; every resource here is a small JSON query
 
 class ClientError extends Error {
-  constructor(status, code, message) {
+  // hint (packs 0.10.x): optional machine-readable help merged into the error object, e.g.
+  // { valid: [...] } or { see: "POST /v1/catalog" }, so an agent can correct the call without a human.
+  constructor(status, code, message, hint) {
     super(message);
     this.status = status;
     this.code = code;
+    this.hint = hint || null;
   }
 }
 
@@ -88,7 +91,7 @@ function readJsonBody(req, maxBytes = MAX_BODY_BYTES) {
  * routes: Map<"METHOD /path", async (body, req) => jsonSerializableObject>
  * GET routes receive body === undefined.
  */
-function createServer({ service, version, versionPath, healthPath, routes, health, onDone }) {
+function createServer({ service, version, versionPath, healthPath, routes, health, onDone, examples }) {
   return http.createServer(async (req, res) => {
     // onDone (packs 0.10.0): called once per finished response with the path and status, for
     // the hourly route counts in lib/usage.js. It never sees headers or bodies.
@@ -113,9 +116,11 @@ function createServer({ service, version, versionPath, healthPath, routes, healt
       }
 
       const key = `${req.method} ${path}`;
+      req.routeKey = key;
       const handler = routes.get(key);
       if (!handler) {
-        return sendJson(res, 404, { error: { code: "not_found", message: `no route for ${key}` } });
+        // The route list (packs 0.10.x): a caller that guessed a path learns the real ones.
+        return sendJson(res, 404, { error: { code: "not_found", message: `no route for ${req.method} ${path.slice(0, 80).replace(/[^\w/.-]/g, "")}`, routes: [...routes.keys()].sort() } });
       }
 
       let body;
@@ -126,7 +131,9 @@ function createServer({ service, version, versionPath, healthPath, routes, healt
       return sendJson(res, 200, result);
     } catch (e) {
       if (e instanceof ClientError) {
-        return sendJson(res, e.status, { error: { code: e.code, message: sanitize(e.message) } });
+        // A working example body for this route rides on every 4xx (packs 0.10.x).
+        const ex = examples && req.routeKey ? examples[req.routeKey] : null;
+        return sendJson(res, e.status, { error: { code: e.code, message: sanitize(e.message), ...(e.hint || {}), ...(ex ? { example: ex } : {}) } });
       }
       // Any unexpected failure (including upstream Pocket-network errors with
       // no cached fallback) is reported as a 400 with a plain-language reason,

@@ -94,24 +94,24 @@ function obj(body) {
 
 function horizonOf(body, fallback = PACK.default_horizon) {
   const h = body.horizon === undefined ? fallback : body.horizon;
-  if (!HORIZONS.includes(h)) throw new ClientError(400, "invalid_input", "field 'horizon' must be one of 7d, 30d, 90d, 365d");
+  if (!HORIZONS.includes(h)) throw new ClientError(400, "invalid_input", "field 'horizon' must be one of 7d, 30d, 90d, 365d", { field: "horizon", valid: HORIZONS });
   return h;
 }
 
 function verticalOf(body) {
   const id = body.vertical;
-  if (typeof id !== "string" || !VERTICALS.has(id)) throw new ClientError(400, "unknown_vertical", `field 'vertical' must be one of: ${[...VERTICALS.keys()].join(", ")}`);
+  if (typeof id !== "string" || !VERTICALS.has(id)) throw new ClientError(400, "unknown_vertical", `field 'vertical' must be one of: ${[...VERTICALS.keys()].join(", ")}`, { field: "vertical", valid: [...VERTICALS.keys()], see: "POST /v1/verticals" });
   return VERTICALS.get(id);
 }
 
 function entityOf(body, required) {
   const e = body.entity_id;
   if (e === undefined || e === null || e === "") {
-    if (required) throw new ClientError(400, "invalid_input", `field 'entity_id' is required: one of ${(PACK.entities || []).join(", ")}`);
+    if (required) throw new ClientError(400, "invalid_input", `field 'entity_id' is required: one of ${(PACK.entities || []).join(", ")}`, { field: "entity_id", valid: PACK.entities || [] });
     return null;
   }
   const id = typeof e === "string" ? e.toLowerCase() : null;
-  if (!id || !(PACK.entities || []).includes(id)) throw new ClientError(400, "unknown_entity", `field 'entity_id' must be one of: ${(PACK.entities || []).join(", ")}`);
+  if (!id || !(PACK.entities || []).includes(id)) throw new ClientError(400, "unknown_entity", `field 'entity_id' must be one of: ${(PACK.entities || []).join(", ")}`, { field: "entity_id", valid: PACK.entities || [] });
   return id;
 }
 
@@ -267,21 +267,30 @@ function countriesOf(body) {
 function scopeFilters(body) {
   // A scope entry pinned to one entity only answers for that entity.
   const fs = PACK.hub_scope.filter((f) => (!body.source_id || f.source_id === body.source_id) && (!body.entity_id || !f.entity_id || f.entity_id === body.entity_id));
-  if (!fs.length) throw new ClientError(400, "out_of_scope", `nothing in scope for that source_id/entity_id; 'source_id' must be one of: ${[...new Set(PACK.hub_scope.map((f) => f.source_id))].join(", ")}`);
+  if (!fs.length) throw new ClientError(400, "out_of_scope", `nothing in scope for that source_id/entity_id; 'source_id' must be one of: ${[...new Set(PACK.hub_scope.map((f) => f.source_id))].join(", ")}`, { field: "source_id", valid: [...new Set(PACK.hub_scope.map((f) => f.source_id))] });
   return fs;
 }
 
 const pick = (body) => Object.fromEntries(PASS.filter((k) => body[k] !== undefined).map((k) => [k, body[k]]));
 
 let scopeIds = { at: 0, ids: null };
-async function inScope(seriesId) {
-  if (typeof seriesId !== "string" || !seriesId) throw new ClientError(400, "invalid_input", "field 'series_id' is required; list ids with POST /v1/catalog");
+async function loadScopeIds() {
   if (!scopeIds.ids || Date.now() - scopeIds.at > TTL) {
     const ids = new Set();
     for (const f of PACK.hub_scope) for (const s of (await hub("/v1/catalog", { ...f, limit: 2000 })).series) ids.add(s.series_id);
     scopeIds = { at: Date.now(), ids };
   }
-  if (!scopeIds.ids.has(seriesId)) throw new ClientError(400, "unknown_series", `'${seriesId}' is not covered by ${PACK.service_id}; list ids with POST /v1/catalog`);
+  return scopeIds.ids;
+}
+// A missing or unknown series_id (0.10.x) answers with a sample of real ids, so the caller can retry at once.
+async function seriesHint() {
+  const ids = await loadScopeIds().catch(() => null);
+  return { field: "series_id", see: "POST /v1/catalog", ...(ids ? { valid_count: ids.size, valid_sample: [...ids].sort().slice(0, 12) } : {}) };
+}
+async function inScope(seriesId) {
+  if (typeof seriesId !== "string" || !seriesId) throw new ClientError(400, "invalid_input", "field 'series_id' is required; list ids with POST /v1/catalog", await seriesHint());
+  const ids = await loadScopeIds();
+  if (!ids.has(seriesId)) throw new ClientError(400, "unknown_series", `'${String(seriesId).slice(0, 80)}' is not covered by ${PACK.service_id}; list ids with POST /v1/catalog`, await seriesHint());
 }
 
 const SORTS = {
@@ -295,10 +304,10 @@ const SORTS = {
 async function signals(body) {
   const h = horizonOf(body, PACK.default_horizon);
   const sort = body.sort || "composite";
-  if (!SORTS[sort]) throw new ClientError(400, "invalid_input", "field 'sort' must be composite, change, abs_change, confidence or deviation");
+  if (!SORTS[sort]) throw new ClientError(400, "invalid_input", "field 'sort' must be composite, change, abs_change, confidence or deviation", { field: "sort", valid: Object.keys(SORTS) });
   const dir = body.direction === "asc" ? 1 : -1;
   const limit = body.limit === undefined ? 20 : body.limit;
-  if (!Number.isInteger(limit) || limit < 1 || limit > 200) throw new ClientError(400, "invalid_input", "field 'limit' must be an integer 1-200");
+  if (!Number.isInteger(limit) || limit < 1 || limit > 200) throw new ClientError(400, "invalid_input", "field 'limit' must be an integer 1-200", { field: "limit", valid_range: [1, 200] });
   const all = [];
   for (const f of scopeFilters(body)) all.push(...(await hub("/v1/signals", { ...pick(body), horizon: h, limit, ...f })).signals);
   const key = SORTS[sort];
@@ -377,7 +386,7 @@ async function overview(body) {
   const horizon = horizonOf(body);
   const entity = entityOf(body, false);
   const vs = PACK.verticals.filter((v) => (entity ? needsEntity(v) : !needsEntity(v)));
-  if (!vs.length) throw new ClientError(400, "invalid_input", `send 'entity_id', one of: ${(PACK.entities || []).join(", ")}`);
+  if (!vs.length) throw new ClientError(400, "invalid_input", `send 'entity_id', one of: ${(PACK.entities || []).join(", ")}`, { field: "entity_id", valid: PACK.entities || [] });
   const briefs = await Promise.all(vs.map((v) => brief(v, { horizon, entity })));
   return {
     horizon,
@@ -493,14 +502,14 @@ if ((PACK.extra_routes || []).includes("inflation_adjust")) routes.set("POST /v1
 if ((PACK.extra_routes || []).includes("crypto_tools")) {
   // Deterministic utilities: no hub, no network. Bad input is a 400 with the reason.
   const T = require("./lib/cryptotools");
-  const tool = (fn) => async (raw) => {
+  const tool = (fn, hint) => async (raw) => {
     const r = fn(obj(raw));
-    if (r.error) throw new ClientError(400, "invalid_input", r.error);
+    if (r.error) throw new ClientError(400, "invalid_input", r.error, hint);
     return wrap(r);
   };
   const address = tool(T.addressCheck);
   routes.set("POST /v1/tools/address", async (raw) => withVerified(await address(raw), VF.forAddress));
-  routes.set("POST /v1/tools/units", tool(T.unitConvert));
+  routes.set("POST /v1/tools/units", tool(T.unitConvert, { valid_units: Object.keys(T.UNITS), or: "pass 'decimals' (0-36) with from/to 'raw' or 'token' for any token" }));
 }
 
 // Every vertical end to end through the hub. 200 only if each one answers status ok with a score,
@@ -540,6 +549,30 @@ function health() {
   return { service: PACK.service_id, version: PACK.version, verticals: PACK.verticals.map((v) => v.id), hub: HUB.replace(/\/\/[^@]*@/, "//") };
 }
 
+// A working example body per route (0.10.x), returned with every 4xx on that route so an agent can
+// correct its call without reading the spec. Only routes this pack serves get an entry.
+const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+function routeExamples() {
+  const plain = PACK.verticals.find((v) => !needsEntity(v)) || PACK.verticals[0];
+  const ent = (PACK.entities || [])[0];
+  const all = {
+    "POST /v1/verticals": {},
+    "POST /v1/brief": { vertical: plain.id, horizon: PACK.default_horizon, ...(needsEntity(plain) && ent ? { entity_id: ent } : {}) },
+    "POST /v1/overview": PACK.verticals.some((v) => !needsEntity(v)) ? {} : { entity_id: ent },
+    "POST /v1/signals": { sort: "composite", limit: 10 },
+    "POST /v1/signal": { series_id: "<an id from POST /v1/catalog>" },
+    "POST /v1/explain": { series_id: "<an id from POST /v1/catalog>", horizon: PACK.default_horizon },
+    "POST /v1/catalog": {},
+    "POST /v1/events": { entity_id: ent, limit: 20 },
+    "POST /v1/evidence-packet": { entity_id: ent },
+    "POST /v1/token-risk": { tokens: [{ chain: "ethereum", address: USDC }] },
+    "POST /v1/inflation/adjust": { amount: 100, from: "2020-01" },
+    "POST /v1/tools/address": { address: USDC },
+    "POST /v1/tools/units": { amount: "1.5", from: "eth", to: "gwei" },
+  };
+  return Object.fromEntries(Object.entries(all).filter(([k]) => routes.has(k)));
+}
+
 // Hourly route counts (0.10.0): aggregate only, see lib/usage.js.
 const U = require("./lib/usage");
 const PROBE_PATHS = ["/", "/v1/version", "/v1/health", "/healthz"];
@@ -551,8 +584,8 @@ if (require.main === module) {
   const usage = U.createUsage({ service: PACK.service_id, version: PACK.version });
   setInterval(usage.tick, 60 * 1000).unref();
   for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { usage.flush(); process.exit(0); });
-  createServer({ service: PACK.service_id, version: PACK.version, versionPath: "/v1/version", healthPath: "/v1/health", routes, health, onDone: usageDone(usage) })
+  createServer({ service: PACK.service_id, version: PACK.version, versionPath: "/v1/version", healthPath: "/v1/health", routes, health, onDone: usageDone(usage), examples: routeExamples() })
     .listen(PORT, () => console.log(JSON.stringify({ service: PACK.service_id, version: PACK.version, port: PORT, hub: HUB, listening: true })));
 }
 
-module.exports = { routes, PACK, usageDone, PROBE_PATHS };
+module.exports = { routes, PACK, usageDone, PROBE_PATHS, routeExamples };

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Public Sector Signals",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "description": "Scored US public sector briefs from official government data: product safety recalls (CPSC, NHTSA, FDA food), political money (FEC, Senate lobbying), federal spending (USAspending, Treasury), natural hazards (FEMA, USGS, NWS), cyber threat (CISA KEV, NVD), respiratory illness (CDC), wildfire activity (NIFC), climate anomaly (NOAA), air travel demand (TSA), federal rulemaking (Federal Register), legislation (Congress.gov), environmental enforcement (EPA ECHO), Medicare enrollment (CMS) and nonprofit finances (IRS Form 990). Each brief is a 0-100 score with label, trend versus the horizon, the inputs that drive it, risk flags, confidence and a citation for every input."
   },
   "servers": [
@@ -38,7 +38,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -108,7 +108,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -157,7 +157,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -257,7 +257,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -302,7 +302,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -356,7 +356,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -402,7 +402,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -521,7 +521,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -550,6 +550,54 @@
               },
               "message": {
                 "type": "string"
+              },
+              "field": {
+                "type": "string",
+                "description": "The input field that needs fixing."
+              },
+              "valid": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The accepted values for that field."
+              },
+              "valid_sample": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Some real series ids (all of them: POST /v1/catalog)."
+              },
+              "valid_count": {
+                "type": "integer"
+              },
+              "valid_units": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "valid_range": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              },
+              "see": {
+                "type": "string",
+                "description": "The route that lists the accepted values."
+              },
+              "example": {
+                "type": "object",
+                "description": "A request body that works on this route, as sent."
+              },
+              "routes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "On a 404: the routes this service answers."
               }
             }
           }

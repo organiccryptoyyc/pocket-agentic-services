@@ -2,7 +2,7 @@
   "_comment": "Health and pharma verticals: openFDA safety and approvals, and ClinicalTrials.gov pipelines (batch 2).",
   "service_id": "pmic-pharma-signals",
   "display_name": "PMIC Pharma Safety and Approval Signals",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "evidence_packet": {
     "_comment": "POST /v1/evidence-packet (0.8.0): dated openFDA (recalls, approvals, shortages), ClinicalTrials.gov (stopped trials) and FDA warning-letter events for a company or the US drug market. SEC filings live in pmic-company-signals.",
     "entities": ["pfe", "lly", "jnj", "us-drug-market", "us-fda-compliance"],

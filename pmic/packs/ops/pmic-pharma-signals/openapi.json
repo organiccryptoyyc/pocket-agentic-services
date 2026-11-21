@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "PMIC Pharma Safety and Approval Signals",
-    "version": "0.9.1",
+    "version": "0.9.2",
     "description": "Scored drug-market and company safety briefs from openFDA, FDA and BLS: drug recalls, adverse event reports, label changes and approvals for the US drug market and for Pfizer, Eli Lilly and Johnson & Johnson, clinical-trial pipelines (ClinicalTrials.gov), drug shortages, medical device recalls and adverse events, FDA warning letters, and drug price inflation (CPI and PPI). Each brief is a 0-100 score with label, trend, drivers, risk flags, confidence and citations."
   },
   "servers": [
@@ -38,7 +38,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -109,7 +109,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -166,7 +166,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -253,7 +253,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -298,7 +298,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -352,7 +352,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -398,7 +398,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -498,7 +498,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -582,7 +582,7 @@
             }
           },
           "400": {
-            "description": "Bad input: JSON object with error {code, message}.",
+            "description": "Bad input: JSON object with error {code, message}, plus hints where known: field, valid values, a sample of real ids, and a working example body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -611,6 +611,54 @@
               },
               "message": {
                 "type": "string"
+              },
+              "field": {
+                "type": "string",
+                "description": "The input field that needs fixing."
+              },
+              "valid": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The accepted values for that field."
+              },
+              "valid_sample": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Some real series ids (all of them: POST /v1/catalog)."
+              },
+              "valid_count": {
+                "type": "integer"
+              },
+              "valid_units": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "valid_range": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              },
+              "see": {
+                "type": "string",
+                "description": "The route that lists the accepted values."
+              },
+              "example": {
+                "type": "object",
+                "description": "A request body that works on this route, as sent."
+              },
+              "routes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "On a 404: the routes this service answers."
               }
             }
           }

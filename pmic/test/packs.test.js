@@ -736,3 +736,50 @@ test("token risk: covered, not_covered (queued) and out_of_scope tokens; bad inp
   }
   assert.equal((await call("pmic-company-signals", "POST", "/v1/token-risk", { tokens: [{ chain: "eth", address: "0x" + "a0".repeat(20) }] })).status, 404);
 });
+
+// 0.10.x: every 4xx says how to fix the call: valid values where they are known, a sample of real
+// series ids, and a working example body for the route. A wrong path lists the real routes.
+test("errors carry machine-readable hints and a working example", async () => {
+  const b = "pmic-crypto-signals";
+  const noVertical = await call(b, "POST", "/v1/brief", {});
+  assert.equal(noVertical.status, 400);
+  assert.equal(noVertical.json.error.code, "unknown_vertical");
+  assert.equal(noVertical.json.error.field, "vertical");
+  assert.ok(noVertical.json.error.valid.includes("crypto-prices"));
+  assert.equal(noVertical.json.error.see, "POST /v1/verticals");
+  assert.deepEqual(noVertical.json.error.example, { vertical: "stablecoin-supply", horizon: "30d" });
+  const fixed = await call(b, "POST", "/v1/brief", noVertical.json.error.example);
+  assert.equal(fixed.status, 200, "the example body works as sent");
+
+  const noSeries = await call(b, "POST", "/v1/explain", {});
+  assert.equal(noSeries.status, 400);
+  assert.equal(noSeries.json.error.field, "series_id");
+  assert.ok(noSeries.json.error.valid_count > 0 && noSeries.json.error.valid_sample.length > 0);
+  const retry = await call(b, "POST", "/v1/explain", { series_id: noSeries.json.error.valid_sample[0] });
+  assert.equal(retry.status, 200, "a sampled id answers");
+  const unknown = await call(b, "POST", "/v1/signal", { series_id: "nope:nothing" });
+  assert.equal(unknown.json.error.code, "unknown_series");
+  assert.ok(unknown.json.error.valid_sample.length > 0);
+
+  const units = await call(b, "POST", "/v1/tools/units", { amount: "1", from: "eth", to: "dollars" });
+  assert.equal(units.status, 400);
+  assert.ok(units.json.error.valid_units.includes("gwei"));
+  assert.deepEqual(units.json.error.example, { amount: "1.5", from: "eth", to: "gwei" });
+  assert.equal((await call(b, "POST", "/v1/tools/units", units.json.error.example)).status, 200);
+
+  const sort = await call(b, "POST", "/v1/signals", { sort: "best" });
+  assert.deepEqual(sort.json.error.valid, ["composite", "change", "abs_change", "confidence", "deviation"]);
+  const horizon = await call(b, "POST", "/v1/brief", { vertical: "crypto-prices", horizon: "1y" });
+  assert.deepEqual(horizon.json.error.valid, ["7d", "30d", "90d", "365d"]);
+
+  const lost = await call(b, "POST", "/v1/scores", {});
+  assert.equal(lost.status, 404);
+  assert.ok(lost.json.error.routes.includes("POST /v1/brief") && lost.json.error.routes.includes("POST /v1/tools/units"));
+  const odd = await call(b, "POST", "/v1/<b>x</b>", {});
+  assert.ok(!odd.json.error.message.includes("<"), "the echoed path is stripped of markup");
+
+  // Company: entity routes show an entity in their example.
+  const ev = await call("pmic-company-signals", "POST", "/v1/events", { entity_id: "nope" });
+  assert.equal(ev.status, 400);
+  assert.ok(ev.json.error.example.entity_id);
+});
