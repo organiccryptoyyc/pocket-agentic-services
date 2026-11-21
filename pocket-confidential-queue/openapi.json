@@ -1,0 +1,103 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Pocket Confidential",
+    "version": "0.1.0",
+    "description": "Confidential decisions on Pocket Network. A customer seals a request to the public key of a PROOF Liskov job running on Acurast; only that job can open it. The queue behind this API stores ciphertext, commitments and signed results, never plaintext input. Protocol pocket-confidential/0.1: X25519 + HKDF-SHA256 + AES-256-GCM, Ed25519 job signatures, canonical JSON (sorted keys). Every response is a JSON object."
+  },
+  "paths": {
+    "/v1/version": {
+      "get": {
+        "summary": "Service identity",
+        "responses": { "200": { "description": "Identity", "content": { "application/json": { "schema": { "type": "object", "required": ["service", "version", "protocol"], "properties": { "service": { "type": "string", "enum": ["pocket-confidential-queue"] }, "version": { "type": "string" }, "protocol": { "type": "string" } } } } } } }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "summary": "Readiness, and whether a confidential worker is online",
+        "responses": { "200": { "description": "Health", "content": { "application/json": { "schema": { "type": "object", "required": ["service", "status", "key_available"], "properties": { "service": { "type": "string" }, "status": { "type": "string", "enum": ["ok"] }, "key_available": { "type": "boolean" } } } } } } }
+      }
+    },
+    "/v1/key": {
+      "get": {
+        "summary": "The current signed key announcement from the Liskov job",
+        "description": "Verify the Ed25519 signature over canonical(announcement) with job_ed25519_public_key, check artifact_digest and policy_digest against the published Liskov policy, then seal requests to encryption_public_key. Announcements last at most 24 hours.",
+        "responses": {
+          "200": { "description": "Signed announcement", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/KeyResponse" } } } },
+          "503": { "description": "No worker online (error code no_key)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/v1/submit": {
+      "post": {
+        "summary": "Submit a sealed request",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["request"], "properties": { "request": { "$ref": "#/components/schemas/SealedRequest" } } } } } },
+        "responses": {
+          "202": { "description": "Queued", "content": { "application/json": { "schema": { "type": "object", "required": ["request_id", "status", "input_commitment"], "properties": { "service": { "type": "string" }, "request_id": { "type": "string" }, "status": { "type": "string", "enum": ["queued"] }, "input_commitment": { "type": "string" } } } } } },
+          "400": { "description": "Malformed request (bad_request)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "stale_key (sealed to a key that is not current) or duplicate request_id", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "503": { "description": "queue_full", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/v1/result": {
+      "post": {
+        "summary": "Read the status or signed result of a request",
+        "description": "Results are kept 24 hours. A done result is signed by the job key the request was sealed to; verify it before use. Results are signed, not encrypted: keep request_id private, and services disclose ranges by default.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["request_id"], "properties": { "request_id": { "type": "string", "pattern": "^[0-9a-f]{16,64}$" } } } } } },
+        "responses": {
+          "200": { "description": "queued, working, done (with sealed) or error (with error)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResultResponse" } } } },
+          "404": { "description": "not_found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": { "type": "object", "required": ["error"], "properties": { "error": { "type": "object", "required": ["code"], "properties": { "code": { "type": "string" }, "message": { "type": "string", "nullable": true } } } } },
+      "KeyResponse": {
+        "type": "object", "required": ["announcement", "signature"],
+        "properties": {
+          "service": { "type": "string" },
+          "announcement": {
+            "type": "object",
+            "required": ["protocol", "cipher", "application_id", "artifact_digest", "policy_digest", "job_ed25519_public_key", "encryption_public_key", "issued_at", "expires_at"],
+            "properties": {
+              "protocol": { "type": "string", "enum": ["pocket-confidential/0.1"] },
+              "cipher": { "type": "string", "enum": ["x25519-hkdf-sha256-aes-256-gcm"] },
+              "application_id": { "type": "string" }, "deployment_id": { "type": "string" }, "acurast_job_id": { "type": "string" }, "processor": { "type": "string" },
+              "artifact_digest": { "type": "string" }, "policy_digest": { "type": "string" },
+              "job_ed25519_public_key": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "encryption_public_key": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$" },
+              "issued_at": { "type": "string", "format": "date-time" }, "expires_at": { "type": "string", "format": "date-time" }
+            }
+          },
+          "signature": { "type": "string", "pattern": "^[0-9a-f]{128}$" },
+          "note": { "type": "string" }
+        }
+      },
+      "SealedRequest": {
+        "type": "object",
+        "required": ["protocol", "cipher", "service", "request_id", "to", "ephemeral_public_key", "iv", "ciphertext", "tag", "input_commitment"],
+        "properties": {
+          "protocol": { "type": "string", "enum": ["pocket-confidential/0.1"] },
+          "cipher": { "type": "string", "enum": ["x25519-hkdf-sha256-aes-256-gcm"] },
+          "service": { "type": "string", "enum": ["treasury-stress"] },
+          "request_id": { "type": "string", "pattern": "^[0-9a-f]{16,64}$" },
+          "to": { "type": "string", "description": "encryption_public_key from GET /v1/key" },
+          "ephemeral_public_key": { "type": "string" }, "iv": { "type": "string" }, "ciphertext": { "type": "string" }, "tag": { "type": "string" },
+          "input_commitment": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "sha256(canonical(input) + salt), hex" }
+        }
+      },
+      "ResultResponse": {
+        "type": "object", "required": ["request_id", "status"],
+        "properties": {
+          "service": { "type": "string" }, "request_id": { "type": "string" }, "input_commitment": { "type": "string" },
+          "status": { "type": "string", "enum": ["queued", "working", "done", "error"] },
+          "sealed": { "type": "object", "required": ["result", "evidence", "signature"], "properties": { "result": { "type": "object" }, "evidence": { "type": "object", "description": "pocket-confidential-evidence/0.1: service, service_version, request_id, input_commitment, output_hash, application_id, deployment_id, processor, job_ed25519_public_key, basis, computed_at, limits" }, "signature": { "type": "string" } } },
+          "error": { "type": "object", "properties": { "code": { "type": "string" }, "message": { "type": "string", "nullable": true } } }
+        }
+      }
+    }
+  }
+}
