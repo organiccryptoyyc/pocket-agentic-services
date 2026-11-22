@@ -23,8 +23,9 @@ Reference client and worker: the `pocket-confidential` worker repository (`src/p
 | `service` | Version | What it returns |
 |---|---|---|
 | `treasury-stress` | 0.2.0 | Mild and severe 30-day shocks against the customer's liquidity floor and limits, plus a `current` scenario: the mild set scaled by today's conditions from public Pocket signals (PMIC macro-regime and credit-stress; PMIC crypto-liquidity, stablecoin-supply and crypto-prices). Ranges, not exact figures, by default. |
-| `covenant-monitor` (Beta) | 0.1.0 | A watch on the same engine (Service 2). Nothing but `within_limits` while every limit holds; when one is crossed, only which limit, by how much (a band unless `exact`) and the weak public signals that drove it. Never positions, ids, amounts or the floor. |
-| `counterparty-screen` (Beta) | 0.1.0 | Service 3: screens names, wallets and domains against public U.S. screening lists inside the job; the answer is sealed to the customer's `reply_key`, so the queue sees neither the items nor the result. |
+| `covenant-monitor` | 0.1.0 | A watch on the same engine (Service 2). Nothing but `within_limits` while every limit holds; when one is crossed, only which limit, by how much (a band unless `exact`) and the weak public signals that drove it. Never positions, ids, amounts or the floor. |
+| `counterparty-screen` | 0.1.0 | Service 3: screens names, wallets and domains against public U.S. screening lists inside the job; the answer is sealed to the customer's `reply_key`, so the queue sees neither the items nor the result. |
+| `evidence-chain` | 0.1.0 | Service 4: the job fetches up to 8 https sources from the processor's own network (robots.txt honoured, honest user-agent, no private addresses) and returns an evidence packet sealed to `reply_key`: per source the redirect chain, HTTP status, retrieval time, SHA-256 of the exact bytes, title, and which of your claims appear (200-character excerpts); per claim, which sources agree and which differ, never resolved. The target sites see the requests; Pocket sees only ciphertext. |
 
 ### Live signals
 
