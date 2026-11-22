@@ -48,6 +48,7 @@ say(verifyEd25519(String(w.job_ed25519_public_key), canonical(w), String(signatu
 console.log(`      job ${w.acurast_job_id} launched by ${w.acurast_origin}, artifact ${w.artifact_digest}`);
 console.log(`      check that key on chain: https://docs.proof.computer/liskov/operate/verify-job-keys`);
 console.log(`      task set ${w.task_set_id}: ${w.claims_count} claims (sha256 ${w.claims_sha256}), ${w.checks.length} sampled`);
+for (const e of w.entities || []) console.log(`      ${e.entity_id.padEnd(22)} ${String(e.verdict).padEnd(12)} sampled ${e.sampled}/${e.claims}: match ${e.match}, in window ${e.match_in_window}, differs ${e.differs}, unavailable ${e.unavailable}; value checked ${e.checked_value_pct ?? "n/a"}%`);
 
 let id = 0;
 async function rpc(url, method, params) {
