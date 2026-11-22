@@ -5,6 +5,8 @@
 //   GET  /v1/key                      the current signed key announcement from the Liskov job
 //   POST /v1/submit  {request}        a request sealed to that key (protocol pocket-confidential/0.1)
 //   POST /v1/result  {request_id}     queued | working | done (signed result) | error
+//                                     a covenant-monitor watch: watching | ended, with the first
+//                                     signed alert (a crossed limit) and the latest signed check
 //
 // Job API on :8090 (a private Caddy route, bearer token; only the Liskov job calls it):
 //   POST /job/keys                    signed key announcement
@@ -30,7 +32,7 @@ const { createStore } = require("./lib/store");
 const { createSignals, defaultSources } = require("./lib/signals");
 
 const SERVICE = "pocket-confidential-queue";
-const VERSION = "0.3.3";
+const VERSION = "0.4.0";
 const MAX_BODY = 256 * 1024;
 const MAX_WITNESS_BODY = 1024 * 1024;
 const MAX_REQUEST = 128 * 1024;
@@ -101,6 +103,15 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }
         const r = store.get(id);
         if (!r) return err(res, 404, "not_found", "no such request (results are kept 24 hours)");
         const base = { service: SERVICE, request_id: id, input_commitment: r.request.input_commitment };
+        if (r.watch && r.status !== "error") {
+          const w = r.watch;
+          const live = Boolean(store.announcementFor(r.request.to));
+          return send(res, 200, { ...base, status: !live ? "ended" : w.checks ? "watching" : r.status === "leased" ? "working" : "queued",
+            watch: { checks: w.checks, last_checked_at: w.last_checked_at ? new Date(w.last_checked_at).toISOString() : null,
+              ends: live ? "when the job key it was sealed to changes, at most 24 hours after submission; then seal again to GET /v1/key" : "the job key changed; seal again to GET /v1/key",
+              watch_until: new Date(r.received_at + 24 * 3600_000).toISOString(),
+              alert: w.alert, latest: w.latest, last_error: w.last_error } });
+        }
         if (r.status === "done") return send(res, 200, { ...base, status: "done", sealed: r.sealed });
         if (r.status === "error") return send(res, 200, { ...base, status: "error", error: r.error });
         return send(res, 200, { ...base, status: r.status === "leased" ? "working" : "queued" });
@@ -143,27 +154,30 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }
         const to = url.searchParams.get("to") || "";
         if (!store.announcementFor(to)) return err(res, 409, "unknown_key", "publish the key announcement first");
         const max = Math.min(50, Math.max(1, Number(url.searchParams.get("max")) || 10));
-        const leased = store.lease(to, max);
-        // Public market signals ride along with work, identical for every customer.
-        const bundle = leased.length && signals ? await signals.get() : null;
-        return send(res, 200, { requests: leased, signals: bundle });
+        // Public market signals ride along with work, identical for every customer (cached 30
+        // minutes). Their fetch time also decides when a watch is due for its next check.
+        const bundle = signals && store.hasWork(to) ? await signals.get().catch(() => null) : null;
+        const leased = store.lease(to, max, bundle ? bundle.fetched_at : null);
+        return send(res, 200, { requests: leased, signals: leased.length ? bundle : null });
       }
       const body = await readJson(req);
       const id = String(body.request_id || "");
       const r = store.get(id);
       if (!r) return err(res, 404, "not_found", "no such request");
-      if (r.status === "done") return send(res, 200, { ok: true, already: true });
+      if (r.status === "done" || (r.watch && r.status !== "leased")) return send(res, 200, { ok: true, already: true });
       if (body.error) {
         const code = String(body.error.code || "service_failed").slice(0, 40);
         const message = body.error.message == null ? null : String(body.error.message).slice(0, 200);
-        store.complete(id, { status: "error", error: { code, message } });
+        if (r.watch) store.recordCheck(id, { error: { code, message } });
+        else store.complete(id, { status: "error", error: { code, message } });
         return send(res, 200, { ok: true });
       }
       const ann = store.announcementFor(r.request.to);
       if (!ann) return err(res, 409, "unknown_key", "the key this request was sealed to has expired");
       const problems = checkSealed(body.sealed, r.request, ann.announcement.job_ed25519_public_key);
       if (problems.length) return err(res, 400, "bad_result", problems.join("; "));
-      store.complete(id, { status: "done", sealed: body.sealed });
+      if (r.watch) store.recordCheck(id, { sealed: body.sealed });
+      else store.complete(id, { status: "done", sealed: body.sealed });
       return send(res, 200, { ok: true });
     } catch (e) {
       return err(res, e.status || 400, "bad_request", String(e.message).slice(0, 200));

@@ -37,9 +37,9 @@ function seal(k, req, result) {
   return { result, evidence, signature: k.sign(canonical({ result, evidence })) };
 }
 
-async function start(now) {
+async function start(now, signals = null) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cq-"));
-  const app = createApp({ dataDir: dir, jobToken: TOKEN, now });
+  const app = createApp({ dataDir: dir, jobToken: TOKEN, now, signals });
   await new Promise((r) => app.publicServer.listen(0, "127.0.0.1", r));
   await new Promise((r) => app.jobServer.listen(0, "127.0.0.1", r));
   await new Promise((r) => app.peerServer.listen(0, "127.0.0.1", r));
@@ -236,4 +236,61 @@ test("witness: TCS-6 posts claims on the peer API, the job leases them and posts
     t += 31 * 60_000;
     assert.strictEqual((await q.job("GET", "/job/witness")).body.task_set.task_set_id, "tcs6-beta-second-001");
   } finally { q.close(); }
+});
+
+test("covenant-monitor watch: re-checked when signals refresh, first alert kept, ends with its key", async () => {
+  let t = Date.parse("2026-11-22T00:00:00Z");
+  let bundle = { fetched_at: new Date(t).toISOString(), items: [] };
+  const q = await start(() => t, { get: async () => bundle, peek: () => bundle });
+  try {
+    const k = jobKey();
+    await q.job("POST", "/job/keys", announcement(k, ENC, t));
+    const req = { ...sealedRequest(ENC, "e".repeat(24)), service: "covenant-monitor" };
+    assert.strictEqual((await q.pub("POST", "/v1/submit", { request: req })).status, 202);
+    const lease = async () => (await q.job("GET", `/job/requests?to=${ENC}`)).body.requests.length;
+    const post = (result) => q.job("POST", "/job/results", { request_id: req.request_id, sealed: seal(k, req, result) });
+    const read = async () => (await q.pub("POST", "/v1/result", { request_id: req.request_id })).body;
+
+    assert.strictEqual(await lease(), 1);
+    assert.strictEqual((await post({ status: "within_limits" })).status, 200);
+    let r = await read();
+    assert.deepStrictEqual([r.status, r.watch.checks, r.watch.alert], ["watching", 1, null]);
+    assert.strictEqual(await lease(), 0, "same signals: not checked again");
+    t += 30 * 60_000;
+    assert.strictEqual(await lease(), 0, "time alone does not trigger a check");
+    bundle = { fetched_at: new Date(t).toISOString(), items: [] };
+    assert.strictEqual(await lease(), 1, "new signals: checked again");
+    await post({ status: "limit_crossed", crossed: [{ limit: "liquidity_floor" }] });
+    t += 30 * 60_000; bundle = { fetched_at: new Date(t).toISOString(), items: [] };
+    assert.strictEqual(await lease(), 1);
+    await post({ status: "within_limits" });
+    r = await read();
+    assert.strictEqual(r.watch.checks, 3);
+    assert.strictEqual(r.watch.alert.result.status, "limit_crossed", "the first alert is kept after recovery");
+    assert.strictEqual(r.watch.latest.result.status, "within_limits");
+    assert.strictEqual((await post({ status: "within_limits" })).body.already, true, "an unleased watch takes no result");
+
+    t += 7 * 3600_000; // the job is gone: its announcement expires and nobody renews it
+    r = await read();
+    assert.strictEqual(r.status, "ended");
+  } finally {
+    q.close();
+  }
+});
+
+test("covenant-monitor watch: bad input on the first check ends it as an error", async () => {
+  let t = Date.parse("2026-11-22T00:00:00Z");
+  const q = await start(() => t);
+  try {
+    const k = jobKey();
+    await q.job("POST", "/job/keys", announcement(k, ENC, t));
+    const req = { ...sealedRequest(ENC, "f".repeat(24)), service: "covenant-monitor" };
+    await q.pub("POST", "/v1/submit", { request: req });
+    await q.job("GET", `/job/requests?to=${ENC}`);
+    await q.job("POST", "/job/results", { request_id: req.request_id, error: { code: "bad_input", message: "watch must list one or more of current, mild, severe" } });
+    const r = (await q.pub("POST", "/v1/result", { request_id: req.request_id })).body;
+    assert.deepStrictEqual([r.status, r.error.code], ["error", "bad_input"]);
+  } finally {
+    q.close();
+  }
 });
