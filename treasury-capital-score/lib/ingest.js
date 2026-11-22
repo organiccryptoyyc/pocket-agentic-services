@@ -41,6 +41,8 @@ function checkBundle(b, registryIds) {
 }
 
 function startIngest() {
+  const log = (event, data) => console.log(JSON.stringify({ event, ...data }));
+  const witness = require("./witness").startWitness(log);
   const token = process.env.TCS6_INGEST_TOKEN;
   if (!token) {
     console.log(JSON.stringify({ ingest: "disabled", reason: "TCS6_INGEST_TOKEN not set" }));
@@ -68,6 +70,7 @@ function startIngest() {
           accepted.push(b.entity_id);
         }
       }
+      if (witness && accepted.length) witness.noteAccepted(accepted);
       return sendJson(res, rejected.length && !accepted.length ? 400 : 200, { accepted, rejected });
     } catch (e) {
       const status = e instanceof ClientError ? e.status : 400;

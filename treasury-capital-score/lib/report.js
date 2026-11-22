@@ -248,7 +248,11 @@ function buildReport(entity, bundle, base, peerNrts, opts = {}) {
   // caller byte-for-byte as the Pi signed it. Absent for bundles that carry neither an attestation nor a
   // verification summary (older bundles, golden fixtures). Never read by scoring.
   const attestation = attestationBlock(bundle, verdict, mat);
-  return attestation ? { ...report, attestation } : report;
+  // Independent witness (pocket-confidential): a signed second read of a sample of this bundle's
+  // on-chain balances, attached as received so its signature still checks. Absent unless a witness
+  // exists for this entity (Beta only for now). Never read by scoring.
+  const withAttestation = attestation ? { ...report, attestation } : report;
+  return opts.witness ? { ...withAttestation, independent_witness: opts.witness } : withAttestation;
 }
 
 // Schema-valid "nothing scored yet" answer for a known registry entity.

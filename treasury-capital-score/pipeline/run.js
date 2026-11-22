@@ -17,6 +17,7 @@ const S = require("../lib/scoring");
 const { buildReport } = require("../lib/report");
 const { verifyEnvelope, loadKeys } = require("../lib/attestation");
 const { validateReport } = require("../lib/schema");
+const { witnessBlock } = require("../lib/witness");
 const store = require("../lib/store");
 
 const MAX_EVIDENCE_AGE_H = Number(process.env.TCS6_MAX_EVIDENCE_AGE_HOURS || 24);
@@ -62,7 +63,7 @@ function runOnce(now = new Date()) {
       // Replay protection: an attestation older than the newest one accepted for this entity is invalid.
       const eid = p.entity.entity_id;
       const verdict = verifyEnvelope(p.bundle.attestation, p.bundle, keys, { lastSignedAt: attestState[eid] && attestState[eid].signed_at, now });
-      const report = buildReport(p.entity, p.bundle, p.base, peers, { attestation: verdict });
+      const report = buildReport(p.entity, p.bundle, p.base, peers, { attestation: verdict, witness: witnessBlock(eid, p.bundle) });
       if (verdict.status === "valid" || verdict.status === "stale") {
         const sig = p.bundle.attestation.signature;
         if (!attestState[eid] || Date.parse(sig.signed_at) > Date.parse(attestState[eid].signed_at)) attestState[eid] = { signed_at: sig.signed_at, attestation_id: sig.attestation_id };

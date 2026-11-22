@@ -21,6 +21,7 @@ services:
       TCS6_NETWORK: {{NETWORK}}
       TCS6_INGEST_HOST: 0.0.0.0
       TCS6_INGEST_PORT: "8090"
+      TCS6_WITNESS_QUEUE: "{{WITNESS_QUEUE}}"   # independent witness (Beta only for now); empty = off
       TCS6_INGEST_TOKEN: "{{INGEST_TOKEN}}"
     volumes:
       - tcs6-data:/var/lib/tcs6

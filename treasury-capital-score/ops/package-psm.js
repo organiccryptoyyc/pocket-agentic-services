@@ -50,6 +50,8 @@ for (const d of ["lib", "pipeline", "methodology", "data", "migrations", "config
 const compose = fs.readFileSync(path.join(SRC, "ops/psm/docker-compose.template.yaml"), "utf8")
   .replaceAll("{{NETWORK}}", NETWORK).replaceAll("{{DEPLOY_ID}}", DEPLOY_ID)
   .replaceAll("{{DEPLOY_STAMP}}", new Date().toISOString())
+  // Independent witness (pocket-confidential): Beta only until the owner reviews it on Beta.
+  .replaceAll("{{WITNESS_QUEUE}}", NETWORK === "beta" ? "http://pocket-confidential-queue-beta-backend:8091" : "")
   .replaceAll("{{INGEST_TOKEN}}", fs.readFileSync(SECRET, "utf8").match(/TCS6_INGEST_TOKEN=([0-9a-f]+)/)[1]);
 fs.mkdirSync(path.join(OUT, "deploy"), { recursive: true });
 fs.writeFileSync(path.join(OUT, "deploy/docker-compose.yaml"), compose);

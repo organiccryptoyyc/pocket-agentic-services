@@ -360,6 +360,27 @@
       "type": "string",
       "const": "This report is derived from public evidence and stated assumptions as of the reported timestamp. It is not legal, tax, accounting, or personalized investment advice, and it does not authorize or execute any transaction."
     },
+    "independent_witness": {
+      "description": "Optional (Beta). A second, independent read of a sample of this report's plain on-chain balances by a Liskov job on an Acurast processor, signed with that job's key and attached exactly as signed (signed.witness, signed.signature; canonical JSON, Ed25519). status is the job's verdict for this entity, or pending when the scored evidence has not been re-read yet. It confirms the sampled holdings existed at the recorded blocks; it does not confirm prices, control, obligations or the score. Never used in scoring.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "statement", "evidence_collected_at", "witnessed_at", "sampled", "match", "match_in_window", "differs", "unavailable", "checked_value_pct", "signature_verified", "verify_with", "signed"],
+      "properties": {
+        "status": { "type": "string", "enum": ["confirmed", "partial", "differs", "unavailable", "not_checked", "pending"] },
+        "statement": { "type": "string" },
+        "evidence_collected_at": { "type": "string" },
+        "witnessed_at": { "type": ["string", "null"] },
+        "sampled": { "type": "integer" },
+        "match": { "type": "integer" },
+        "match_in_window": { "type": "integer" },
+        "differs": { "type": "integer" },
+        "unavailable": { "type": "integer" },
+        "checked_value_pct": { "type": ["number", "null"] },
+        "signature_verified": { "type": "boolean" },
+        "verify_with": { "type": "string" },
+        "signed": { "type": ["object", "null"], "required": ["witness", "signature"], "properties": { "witness": { "type": "object" }, "signature": { "type": "string" } } }
+      }
+    },
     "attestation": {
       "description": "Optional (Verified layer). Signed attestation of cross-source comparisons and validation controls on this report's inputs, exactly as the collector signed it (RFC 8785 canonical payload, Ed25519), plus this service's verification verdict. Present when the evidence bundle carried an attestation or a verification summary. Never used in scoring.",
       "type": "object",
