@@ -10,11 +10,15 @@ const path = require("path");
 const KEEP_MS = 24 * 3600_000;
 const LEASE_MS = 120_000; // a request handed to a job comes back if no result arrives in 2 min
 const MAX_PENDING = 1000;
+const WITNESS_KEEP_MS = 7 * 24 * 3600_000;
+const WITNESS_LEASE_MS = 30 * 60_000; // a witness reads the chain for up to ~20 minutes
+const WITNESS_MAX_OPEN = 20;
 
 function createStore(dataDir, now = () => Date.now()) {
   const file = path.join(dataDir, "queue-state.json");
   let s = { announcements: [], requests: {} };
   try { s = JSON.parse(fs.readFileSync(file, "utf8")); } catch { /* fresh */ }
+  s.witness = s.witness || {};
 
   function save() {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -27,6 +31,7 @@ function createStore(dataDir, now = () => Date.now()) {
     const t = now();
     s.announcements = s.announcements.filter((a) => Date.parse(a.announcement.expires_at) > t);
     for (const [id, r] of Object.entries(s.requests)) if (t - r.received_at > KEEP_MS) delete s.requests[id];
+    for (const [id, w] of Object.entries(s.witness)) if (t - w.received_at > WITNESS_KEEP_MS) delete s.witness[id];
   }
 
   return {
@@ -76,6 +81,37 @@ function createStore(dataDir, now = () => Date.now()) {
       save();
       return true;
     },
+    // Witness task sets: one at a time, oldest first; an expired lease is handed out again.
+    addTaskSet(ts) {
+      prune();
+      const old = s.witness[ts.task_set_id];
+      if (old) return { ok: true, already: true, status: old.status };
+      const open = Object.values(s.witness).filter((w) => w.status === "queued" || w.status === "leased").length;
+      if (open >= WITNESS_MAX_OPEN) return { ok: false, reason: "too many open task sets" };
+      s.witness[ts.task_set_id] = { task_set: ts, status: "queued", received_at: now(), leased_at: null, attempts: 0 };
+      save();
+      return { ok: true, status: "queued" };
+    },
+    leaseTaskSet() {
+      prune();
+      const t = now();
+      const free = Object.values(s.witness)
+        .filter((w) => w.status === "queued" || (w.status === "leased" && t - w.leased_at > WITNESS_LEASE_MS))
+        .sort((a, b) => a.received_at - b.received_at)[0];
+      if (!free) return null;
+      free.status = "leased"; free.leased_at = t; free.attempts += 1;
+      save();
+      return free.task_set;
+    },
+    getTaskSet(id) { prune(); return s.witness[id] || null; },
+    completeTaskSet(id, patch) {
+      const w = s.witness[id];
+      if (!w) return false;
+      Object.assign(w, patch, { completed_at: now() });
+      save();
+      return true;
+    },
+    jobKeys() { prune(); return [...new Set(s.announcements.map((a) => a.announcement.job_ed25519_public_key))]; },
     stats() {
       prune();
       const by = {};
@@ -85,4 +121,4 @@ function createStore(dataDir, now = () => Date.now()) {
   };
 }
 
-module.exports = { createStore, KEEP_MS, LEASE_MS, MAX_PENDING };
+module.exports = { createStore, KEEP_MS, LEASE_MS, MAX_PENDING, WITNESS_KEEP_MS, WITNESS_LEASE_MS, WITNESS_MAX_OPEN };

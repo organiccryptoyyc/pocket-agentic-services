@@ -9,7 +9,7 @@ const path = require("path");
 const crypto = require("crypto");
 const http = require("http");
 const { createApp } = require("../server");
-const { canonical, sha256hex, PROTOCOL, CIPHER, EVIDENCE_SCHEMA } = require("../lib/verify");
+const { canonical, sha256hex, PROTOCOL, CIPHER, EVIDENCE_SCHEMA, WITNESS_SCHEMA } = require("../lib/verify");
 
 const TOKEN = "j".repeat(48);
 
@@ -42,13 +42,15 @@ async function start(now) {
   const app = createApp({ dataDir: dir, jobToken: TOKEN, now });
   await new Promise((r) => app.publicServer.listen(0, "127.0.0.1", r));
   await new Promise((r) => app.jobServer.listen(0, "127.0.0.1", r));
+  await new Promise((r) => app.peerServer.listen(0, "127.0.0.1", r));
+  const peer = `http://127.0.0.1:${app.peerServer.address().port}`;
   const pub = `http://127.0.0.1:${app.publicServer.address().port}`;
   const job = `http://127.0.0.1:${app.jobServer.address().port}`;
   const call = async (base, method, p, body, auth) => {
     const r = await fetch(base + p, { method, headers: { "Content-Type": "application/json", ...(auth ? { Authorization: `Bearer ${auth}` } : {}) }, body: body ? JSON.stringify(body) : undefined });
     return { status: r.status, body: await r.json() };
   };
-  return { app, dir, pub: (m, p, b) => call(pub, m, p, b), job: (m, p, b, auth = TOKEN) => call(job, m, p, b, auth), close: () => { app.publicServer.close(); app.jobServer.close(); } };
+  return { app, dir, pub: (m, p, b) => call(pub, m, p, b), job: (m, p, b, auth = TOKEN) => call(job, m, p, b, auth), peer: (m, p, b) => call(peer, m, p, b), close: () => { app.publicServer.close(); app.jobServer.close(); app.peerServer.close(); } };
 }
 
 const ENC = "x".repeat(43);
@@ -180,4 +182,45 @@ test("signals: public briefs ride along with leased work, cached, failures marke
   } finally {
     app.publicServer.close(); app.jobServer.close(); src.close();
   }
+});
+
+test("witness: TCS-6 posts claims on the peer API, the job leases them and posts a signed witness", async () => {
+  let t = Date.parse("2026-11-20T00:00:00Z");
+  const q = await start(() => t);
+  try {
+    const claims = [{ ref: "ethereum:native:0x11", entity_id: "aave", chain: "ethereum", holder: "0x" + "1".repeat(40), token: null, quantity: 5, value_usd: 15000, observed_at: new Date(t - 3600_000).toISOString() }];
+    const ts = { task_set_id: "tcs6-beta-2026-11-20T00", network: "beta", source: "treasury-capital-score-beta", claims };
+    assert.strictEqual((await q.peer("POST", "/peer/witness/tasks", { task_set: { ...ts, claims: [{ ...claims[0], holder: "nope" }] } })).status, 400);
+    assert.strictEqual((await q.peer("POST", "/peer/witness/tasks", { task_set: ts })).status, 202);
+    assert.strictEqual((await q.peer("POST", "/peer/witness/tasks", { task_set: ts })).status, 200, "same id is idempotent");
+    assert.strictEqual((await q.peer("GET", `/peer/witness/result?task_set_id=${ts.task_set_id}`)).body.status, "queued");
+    assert.strictEqual((await q.job("GET", "/job/witness", null, "wrong-token-wrong-token-wrong-token")).status, 401);
+    const leased = await q.job("GET", "/job/witness");
+    assert.strictEqual(leased.body.task_set.task_set_id, ts.task_set_id);
+    assert.strictEqual((await q.job("GET", "/job/witness")).body.task_set, null, "not handed out twice while leased");
+    assert.strictEqual((await q.peer("GET", `/peer/witness/result?task_set_id=${ts.task_set_id}`)).body.status, "working");
+
+    const k = jobKey();
+    const witness = { schema: WITNESS_SCHEMA, task_set_id: ts.task_set_id, claims_sha256: sha256hex(canonical(claims)), job_ed25519_public_key: k.pub, entities: [], checks: [] };
+    // No announcement from that key yet: refused. A witness over other claims: refused.
+    assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness, signature: k.sign(canonical(witness)) })).status, 400);
+    await q.job("POST", "/job/keys", announcement(k, ENC, t));
+    const wrong = { ...witness, claims_sha256: "0".repeat(64) };
+    assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: wrong, signature: k.sign(canonical(wrong)) })).status, 400);
+    assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness, signature: k.sign(canonical({ ...witness, x: 1 })) })).status, 400, "bad signature");
+    assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness, signature: k.sign(canonical(witness)) })).status, 200);
+    const done = await q.peer("GET", `/peer/witness/result?task_set_id=${ts.task_set_id}`);
+    assert.strictEqual(done.body.status, "done");
+    assert.deepStrictEqual(done.body.witness, witness);
+
+    // The peer API is not on the public port, and the job API is not on the peer port.
+    assert.strictEqual((await q.pub("POST", "/peer/witness/tasks", { task_set: ts })).status, 404);
+    assert.strictEqual((await q.peer("GET", "/job/witness")).status, 404);
+    // An unanswered lease comes back after 30 minutes.
+    await q.peer("POST", "/peer/witness/tasks", { task_set: { ...ts, task_set_id: "tcs6-beta-second-001" } });
+    assert.ok((await q.job("GET", "/job/witness")).body.task_set);
+    assert.strictEqual((await q.job("GET", "/job/witness")).body.task_set, null);
+    t += 31 * 60_000;
+    assert.strictEqual((await q.job("GET", "/job/witness")).body.task_set.task_set_id, "tcs6-beta-second-001");
+  } finally { q.close(); }
 });

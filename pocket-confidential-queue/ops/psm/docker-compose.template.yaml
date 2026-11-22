@@ -2,7 +2,8 @@
 # ops/package-psm.js; don't edit the copy. The job token is filled in from
 # .secrets/<network>-job.env (gitignored) and also goes into the Liskov job as the
 # CONFIDENTIAL_QUEUE_TOKEN secret. Port 8080: public API (RelayMiner, later). Port 8090:
-# job API, reached only through the private route {{ROUTE}}.
+# job API, reached only through the private route {{ROUTE}}. Port 8091: peer API (witness
+# task sets from our own backends), on the internal Docker network only: no route, no host port.
 services:
   backend:
     build: ../backend
@@ -12,12 +13,13 @@ services:
     environment:
       PORT: "8080"
       CQ_JOB_PORT: "8090"
+      CQ_PEER_PORT: "8091"
       CQ_JOB_TOKEN: "{{JOB_TOKEN}}"
       CQ_NETWORK: {{NETWORK}}
       CQ_DEPLOY_STAMP: "{{DEPLOY_STAMP}}"
     volumes:
       - cq-data:/var/lib/pocket-confidential-queue
-    expose: ["8080", "8090"]
+    expose: ["8080", "8090", "8091"]
     mem_limit: 128m
     networks: [supplier]
 

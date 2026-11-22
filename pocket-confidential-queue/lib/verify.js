@@ -78,4 +78,47 @@ function checkSealed(sealed, req, jobKeyHex) {
   return p;
 }
 
-module.exports = { PROTOCOL, CIPHER, EVIDENCE_SCHEMA, canonical, sha256hex, verifyEd25519, checkAnnouncement, checkRequest, checkSealed };
+// Witness task sets (TCS-6 claims) and the job's signed witness. Same rules as
+// pocket-confidential/src/witness.ts.
+const WITNESS_SCHEMA = "pocket-confidential-witness/0.1";
+const MAX_CLAIMS = 2000;
+const ADDR = /^0x[0-9a-fA-F]{40}$/;
+function checkTaskSet(t, now = Date.now()) {
+  const p = [];
+  if (!t || typeof t !== "object") return ["task_set must be an object"];
+  if (typeof t.task_set_id !== "string" || !/^[A-Za-z0-9_.:-]{8,80}$/.test(t.task_set_id)) p.push("task_set_id must be 8-80 characters [A-Za-z0-9_.:-]");
+  if (typeof t.network !== "string" || typeof t.source !== "string") p.push("network and source are required");
+  if (!Array.isArray(t.claims) || !t.claims.length) return [...p, "claims must be a non-empty array"];
+  if (t.claims.length > MAX_CLAIMS) p.push(`at most ${MAX_CLAIMS} claims`);
+  t.claims.forEach((c, i) => {
+    if (!c || typeof c !== "object") return p.push(`claims[${i}] must be an object`);
+    if (typeof c.ref !== "string" || c.ref.length > 200) p.push(`claims[${i}].ref invalid`);
+    if (typeof c.entity_id !== "string" || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(c.entity_id)) p.push(`claims[${i}].entity_id invalid`);
+    if (typeof c.chain !== "string" || c.chain.length > 32) p.push(`claims[${i}].chain invalid`);
+    if (typeof c.holder !== "string" || !ADDR.test(c.holder)) p.push(`claims[${i}].holder invalid`);
+    if (c.token !== null && (typeof c.token !== "string" || !ADDR.test(c.token))) p.push(`claims[${i}].token invalid`);
+    if (typeof c.quantity !== "number" || !Number.isFinite(c.quantity) || c.quantity < 0) p.push(`claims[${i}].quantity invalid`);
+    if (c.value_usd !== null && (typeof c.value_usd !== "number" || !Number.isFinite(c.value_usd))) p.push(`claims[${i}].value_usd invalid`);
+    const ts = Date.parse(c.observed_at);
+    if (!Number.isFinite(ts) || ts > now + 300_000 || now - ts > 30 * 86400_000) p.push(`claims[${i}].observed_at invalid or older than 30 days`);
+  });
+  return p.slice(0, 20);
+}
+
+// The witness must answer this task set, commit to exactly its claims, and be signed by a job
+// key the queue currently holds an announcement for.
+function checkWitness(body, taskSet, jobKeys) {
+  const p = [];
+  const w = body && body.witness;
+  if (!w || typeof body.signature !== "string") return ["witness and signature are required"];
+  if (w.schema !== WITNESS_SCHEMA) p.push("unknown witness schema");
+  if (w.task_set_id !== taskSet.task_set_id) p.push("witness is for another task set");
+  if (w.claims_sha256 !== sha256hex(canonical(taskSet.claims))) p.push("witness does not commit to the claims it was given");
+  const key = String(w.job_ed25519_public_key || "").toLowerCase();
+  if (!jobKeys.map((k) => k.toLowerCase()).includes(key)) p.push("signed by a job key the queue does not hold");
+  if (!verifyEd25519(key, canonical(w), body.signature)) p.push("bad witness signature");
+  if (!Array.isArray(w.checks) || !Array.isArray(w.entities)) p.push("checks and entities are required");
+  return p;
+}
+
+module.exports = { PROTOCOL, CIPHER, EVIDENCE_SCHEMA, WITNESS_SCHEMA, canonical, sha256hex, verifyEd25519, checkAnnouncement, checkRequest, checkSealed, checkTaskSet, checkWitness };

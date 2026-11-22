@@ -53,6 +53,34 @@ Dossier exit liquidity and TCS-6 peer data would need the customer's tokens or e
 3. **The build.** `artifact_digest` names the exact attested build; the signed key announcement from
    `GET /v1/key` carries the same digest. A new build means a new key.
 
+## Witness re-check (TCS-6, phase 1, Beta)
+
+A second, independent read of the chain for TCS-6 treasury reports. TCS-6 posts its verified on-chain holdings
+as public claims (entity, chain, holder, token, quantity, observed time) to the internal peer API. The Liskov
+job then, on its own:
+
+- draws the sample: per entity, the 3 largest claims by value and 3 at random from the rest;
+- finds the block at each claim's observed time and reads the balance there (`eth_getBalance`, or
+  `balanceOf` and `decimals()` by `eth_call`) from **keyless Pocket public gateways fixed in the job's code**,
+  so neither the queue nor TCS-6 can choose the node;
+- labels each read `match` (within 0.5% at that block), `match_in_window` (within 0.5% ten minutes before or
+  twenty after), `differs` or `unavailable` (never a guessed value), and gives each entity a verdict;
+- signs the witness (schema `pocket-confidential-witness/0.1`) with the job key; it commits to the whole claim
+  set by `claims_sha256`.
+
+The queue accepts a witness only if it answers that task set, commits to exactly those claims and is signed by a
+job key it holds a current announcement for. To check one yourself:
+
+```
+node tools/verify-witness.mjs witness.json --rpc ethereum=https://<your archive node>
+```
+
+It checks the signature, then repeats every read at the recorded block and requires the same block hash and the
+same raw value. Then check the job key on chain as in step 2 above. A witness confirms that the sampled holdings
+existed at those blocks; it does not confirm prices, control of the addresses, obligations or the score. The job
+and the TCS-6 collector both read through Pocket gateways, so a gateway fault could affect both; `--rpc` with
+your own node removes that.
+
 ## Limits and honesty
 
 - The safe claim: a result is signed by the key that the attested Acurast processor published on chain for
@@ -70,6 +98,9 @@ Dossier exit liquidity and TCS-6 peer data would need the customer's tokens or e
 ## Ports
 
 - `:8080` public API (behind the RelayMiner).
-- `:8090` job API (`/job/keys`, `/job/requests`, `/job/results`), bearer token, private Caddy route only.
+- `:8090` job API (`/job/keys`, `/job/requests`, `/job/results`, `/job/witness`), bearer token, private Caddy
+  route only.
+- `:8091` peer API (`POST /peer/witness/tasks`, `GET /peer/witness/result?task_set_id=`), internal Docker
+  network only: no Caddy route, no host port. Task sets are kept 7 days; at most 20 open.
 
 Tests: `node --test test/queue.test.js`.

@@ -10,6 +10,13 @@
 //   POST /job/keys                    signed key announcement
 //   GET  /job/requests?to=&max=       sealed requests for that key (leased for 2 minutes)
 //   POST /job/results                 {request_id, sealed | error}
+//   GET  /job/witness                 the oldest open witness task set (leased 30 minutes) or null
+//   POST /job/witness                 {task_set_id, witness, signature} | {task_set_id, error}
+//
+// Peer API on :8091 (internal Docker network only: no Caddy route, no RelayMiner; our own
+// backends such as TCS-6 call it):
+//   POST /peer/witness/tasks          {task_set}: public treasury claims for the job to re-read on chain
+//   GET  /peer/witness/result?task_set_id=   queued | working | done (signed witness) | error
 //
 // The queue cannot read requests: it holds no decryption key. It checks signatures, expiry,
 // sizes and that each result is signed by the job key the request was sealed to.
@@ -18,13 +25,14 @@
 const http = require("http");
 const crypto = require("crypto");
 const path = require("path");
-const { checkAnnouncement, checkRequest, checkSealed } = require("./lib/verify");
+const { checkAnnouncement, checkRequest, checkSealed, checkTaskSet, checkWitness } = require("./lib/verify");
 const { createStore } = require("./lib/store");
 const { createSignals, defaultSources } = require("./lib/signals");
 
 const SERVICE = "pocket-confidential-queue";
-const VERSION = "0.2.1";
+const VERSION = "0.3.0";
 const MAX_BODY = 256 * 1024;
+const MAX_WITNESS_BODY = 1024 * 1024;
 const MAX_REQUEST = 128 * 1024;
 
 function send(res, status, obj) {
@@ -33,13 +41,13 @@ function send(res, status, obj) {
   res.end(body);
 }
 
-function readJson(req) {
+function readJson(req, max = MAX_BODY) {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks = [];
     req.on("data", (c) => {
       size += c.length;
-      if (size > MAX_BODY) { reject(Object.assign(new Error(`body over ${MAX_BODY} bytes`), { status: 413 })); req.destroy(); return; }
+      if (size > max) { reject(Object.assign(new Error(`body over ${max} bytes`), { status: 413 })); req.destroy(); return; }
       chunks.push(c);
     });
     req.on("end", () => {
@@ -107,8 +115,23 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }
     try {
       const url = new URL(req.url, "http://x");
       const route = `${req.method} ${url.pathname}`;
-      if (!["POST /job/keys", "GET /job/requests", "POST /job/results"].includes(route)) return err(res, 404, "not_found", "POST /job/keys, GET /job/requests, POST /job/results");
+      if (!["POST /job/keys", "GET /job/requests", "POST /job/results", "GET /job/witness", "POST /job/witness"].includes(route)) return err(res, 404, "not_found", "POST /job/keys, GET /job/requests, POST /job/results, GET|POST /job/witness");
       if (!tokenOk(req.headers.authorization, jobToken)) return err(res, 401, "unauthorized", "bearer token required");
+      if (route === "GET /job/witness") return send(res, 200, { task_set: store.leaseTaskSet() });
+      if (route === "POST /job/witness") {
+        const body = await readJson(req, MAX_WITNESS_BODY);
+        const w = store.getTaskSet(String(body.task_set_id || ""));
+        if (!w) return err(res, 404, "not_found", "no such task set");
+        if (w.status === "done") return send(res, 200, { ok: true, already: true });
+        if (body.error) {
+          store.completeTaskSet(w.task_set.task_set_id, { status: "error", error: { code: String(body.error.code || "witness_failed").slice(0, 40), message: body.error.message == null ? null : String(body.error.message).slice(0, 200) } });
+          return send(res, 200, { ok: true });
+        }
+        const problems = checkWitness(body, w.task_set, store.jobKeys());
+        if (problems.length) return err(res, 400, "bad_witness", problems.join("; "));
+        store.completeTaskSet(w.task_set.task_set_id, { status: "done", witness: body.witness, signature: body.signature });
+        return send(res, 200, { ok: true });
+      }
       if (route === "POST /job/keys") {
         const a = await readJson(req);
         const problems = checkAnnouncement(a, now());
@@ -147,7 +170,34 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }
     }
   }
 
-  return { store, publicServer: http.createServer(publicHandler), jobServer: http.createServer(jobHandler) };
+  async function peerHandler(req, res) {
+    try {
+      const url = new URL(req.url, "http://x");
+      const route = `${req.method} ${url.pathname}`;
+      if (route === "POST /peer/witness/tasks") {
+        const body = await readJson(req, MAX_WITNESS_BODY);
+        const problems = checkTaskSet(body.task_set, now());
+        if (problems.length) return err(res, 400, "bad_task_set", problems.join("; "));
+        const r = store.addTaskSet(body.task_set);
+        if (!r.ok) return err(res, 503, "busy", r.reason);
+        return send(res, r.already ? 200 : 202, { service: SERVICE, task_set_id: body.task_set.task_set_id, status: r.status });
+      }
+      if (route === "GET /peer/witness/result") {
+        const id = url.searchParams.get("task_set_id") || "";
+        const w = store.getTaskSet(id);
+        if (!w) return err(res, 404, "not_found", "no such task set (kept 7 days)");
+        const base = { service: SERVICE, task_set_id: id, received_at: new Date(w.received_at).toISOString() };
+        if (w.status === "done") return send(res, 200, { ...base, status: "done", witness: w.witness, signature: w.signature });
+        if (w.status === "error") return send(res, 200, { ...base, status: "error", error: w.error });
+        return send(res, 200, { ...base, status: w.status === "leased" ? "working" : "queued" });
+      }
+      return err(res, 404, "not_found", "POST /peer/witness/tasks, GET /peer/witness/result?task_set_id=");
+    } catch (e) {
+      return err(res, e.status || 400, "bad_request", String(e.message).slice(0, 200));
+    }
+  }
+
+  return { store, publicServer: http.createServer(publicHandler), jobServer: http.createServer(jobHandler), peerServer: http.createServer(peerHandler) };
 }
 
 if (require.main === module) {
@@ -163,6 +213,8 @@ if (require.main === module) {
   const jobPort = Number(process.env.CQ_JOB_PORT || 8090);
   app.publicServer.listen(port, "0.0.0.0", () => console.log(JSON.stringify({ service: SERVICE, version: VERSION, listening: port })));
   app.jobServer.listen(jobPort, "0.0.0.0", () => console.log(JSON.stringify({ job_api: "listening", port: jobPort })));
+  const peerPort = Number(process.env.CQ_PEER_PORT || 8091);
+  app.peerServer.listen(peerPort, "0.0.0.0", () => console.log(JSON.stringify({ peer_api: "listening", port: peerPort })));
 }
 
 module.exports = { createApp, SERVICE, VERSION };
