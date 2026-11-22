@@ -24,6 +24,7 @@ fs.rmSync(OUT, { recursive: true, force: true });
 const copy = (f, t) => fs.cpSync(path.join(SRC, f), path.join(OUT, t), { recursive: true });
 for (const f of ["server.js", "package.json", "Dockerfile"]) copy(f, `backend/${f}`);
 copy("lib", "backend/lib");
+copy("tools", "backend/tools"); // verify-witness.mjs and tcs6-claims.js (run by hand on the server)
 fs.mkdirSync(path.join(OUT, "deploy"), { recursive: true });
 fs.writeFileSync(path.join(OUT, "deploy/docker-compose.yaml"), fs.readFileSync(path.join(SRC, "ops/psm/docker-compose.template.yaml"), "utf8")
   .replaceAll("{{NETWORK}}", NETWORK).replaceAll("{{DEPLOY_ID}}", DEPLOY_ID).replaceAll("{{ROUTE}}", ROUTE)
