@@ -1,7 +1,7 @@
 // One-off: send every current bundle to the independent witness now instead of waiting for the Pi's
 // next push, wait for the signed result (up to 30 minutes) and store it. Then restart the pipeline
 // container so the reports pick it up. Run inside the backend container:
-//   docker exec treasury-capital-score-beta-backend node pipeline/witness-now.js
+//   docker exec treasury-capital-score[-beta]-backend node pipeline/witness-now.js
 "use strict";
 
 const { createWitnessClient } = require("../lib/witness");
@@ -24,7 +24,7 @@ async function main() {
     if (Date.now() > until) { console.log("still running after 30 minutes; the backend keeps polling it"); break; }
     await new Promise((r) => setTimeout(r, 30_000));
   }
-  console.log("done: now run  docker restart treasury-capital-score-beta-pipeline");
+  console.log(`done: now run  docker restart treasury-capital-score${network === "main" ? "" : "-beta"}-pipeline`);
   process.exit(0);
 }
 
