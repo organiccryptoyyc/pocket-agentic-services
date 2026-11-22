@@ -216,6 +216,8 @@ test("witness: TCS-6 posts claims on the peer API, the job leases them and posts
     // A witness without per-entity witnesses (an older job still draining) is refused.
     assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)) })).status, 400);
     assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)), entity_witnesses: [] })).status, 400);
+    assert.strictEqual((await q.peer("GET", `/peer/witness/result?task_set_id=${ts.task_set_id}`)).body.status, "queued", "a refused witness frees the task set at once");
+    assert.strictEqual((await q.job("GET", "/job/witness")).body.task_set.task_set_id, ts.task_set_id);
     const ewWrong = { ...ew, entity: { entity_id: "curve" } };
     assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)), entity_witnesses: [{ witness: ewWrong, signature: k.sign(canonical(ewWrong)) }] })).status, 400);
     assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)), entity_witnesses: [{ witness: ew, signature: k.sign(canonical(ew)) }] })).status, 200);

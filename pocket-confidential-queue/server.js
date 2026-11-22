@@ -30,7 +30,7 @@ const { createStore } = require("./lib/store");
 const { createSignals, defaultSources } = require("./lib/signals");
 
 const SERVICE = "pocket-confidential-queue";
-const VERSION = "0.3.2";
+const VERSION = "0.3.3";
 const MAX_BODY = 256 * 1024;
 const MAX_WITNESS_BODY = 1024 * 1024;
 const MAX_REQUEST = 128 * 1024;
@@ -128,7 +128,7 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }
           return send(res, 200, { ok: true });
         }
         const problems = checkWitness(body, w.task_set, store.jobKeys());
-        if (problems.length) return err(res, 400, "bad_witness", problems.join("; "));
+        if (problems.length) { store.releaseTaskSet(w.task_set.task_set_id); return err(res, 400, "bad_witness", problems.join("; ")); }
         store.completeTaskSet(w.task_set.task_set_id, { status: "done", witness: body.witness, signature: body.signature, entity_witnesses: body.entity_witnesses || [] });
         return send(res, 200, { ok: true });
       }

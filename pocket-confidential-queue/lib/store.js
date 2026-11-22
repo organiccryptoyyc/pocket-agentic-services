@@ -111,6 +111,14 @@ function createStore(dataDir, now = () => Date.now()) {
       save();
       return true;
     },
+    // A refused witness puts the task set straight back in the queue for another job.
+    releaseTaskSet(id) {
+      const w = s.witness[id];
+      if (!w || w.status !== "leased") return false;
+      w.status = "queued"; w.leased_at = null;
+      save();
+      return true;
+    },
     jobKeys() { prune(); return [...new Set(s.announcements.map((a) => a.announcement.job_ed25519_public_key))]; },
     stats() {
       prune();
