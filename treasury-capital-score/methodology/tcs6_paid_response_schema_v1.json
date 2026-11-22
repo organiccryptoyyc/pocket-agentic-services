@@ -361,7 +361,7 @@
       "const": "This report is derived from public evidence and stated assumptions as of the reported timestamp. It is not legal, tax, accounting, or personalized investment advice, and it does not authorize or execute any transaction."
     },
     "independent_witness": {
-      "description": "Optional (Beta). A second, independent read of a sample of this report's plain on-chain balances by a Liskov job on an Acurast processor, signed with that job's key and attached exactly as signed (signed.witness, signed.signature; canonical JSON, Ed25519). status is the job's verdict for this entity, or pending when the scored evidence has not been re-read yet. It confirms the sampled holdings existed at the recorded blocks; it does not confirm prices, control, obligations or the score. Never used in scoring.",
+      "description": "Optional. A second, independent read of a sample of this report's plain on-chain balances by a Liskov job on an Acurast processor, signed with that job's key and attached exactly as signed (signed.witness, signed.signature; canonical JSON, Ed25519). status is the job's verdict for this entity, or pending when the scored evidence has not been re-read yet. It confirms the sampled holdings existed at the recorded blocks; it does not confirm prices, control, obligations or the score. Never used in scoring.",
       "type": "object",
       "additionalProperties": false,
       "required": ["status", "statement", "evidence_collected_at", "witnessed_at", "sampled", "match", "match_in_window", "differs", "unavailable", "checked_value_pct", "signature_verified", "verify_with", "signed"],

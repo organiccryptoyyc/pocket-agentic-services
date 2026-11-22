@@ -6,7 +6,7 @@
 // TCS6_WITNESS_DEBOUNCE_MIN (default 10) minutes after the last push, then sent as one task set of
 // claims to the pocket-confidential queue's internal peer API (TCS6_WITNESS_QUEUE). The result is
 // polled; each entity's signed witness is checked and stored as witness/<entity_id>.json together with
-// the collected_at of the bundle it re-read. Off when TCS6_WITNESS_QUEUE is unset (MainNet today).
+// the collected_at of the bundle it re-read. Off when TCS6_WITNESS_QUEUE is unset.
 //
 // Pipeline: witnessBlock() attaches the stored witness to the report only when it covers the exact
 // bundle being scored; a newer bundle not yet re-read shows as "pending".
