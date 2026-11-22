@@ -23,6 +23,7 @@ Reference client and worker: the `pocket-confidential` worker repository (`src/p
 | `service` | Version | What it returns |
 |---|---|---|
 | `treasury-stress` | 0.2.0 | Mild and severe 30-day shocks against the customer's liquidity floor and limits, plus a `current` scenario: the mild set scaled by today's conditions from public Pocket signals (PMIC macro-regime and credit-stress; PMIC crypto-liquidity, stablecoin-supply and crypto-prices). Ranges, not exact figures, by default. |
+| `covenant-monitor` (Beta) | 0.1.0 | A watch on the same engine (Service 2). Nothing but `within_limits` while every limit holds; when one is crossed, only which limit, by how much (a band unless `exact`) and the weak public signals that drove it. Never positions, ids, amounts or the floor. |
 
 ### Live signals
 
@@ -37,6 +38,19 @@ Dossier exit liquidity and TCS-6 peer data would need the customer's tokens or e
 `liquid`; optional `lockup_days`), `liquidity_floor_usd`, optional `horizon_days` (default 30), `limits`
 (`min_stable_share`, `max_single_share`), `scenarios` (custom shocks, -1 to 1 per class) and
 `disclosure` (`range`, the default, or `exact`).
+
+### Covenant monitor (watch)
+
+`covenant-monitor` takes the `treasury-stress` input without `scenarios`, plus `watch` (one or more of
+`current`, `mild`, `severe`; default `current`). Submit it once with `POST /v1/submit`. The queue keeps the
+sealed request (it still cannot read it) and hands it back to the job each time the public signals refresh,
+about every 30 minutes. `POST /v1/result` then returns `status: "watching"` and a `watch` object: number of
+checks, last check time, `alert` (the first signed result that crossed a limit, kept even if the limit later
+recovers) and `latest` (the newest signed check). Both verify like any result. The watch ends when the job key
+it was sealed to changes (Liskov replaces the job at least every 24 hours, and on every release) or 24 hours
+after submission: the status becomes `ended`; seal again to the current `GET /v1/key` to keep watching. Each
+submit and each read is one paid relay; there is no subscription. If the signals are stale, a check says
+`not_checked`, never `within_limits`.
 
 ## How to verify a result
 
