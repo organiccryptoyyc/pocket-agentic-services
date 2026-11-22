@@ -213,6 +213,9 @@ test("witness: TCS-6 posts claims on the peer API, the job leases them and posts
     const ew = { schema: "pocket-confidential-entity-witness/0.1", task_set_id: ts.task_set_id, claims_sha256: witness.claims_sha256, job_ed25519_public_key: k.pub, entity: { entity_id: "aave" }, checks: [] };
     const other = jobKey();
     assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)), entity_witnesses: [{ witness: ew, signature: other.sign(canonical(ew)) }] })).status, 400);
+    // A witness without per-entity witnesses (an older job still draining) is refused.
+    assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)) })).status, 400);
+    assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)), entity_witnesses: [] })).status, 400);
     const ewWrong = { ...ew, entity: { entity_id: "curve" } };
     assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)), entity_witnesses: [{ witness: ewWrong, signature: k.sign(canonical(ewWrong)) }] })).status, 400);
     assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)), entity_witnesses: [{ witness: ew, signature: k.sign(canonical(ew)) }] })).status, 200);

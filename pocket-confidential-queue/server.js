@@ -30,7 +30,7 @@ const { createStore } = require("./lib/store");
 const { createSignals, defaultSources } = require("./lib/signals");
 
 const SERVICE = "pocket-confidential-queue";
-const VERSION = "0.3.1";
+const VERSION = "0.3.2";
 const MAX_BODY = 256 * 1024;
 const MAX_WITNESS_BODY = 1024 * 1024;
 const MAX_REQUEST = 128 * 1024;

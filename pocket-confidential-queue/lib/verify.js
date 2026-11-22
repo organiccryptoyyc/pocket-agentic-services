@@ -121,8 +121,10 @@ function checkWitness(body, taskSet, jobKeys) {
   if (!Array.isArray(w.checks) || !Array.isArray(w.entities)) p.push("checks and entities are required");
   // Per-entity witnesses (witness 0.2+): each signed by the same key, for the same task set and
   // claims, one per entity in the full witness.
-  if (body.entity_witnesses !== undefined) {
-    if (!Array.isArray(body.entity_witnesses)) return [...p, "entity_witnesses must be an array"];
+  // Witness 0.2+ signs each entity too; a witness without them (an older job still draining after a
+  // release) is refused, so its lease expires and the current job takes the task set again.
+  if (!Array.isArray(body.entity_witnesses) || !body.entity_witnesses.length) return [...p, "entity_witnesses are required (witness 0.2 or later)"];
+  {
     const names = new Set((w.entities || []).map((e) => e.entity_id));
     const seen = new Set();
     body.entity_witnesses.forEach((x, i) => {
