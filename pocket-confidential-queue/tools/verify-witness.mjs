@@ -39,12 +39,17 @@ args.forEach((a, i) => { if (a === "--rpc" && args[i + 1]) { const [c, ...u] = a
 const offline = args.includes("--offline");
 
 const doc = JSON.parse(readFileSync(file, "utf8"));
-const { witness: w, signature } = doc.witness && doc.signature ? doc : doc.sealed ?? doc;
+// Accepts the full witness, a queue result, or one entity's witness (as a TCS-6 report carries it
+// under independent_witness.signed).
+const src = doc.independent_witness && doc.independent_witness.signed ? doc.independent_witness.signed : doc;
+const { witness: w0, signature } = src;
+const w = w0 && w0.schema === "pocket-confidential-entity-witness/0.1" ? { ...w0, entities: [w0.entity] } : w0;
+const signed = w0;
 let failures = 0, repeated = 0, skipped = 0;
 const say = (ok, text) => { if (!ok) failures++; console.log(`${ok ? "PASS" : "FAIL"}  ${text}`); };
 
-say(w && w.schema === "pocket-confidential-witness/0.1", `schema ${w && w.schema}`);
-say(verifyEd25519(String(w.job_ed25519_public_key), canonical(w), String(signature)), `signature by job key ${w.job_ed25519_public_key}`);
+say(w && ["pocket-confidential-witness/0.1", "pocket-confidential-entity-witness/0.1"].includes(w.schema), `schema ${w && w.schema}`);
+say(verifyEd25519(String(w.job_ed25519_public_key), canonical(signed), String(signature)), `signature by job key ${w.job_ed25519_public_key}`);
 console.log(`      job ${w.acurast_job_id} launched by ${w.acurast_origin}, artifact ${w.artifact_digest}`);
 console.log(`      check that key on chain: https://docs.proof.computer/liskov/operate/verify-job-keys`);
 console.log(`      task set ${w.task_set_id}: ${w.claims_count} claims (sha256 ${w.claims_sha256}), ${w.checks.length} sampled`);

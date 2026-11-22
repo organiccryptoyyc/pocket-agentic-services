@@ -30,7 +30,7 @@ const { createStore } = require("./lib/store");
 const { createSignals, defaultSources } = require("./lib/signals");
 
 const SERVICE = "pocket-confidential-queue";
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 const MAX_BODY = 256 * 1024;
 const MAX_WITNESS_BODY = 1024 * 1024;
 const MAX_REQUEST = 128 * 1024;
@@ -129,7 +129,7 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }
         }
         const problems = checkWitness(body, w.task_set, store.jobKeys());
         if (problems.length) return err(res, 400, "bad_witness", problems.join("; "));
-        store.completeTaskSet(w.task_set.task_set_id, { status: "done", witness: body.witness, signature: body.signature });
+        store.completeTaskSet(w.task_set.task_set_id, { status: "done", witness: body.witness, signature: body.signature, entity_witnesses: body.entity_witnesses || [] });
         return send(res, 200, { ok: true });
       }
       if (route === "POST /job/keys") {
@@ -187,7 +187,7 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }
         const w = store.getTaskSet(id);
         if (!w) return err(res, 404, "not_found", "no such task set (kept 7 days)");
         const base = { service: SERVICE, task_set_id: id, received_at: new Date(w.received_at).toISOString() };
-        if (w.status === "done") return send(res, 200, { ...base, status: "done", witness: w.witness, signature: w.signature });
+        if (w.status === "done") return send(res, 200, { ...base, status: "done", witness: w.witness, signature: w.signature, entity_witnesses: w.entity_witnesses || [] });
         if (w.status === "error") return send(res, 200, { ...base, status: "error", error: w.error });
         return send(res, 200, { ...base, status: w.status === "leased" ? "working" : "queued" });
       }

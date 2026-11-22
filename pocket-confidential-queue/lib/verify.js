@@ -81,6 +81,7 @@ function checkSealed(sealed, req, jobKeyHex) {
 // Witness task sets (TCS-6 claims) and the job's signed witness. Same rules as
 // pocket-confidential/src/witness.ts.
 const WITNESS_SCHEMA = "pocket-confidential-witness/0.1";
+const ENTITY_WITNESS_SCHEMA = "pocket-confidential-entity-witness/0.1";
 const MAX_CLAIMS = 2000;
 const ADDR = /^0x[0-9a-fA-F]{40}$/;
 function checkTaskSet(t, now = Date.now()) {
@@ -118,7 +119,25 @@ function checkWitness(body, taskSet, jobKeys) {
   if (!jobKeys.map((k) => k.toLowerCase()).includes(key)) p.push("signed by a job key the queue does not hold");
   if (!verifyEd25519(key, canonical(w), body.signature)) p.push("bad witness signature");
   if (!Array.isArray(w.checks) || !Array.isArray(w.entities)) p.push("checks and entities are required");
-  return p;
+  // Per-entity witnesses (witness 0.2+): each signed by the same key, for the same task set and
+  // claims, one per entity in the full witness.
+  if (body.entity_witnesses !== undefined) {
+    if (!Array.isArray(body.entity_witnesses)) return [...p, "entity_witnesses must be an array"];
+    const names = new Set((w.entities || []).map((e) => e.entity_id));
+    const seen = new Set();
+    body.entity_witnesses.forEach((x, i) => {
+      const ew = x && x.witness;
+      if (!ew || typeof x.signature !== "string") return p.push(`entity_witnesses[${i}] needs witness and signature`);
+      if (ew.schema !== ENTITY_WITNESS_SCHEMA) p.push(`entity_witnesses[${i}] unknown schema`);
+      if (ew.task_set_id !== taskSet.task_set_id || ew.claims_sha256 !== w.claims_sha256) p.push(`entity_witnesses[${i}] is for another task set`);
+      if (String(ew.job_ed25519_public_key || "").toLowerCase() !== key) p.push(`entity_witnesses[${i}] signed by another key`);
+      const id = ew.entity && ew.entity.entity_id;
+      if (!names.has(id) || seen.has(id)) p.push(`entity_witnesses[${i}] entity not in the witness or repeated`);
+      seen.add(id);
+      if (!verifyEd25519(key, canonical(ew), x.signature)) p.push(`entity_witnesses[${i}] bad signature`);
+    });
+  }
+  return p.slice(0, 20);
 }
 
-module.exports = { PROTOCOL, CIPHER, EVIDENCE_SCHEMA, WITNESS_SCHEMA, canonical, sha256hex, verifyEd25519, checkAnnouncement, checkRequest, checkSealed, checkTaskSet, checkWitness };
+module.exports = { PROTOCOL, CIPHER, EVIDENCE_SCHEMA, WITNESS_SCHEMA, ENTITY_WITNESS_SCHEMA, canonical, sha256hex, verifyEd25519, checkAnnouncement, checkRequest, checkSealed, checkTaskSet, checkWitness };

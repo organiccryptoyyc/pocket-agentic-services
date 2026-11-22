@@ -208,10 +208,18 @@ test("witness: TCS-6 posts claims on the peer API, the job leases them and posts
     const wrong = { ...witness, claims_sha256: "0".repeat(64) };
     assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: wrong, signature: k.sign(canonical(wrong)) })).status, 400);
     assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness, signature: k.sign(canonical({ ...witness, x: 1 })) })).status, 400, "bad signature");
-    assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness, signature: k.sign(canonical(witness)) })).status, 200);
+    // Per-entity witnesses must be signed by the same key and name an entity of the witness.
+    const witness2 = { ...witness, entities: [{ entity_id: "aave" }] };
+    const ew = { schema: "pocket-confidential-entity-witness/0.1", task_set_id: ts.task_set_id, claims_sha256: witness.claims_sha256, job_ed25519_public_key: k.pub, entity: { entity_id: "aave" }, checks: [] };
+    const other = jobKey();
+    assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)), entity_witnesses: [{ witness: ew, signature: other.sign(canonical(ew)) }] })).status, 400);
+    const ewWrong = { ...ew, entity: { entity_id: "curve" } };
+    assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)), entity_witnesses: [{ witness: ewWrong, signature: k.sign(canonical(ewWrong)) }] })).status, 400);
+    assert.strictEqual((await q.job("POST", "/job/witness", { task_set_id: ts.task_set_id, witness: witness2, signature: k.sign(canonical(witness2)), entity_witnesses: [{ witness: ew, signature: k.sign(canonical(ew)) }] })).status, 200);
     const done = await q.peer("GET", `/peer/witness/result?task_set_id=${ts.task_set_id}`);
     assert.strictEqual(done.body.status, "done");
-    assert.deepStrictEqual(done.body.witness, witness);
+    assert.deepStrictEqual(done.body.witness, witness2);
+    assert.strictEqual(done.body.entity_witnesses[0].witness.entity.entity_id, "aave");
 
     // The peer API is not on the public port, and the job API is not on the peer port.
     assert.strictEqual((await q.pub("POST", "/peer/witness/tasks", { task_set: ts })).status, 404);
