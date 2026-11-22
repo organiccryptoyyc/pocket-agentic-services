@@ -20,7 +20,7 @@ services:
     volumes:
       - cq-data:/var/lib/pocket-confidential-queue
     expose: ["8080", "8090", "8091"]
-    mem_limit: 128m
+    mem_limit: 384m   # 0.5.0: the screening-list refresh parses two ~30 MB public files
     networks: [supplier]
 
 volumes:

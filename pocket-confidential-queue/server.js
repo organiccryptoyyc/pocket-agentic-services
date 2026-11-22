@@ -14,6 +14,7 @@
 //   POST /job/results                 {request_id, sealed | error}
 //   GET  /job/witness                 the oldest open witness task set (leased 30 minutes) or null
 //   POST /job/witness                 {task_set_id, witness, signature} | {task_set_id, error}
+//   GET  /job/lists?have=<sha256>     public screening lists for counterparty-screen, or {unchanged}
 //
 // Peer API on :8091 (internal Docker network only: no Caddy route, no RelayMiner; our own
 // backends such as TCS-6 call it):
@@ -30,9 +31,10 @@ const path = require("path");
 const { checkAnnouncement, checkRequest, checkSealed, checkTaskSet, checkWitness } = require("./lib/verify");
 const { createStore } = require("./lib/store");
 const { createSignals, defaultSources } = require("./lib/signals");
+const { createLists } = require("./lib/lists");
 
 const SERVICE = "pocket-confidential-queue";
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 const MAX_BODY = 256 * 1024;
 const MAX_WITNESS_BODY = 1024 * 1024;
 const MAX_REQUEST = 128 * 1024;
@@ -70,7 +72,7 @@ function tokenOk(header, token) {
 
 const err = (res, status, code, message) => send(res, status, { error: { code, message } });
 
-function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }) {
+function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null, lists = null }) {
   const store = createStore(dataDir, now);
 
   async function publicHandler(req, res) {
@@ -80,7 +82,9 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }
       if (route === "GET /v1/version") return send(res, 200, { service: SERVICE, version: VERSION, protocol: "pocket-confidential/0.1" });
       if (route === "GET /v1/health") {
         const b = signals && signals.peek();
-        return send(res, 200, { service: SERVICE, status: "ok", key_available: Boolean(store.currentAnnouncement()), signals: b ? { fetched_at: b.fetched_at, ok: b.items.filter((i) => i.status === "ok").length, total: b.items.length } : null });
+        const l = lists && lists.peek();
+        return send(res, 200, { service: SERVICE, status: "ok", key_available: Boolean(store.currentAnnouncement()), signals: b ? { fetched_at: b.fetched_at, ok: b.items.filter((i) => i.status === "ok").length, total: b.items.length } : null,
+          screening_lists: l ? { built_at: l.built_at, sha256: l.sha256, sources: l.sources } : null });
       }
       if (route === "GET /v1/key") {
         const a = store.currentAnnouncement();
@@ -126,8 +130,14 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null }
     try {
       const url = new URL(req.url, "http://x");
       const route = `${req.method} ${url.pathname}`;
-      if (!["POST /job/keys", "GET /job/requests", "POST /job/results", "GET /job/witness", "POST /job/witness"].includes(route)) return err(res, 404, "not_found", "POST /job/keys, GET /job/requests, POST /job/results, GET|POST /job/witness");
+      if (!["POST /job/keys", "GET /job/requests", "POST /job/results", "GET /job/witness", "POST /job/witness", "GET /job/lists"].includes(route)) return err(res, 404, "not_found", "POST /job/keys, GET /job/requests, POST /job/results, GET|POST /job/witness, GET /job/lists");
       if (!tokenOk(req.headers.authorization, jobToken)) return err(res, 401, "unauthorized", "bearer token required");
+      if (route === "GET /job/lists") {
+        const l = lists ? await lists.get() : null;
+        if (!l) return err(res, 503, "no_lists", "the screening lists are not available yet");
+        if (url.searchParams.get("have") === l.sha256) return send(res, 200, { unchanged: true, sha256: l.sha256 });
+        return send(res, 200, { lists: l });
+      }
       if (route === "GET /job/witness") return send(res, 200, { task_set: store.leaseTaskSet() });
       if (route === "POST /job/witness") {
         const body = await readJson(req, MAX_WITNESS_BODY);
@@ -221,8 +231,11 @@ if (require.main === module) {
     process.exit(1);
   }
   const signals = createSignals({ sources: defaultSources(process.env.CQ_NETWORK === "beta" ? "beta" : "main") });
-  const app = createApp({ dataDir: path.resolve(process.env.CQ_DATA_DIR || "/var/lib/pocket-confidential-queue"), jobToken: token, signals });
+  const dataDir = path.resolve(process.env.CQ_DATA_DIR || "/var/lib/pocket-confidential-queue");
+  const lists = createLists({ dataDir });
+  const app = createApp({ dataDir, jobToken: token, signals, lists });
   signals.get().catch(() => {}); // warm the cache at start
+  lists.get().catch(() => {});
   const port = Number(process.env.PORT || 8080);
   const jobPort = Number(process.env.CQ_JOB_PORT || 8090);
   app.publicServer.listen(port, "0.0.0.0", () => console.log(JSON.stringify({ service: SERVICE, version: VERSION, listening: port })));

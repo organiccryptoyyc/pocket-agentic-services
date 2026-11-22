@@ -24,6 +24,7 @@ Reference client and worker: the `pocket-confidential` worker repository (`src/p
 |---|---|---|
 | `treasury-stress` | 0.2.0 | Mild and severe 30-day shocks against the customer's liquidity floor and limits, plus a `current` scenario: the mild set scaled by today's conditions from public Pocket signals (PMIC macro-regime and credit-stress; PMIC crypto-liquidity, stablecoin-supply and crypto-prices). Ranges, not exact figures, by default. |
 | `covenant-monitor` (Beta) | 0.1.0 | A watch on the same engine (Service 2). Nothing but `within_limits` while every limit holds; when one is crossed, only which limit, by how much (a band unless `exact`) and the weak public signals that drove it. Never positions, ids, amounts or the floor. |
+| `counterparty-screen` (Beta) | 0.1.0 | Service 3: screens names, wallets and domains against public U.S. screening lists inside the job; the answer is sealed to the customer's `reply_key`, so the queue sees neither the items nor the result. |
 
 ### Live signals
 
@@ -38,6 +39,20 @@ Dossier exit liquidity and TCS-6 peer data would need the customer's tokens or e
 `liquid`; optional `lockup_days`), `liquidity_floor_usd`, optional `horizon_days` (default 30), `limits`
 (`min_stable_share`, `max_single_share`), `scenarios` (custom shocks, -1 to 1 per class) and
 `disclosure` (`range`, the default, or `exact`).
+
+### Counterparty screening (sealed answer)
+
+`counterparty-screen` input: `items[]` (1-500; `type`: name, wallet or domain; `value`; optional `chain`,
+`ref`), `reply_key` (a base64url X25519 public key you hold the private half of) and `match` (`standard`, the
+default, or `broad`). The queue downloads the U.S. Consolidated Screening List (data.trade.gov) and the OFAC
+SDN list (treasury.gov) every 12 hours, keeps only names, wallet addresses and websites, and gives the same
+bundle to the job; `GET /v1/health` shows its date and fingerprint. The job matches your items inside itself
+and encrypts the answer to `reply_key` (protocol `reply` envelope, AAD `reply|<request_id>`) before signing
+it, so `POST /v1/result` returns `result.status: "sealed_for_customer"` and ciphertext only. Open it with
+`openReply` in the worker repository's `src/protocol.ts`. The answer lists flagged items only (with the list
+entry matched and why) and unflagged items as a count. Names match by their words (legal suffixes and word
+order ignored); wallets and websites match exactly as OFAC lists them. No live lookups: nothing is sent to
+any other server. A match is a lead for review, not a legal determination.
 
 ### Covenant monitor (watch)
 

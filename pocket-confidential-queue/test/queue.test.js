@@ -294,3 +294,39 @@ test("covenant-monitor watch: bad input on the first check ends it as an error",
     q.close();
   }
 });
+
+test("screening lists: built from the official file formats, served to the job, unchanged when current", async () => {
+  const { createLists } = require("../lib/lists");
+  const csl = JSON.stringify({ results: Array.from({ length: 1200 }, (_, i) => ({ id: `id${i}`, name: `Entity ${i}`, alt_names: i === 0 ? ["First Alias"] : [], source: "Specially Designated Nationals (SDN) - Treasury Department", country: "XX", programs: ["P"] })), sources_used: [{ source_last_updated: "2026-11-20T20:32:31+00:00" }] });
+  const sdnEntry = (i) => `<sdnEntry><uid>${i}</uid><lastName>HOLDER ${i}</lastName><idList><id><idType>Digital Currency Address - ETH</idType><idNumber>0x${String(i).padStart(40, "a")}</idNumber></id><id><idType>Website</idType><idNumber>www.site${i}.example</idNumber></id></idList></sdnEntry>`;
+  const sdn = `<sdnList><publshInformation><Publish_Date>11/20/2026</Publish_Date></publshInformation>${Array.from({ length: 60 }, (_, i) => sdnEntry(i)).join("")}</sdnList>`;
+  let calls = 0;
+  const fetchImpl = async (url) => { calls++; return new Response(String(url).includes("trade.gov") ? csl : sdn, { status: 200 }); };
+  let t = Date.parse("2026-11-22T00:00:00Z");
+  const lists = createLists({ dataDir: fs.mkdtempSync(path.join(os.tmpdir(), "cql-")), fetchImpl, now: () => t });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cq-"));
+  const app = createApp({ dataDir: dir, jobToken: TOKEN, now: () => t, lists });
+  await new Promise((r) => app.jobServer.listen(0, "127.0.0.1", r));
+  await new Promise((r) => app.publicServer.listen(0, "127.0.0.1", r));
+  const job = `http://127.0.0.1:${app.jobServer.address().port}`;
+  const H = { Authorization: `Bearer ${TOKEN}` };
+  try {
+    assert.strictEqual((await fetch(`${job}/job/lists`)).status, 401);
+    const first = await (await fetch(`${job}/job/lists`, { headers: H })).json();
+    const l = first.lists;
+    assert.strictEqual(l.schema, "pocket-confidential-lists/0.1");
+    assert.strictEqual(l.entries.length, 1200);
+    assert.deepStrictEqual(l.entries[0], ["id0", "SDN", "Entity 0", ["First Alias"], "XX", "P"]);
+    assert.strictEqual(l.addresses["0x" + "0".padStart(40, "a")][0][1], "HOLDER 0");
+    assert.ok(l.websites["site7.example"], "websites are normalised (no www.)");
+    assert.deepStrictEqual(l.sources.map((s) => [s.id, s.last_updated]), [["csl", "2026-11-20"], ["ofac-sdn", "2026-11-20"]]);
+    const { sha256, ...rest } = l;
+    assert.strictEqual(sha256, crypto.createHash("sha256").update(JSON.stringify(rest)).digest("hex"));
+    assert.deepStrictEqual(await (await fetch(`${job}/job/lists?have=${l.sha256}`, { headers: H })).json(), { unchanged: true, sha256: l.sha256 });
+    assert.strictEqual(calls, 2, "downloaded once");
+    const h = await (await fetch(`http://127.0.0.1:${app.publicServer.address().port}/v1/health`)).json();
+    assert.strictEqual(h.screening_lists.sha256, l.sha256);
+  } finally {
+    app.jobServer.close(); app.publicServer.close();
+  }
+});
