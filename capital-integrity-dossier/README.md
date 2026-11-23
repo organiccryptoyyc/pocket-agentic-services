@@ -7,10 +7,10 @@ reconciles with the protocol's own numbers, and what we could not verify.
 
 ## Multi-call, disclosed up front
 
-A full dossier takes **up to 7 calls** (up to **$0.035** at the portal's $0.005 per call): one `plan` call plus one
-call per available section. `plan` states `calls_required` and the estimated total before you commit. You pay only
-for the calls you make and can stop after any section. Every response repeats `calls_used`, `calls_remaining` and
-the remaining estimate, and the `plan` response carries a buyer `notice` saying the same.
+A full dossier takes **up to 7 calls**: one `plan` call plus one call per available section, each billed at the
+price of the marketplace you call through. `plan` states `calls_required` before you commit. You pay only for the
+calls you make and can stop after any section. Every response repeats `calls_used` and `calls_remaining`, and the
+`plan` response carries a buyer `notice` saying the same.
 
 ```
 POST /v1/dossier/plan      {"entity_id": "inverse-finance"}           -> dossier_id, sections, calls_required, estimate, notice
@@ -38,7 +38,7 @@ Every value is copied from the same pinned snapshot; the dossier's own fields st
 
 ## Treasury Availability (1.6.0, one call)
 
-`POST /v1/dossier/availability {"entity_id"}` answers in a single $0.005 call how much of the treasury verified on
+`POST /v1/dossier/availability {"entity_id"}` answers in a single call how much of the treasury verified on
 chain could be used now. Every position lands in exactly one bucket, so the six add up to `observed_usd`:
 `available_now`, `own_token` (the protocol's own token in any wrapper), `encumbered` (loan collateral, counted in full),
 `restricted` (lock-ups, redemption limits, curated restrictions), `illiquid_now` (exit-check shortfall) and
