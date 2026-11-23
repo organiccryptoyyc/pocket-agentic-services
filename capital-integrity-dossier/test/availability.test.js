@@ -85,7 +85,7 @@ test("each position lands in exactly one bucket and the buckets add up to the ob
   assert.strictEqual(r.summary.available_confirmed_by_exit_check_usd, 100000);
   assert.match(r.summary.statement, /^Of \$3,330,000 verified on chain, \$1,150,000 \(34\.53%\) could be used now\.$/);
   assert.strictEqual(r.method, "tcs6-availability/1.0");
-  assert.deepStrictEqual(r.cost, { calls: 1, price_per_call_usd: 0.005, total_usd: 0.005, basis: "agent.pocket.network flat price per call",
+  assert.deepStrictEqual(r.cost, { calls: 1,
     deeper: "the full dossier (POST /v1/dossier/plan) shows every position, check and source, in up to 7 calls" });
 });
 

@@ -86,16 +86,16 @@ const code = (fn) => {
   return null;
 };
 
-test("plan discloses the call count, the price and the buyer notice before any section", () => {
+test("plan discloses the call count and the buyer notice before any section, with no dollar amounts (1.8.0)", () => {
   const p = D.plan({ entity_id: fresh() });
   assert.match(p.dossier_id, store.DOSSIER_ID_RE);
   assert.strictEqual(p.calls_required, 7);
   assert.strictEqual(p.calls_used, 1);
   assert.strictEqual(p.calls_remaining, 6);
-  assert.deepStrictEqual(p.estimate, { price_per_call_usd: 0.005, total_usd: 0.035, remaining_usd: 0.03, basis: "agent.pocket.network flat price per call" });
+  assert.ok(!("estimate" in p), "no price estimate: each marketplace shows its own price");
   assert.match(p.notice, /security/);
   assert.match(p.notice, /7 calls/);
-  assert.match(p.notice, /\$0\.035/);
+  assert.doesNotMatch(JSON.stringify(p), /\$0\.0|price_per_call|agent\.pocket\.network flat price/);
   assert.match(p.notice, /pay only for the calls you make/);
   assert.match(p.notice, /Thank you for understanding/);
   assert.strictEqual(p.sections.length, 6);
@@ -111,7 +111,7 @@ test("each section call counts, the remainder falls to zero, and a repeat is cou
     assert.strictEqual(s.section, name);
     assert.strictEqual(s.calls_used, i + 2);
     assert.strictEqual(s.calls_remaining, 5 - i);
-    assert.strictEqual(s.estimate.remaining_usd, Math.round((5 - i) * 0.005 * 1000) / 1000);
+    assert.ok(!("estimate" in s));
     assert.strictEqual(s.snapshot_report_id, "tcs6_demo-1");
     assert.ok(!s.note);
   });

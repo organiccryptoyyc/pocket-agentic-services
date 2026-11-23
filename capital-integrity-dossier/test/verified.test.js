@@ -91,7 +91,7 @@ test("plan carries a valid verified block with the TCS-6 judgement", async () =>
   assert.deepStrictEqual(await schemaErrors(v), []);
   assert.strictEqual(v.schema, "pocket-agentic-envelope/1");
   assert.strictEqual(v.service, "capital-integrity-dossier");
-  assert.strictEqual(v.service_version, "1.7.0");
+  assert.strictEqual(v.service_version, "1.8.0");
   assert.strictEqual(v.route, "/v1/dossier/plan");
   assert.strictEqual(v.subject.id, "protocol:tcs6:demo");
   assert.deepStrictEqual(v.subject.identifiers, { tcs6_entity_id: "demo", entity_type: "dao", peer_cohort: "defi" });
@@ -105,7 +105,7 @@ test("plan carries a valid verified block with the TCS-6 judgement", async () =>
 
 test("the dossier's own fields are unchanged; verified is one extra field", () => {
   const p = D.plan({ entity_id: seed() }, NOW);
-  for (const k of ["schema_version", "dossier_id", "entity", "as_of", "snapshot_report_id", "headline", "sections", "calls_required", "estimate", "notice", "attestation_ref", "disclaimer"]) assert.ok(k in p, k);
+  for (const k of ["schema_version", "dossier_id", "entity", "as_of", "snapshot_report_id", "headline", "sections", "calls_required", "notice", "attestation_ref", "disclaimer"]) assert.ok(k in p, k);
   assert.deepStrictEqual(p.attestation_ref, { attestation_id: "att-1", key_id: "tcs6-attest-test", evidence_manifest_hash: "sha256:00", verification_status: "valid" });
   assert.strictEqual(p.schema_version, "capital-integrity-dossier/1.0");
 });

@@ -30,12 +30,12 @@ const SECTIONS = [
 const SECTION_NAMES = SECTIONS.map(([n]) => n);
 
 const round2 = (x) => (typeof x === "number" && Number.isFinite(x) ? Math.round(x * 100) / 100 : x);
-const usd = (calls) => Math.round(calls * PRICE_PER_CALL_USD * 1000) / 1000;
-
+// 1.8.0: responses carry no dollar amounts. Buyers reach this through more than one marketplace
+// (Pocket, x402), each with its own price, and approve that price per call where they pay.
 function notice(callsRequired, upTo = false) {
   const n = upTo ? "up to " : "";
   return `Heads-up for your security and cost control: this dossier is a disclosed multi-call product. A full dossier takes ${n}${callsRequired} calls `
-    + `(the plan call plus one call per section), ${upTo ? "up to" : "about"} $${usd(callsRequired).toFixed(3)} at $${PRICE_PER_CALL_USD} per call. `
+    + "(the plan call plus one call per section), each billed at the price of the marketplace you call through. "
     + "You pay only for the calls you make and can stop after any section; each response shows how many calls remain. Thank you for understanding.";
 }
 
@@ -93,7 +93,6 @@ function plan(body, nowMs = Date.now()) {
     calls_required: callsRequired,
     calls_used: 1,
     calls_remaining: callsRequired - 1,
-    estimate: { price_per_call_usd: PRICE_PER_CALL_USD, total_usd: usd(callsRequired), remaining_usd: usd(callsRequired - 1), basis: "agent.pocket.network flat price per call" },
     notice: notice(callsRequired),
     next: "POST /v1/dossier/section {dossier_id, section} for each available section, in any order",
     attestation_ref: attestationRef(r),
@@ -444,7 +443,6 @@ function section(body, nowMs = Date.now()) {
     snapshot_report_id: r.report_id,
     calls_used: callsUsed,
     calls_remaining: remaining,
-    estimate: { price_per_call_usd: PRICE_PER_CALL_USD, remaining_usd: usd(remaining), basis: "agent.pocket.network flat price per call" },
     attestation_ref: attestationRef(r),
     data: built.data,
     ...(built.chart ? { chart: built.chart } : {}),

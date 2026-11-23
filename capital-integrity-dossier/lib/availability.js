@@ -181,7 +181,7 @@ function availability(body, nowMs = Date.now()) {
       values: "before haircuts, at the snapshot's prices; TCS-6 scores are unchanged by this view",
       not_valued: "tokens with no price are never guessed; they are listed under not_valued and left out of every bucket",
     },
-    cost: { calls: 1, price_per_call_usd: D.PRICE_PER_CALL_USD, total_usd: D.PRICE_PER_CALL_USD, basis: "agent.pocket.network flat price per call",
+    cost: { calls: 1,
       deeper: "the full dossier (POST /v1/dossier/plan) shows every position, check and source, in up to 7 calls" },
     attestation_ref: D.attestationRef(r),
     disclaimer: r.disclaimer,
