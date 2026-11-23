@@ -92,7 +92,14 @@ async function main() {
   assert.strictEqual(coPf.status, 200, JSON.stringify(coPf.body));
   const coChecks = Object.fromEntries(coPf.body.checks.map((c) => [c.id, c]));
   assert.strictEqual(coChecks.domain_registration.result, "unknown");
-  assert.notStrictEqual(coChecks.seller_trust.result, "fail");
+  // The stub's certificate is organization-validated (80/100): trusted with or without age points, so it stays a pass.
+  assert.strictEqual(coChecks.seller_trust.result, "pass");
+  const { sellerCheck } = require("../lib/preflight");
+  const dv = (s, rec) => sellerCheck({ seller_trust_score: s, recommendation: rec, score_basis: "certificate_only" }).result;
+  assert.strictEqual(dv(55, "proceed_with_caution"), "unknown", "55 could be 75 with the unreadable age points: unknown");
+  assert.strictEqual(dv(25, "high_risk"), "unknown", "25 could be 45: unknown");
+  assert.strictEqual(dv(15, "high_risk"), "fail", "15 stays under 40 even with all age points");
+  assert.strictEqual(sellerCheck({ seller_trust_score: 55, recommendation: "proceed_with_caution" }).result, "warn", "full data keeps warn");
   assert.strictEqual(coPf.body.verdict, "unknown", "unknown never counts as a pass, and is not a fail");
   // A covered TLD that RDAP doesn't know is still "not registered".
   assert.strictEqual(gone.body.registration.registered, false);

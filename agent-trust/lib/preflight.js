@@ -103,8 +103,12 @@ function tlsCheck(bv) {
 
 function sellerCheck(st) {
   const data = { seller_trust_score: st.seller_trust_score, recommendation: st.recommendation, score_basis: st.score_basis || "registration_and_certificate" };
-  const r = st.recommendation === "trusted" ? "pass" : st.recommendation === "proceed_with_caution" ? "warn" : "fail";
+  const band = (s) => (s >= 70 ? "pass" : s >= 40 ? "warn" : "fail");
+  let r = st.recommendation === "trusted" ? "pass" : st.recommendation === "proceed_with_caution" ? "warn" : "fail";
   const basis = st.score_basis === "certificate_only" ? "; certificate only, the registry can't be read" : "";
+  // 1.6.0: with the registry unreadable, the certificate score lacks up to 20 points for registration age.
+  // If those points would change the band, the answer depends on what we can't read: unknown, not warn or fail.
+  if (st.score_basis === "certificate_only" && band(st.seller_trust_score) !== band(Math.min(100, st.seller_trust_score + 20))) r = "unknown";
   return check("seller_trust", r, "heuristic", `seller trust ${st.seller_trust_score}/100 (${st.recommendation}${basis})`, { data });
 }
 
