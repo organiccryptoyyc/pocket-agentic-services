@@ -91,7 +91,7 @@ test("plan carries a valid verified block with the TCS-6 judgement", async () =>
   assert.deepStrictEqual(await schemaErrors(v), []);
   assert.strictEqual(v.schema, "pocket-agentic-envelope/1");
   assert.strictEqual(v.service, "capital-integrity-dossier");
-  assert.strictEqual(v.service_version, "1.8.0");
+  assert.strictEqual(v.service_version, "1.8.1");
   assert.strictEqual(v.route, "/v1/dossier/plan");
   assert.strictEqual(v.subject.id, "protocol:tcs6:demo");
   assert.deepStrictEqual(v.subject.identifiers, { tcs6_entity_id: "demo", entity_type: "dao", peer_cohort: "defi" });
