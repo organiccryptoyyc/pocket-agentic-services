@@ -1,0 +1,10 @@
+{
+  "name": "x402-feed",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Read-only, token-protected door from the alpha1 x402 seller to the service backends on the supplier's internal network.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node --test test/feed.test.js" },
+  "engines": { "node": ">=20" },
+  "dependencies": {}
+}
