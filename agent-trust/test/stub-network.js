@@ -27,9 +27,16 @@ global.fetch = async function stubFetch(url, init) {
   const u = new URL(url);
   if (process.env.SIMULATED_UPSTREAM_FAILURE === "1") throw new Error("stub: simulated network failure");
 
+  // IANA's RDAP bootstrap: .co has no RDAP service (live, 2026-11-23); "nordap" is never listed.
+  if (u.hostname === "data.iana.org") {
+    if (process.env.IANA_DOWN === "1") return { ok: false, status: 503, text: async () => "{}" };
+    return jsonResponse({ services: [[["com", "org", "net", "io", "example"], ["https://rdap.example/"]]] });
+  }
   if (u.hostname === "rdap.org") {
     const domain = decodeURIComponent(u.pathname.split("/").pop());
     if (domain === "doesnotexist-agent-trust-test.example") return jsonResponse({ errorCode: 404 }, 404);
+    // rdap.org answers 404 for a TLD with no RDAP service (live behaviour for .co, 2026-11-23).
+    if (/\.(co|nordap)$/.test(domain)) return jsonResponse({ errorCode: 404 }, 404);
     // rdap.org answers 400 for a subdomain (live behaviour, 2026-11-14).
     if (domain.split(".").length > 2) return jsonResponse({ errorCode: 400, title: "Bad Request" }, 400);
     return jsonResponse({

@@ -77,6 +77,15 @@ lookup now walks up (at most two labels) to the registered name and says so in `
 registry and DNS checks and returns `resolves: false` (plus `checked`, the checks it ran); `/v1/seller-trust` and
 `/v1/brand-verify` need a server, so they return 422 `domain_not_resolvable` instead of `upstream_unavailable`.
 
+1.6.0: a registry with no RDAP service is unknown, not unregistered. rdap.org answers 404 both for a name that
+isn't registered and for a TLD whose registry publishes no RDAP (for example `.co`), so `theblock.co` and
+`blockworks.co` read as "not registered" and failed `/v1/preflight`. The lookup now checks IANA's RDAP bootstrap
+(`https://data.iana.org/rdap/dns.json`, cached a day): for an uncovered TLD, `registration` is
+`{registered: null, rdap_available: false, reason}`, `/v1/domain-trust` returns `trust_score: null`,
+`/v1/seller-trust` scores the certificate alone (`score_basis: "certificate_only"`), and the preflight
+`domain_registration` check is `unknown` (so the verdict is `unknown`, never a pass). A 404 for a covered TLD is
+still "not registered".
+
 ## Operator setup: the sanctions-check API key
 
 `/v1/sanctions-check` requires `TRADE_GOV_SUBSCRIPTION_KEY` in the

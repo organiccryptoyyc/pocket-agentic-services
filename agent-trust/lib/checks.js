@@ -69,7 +69,45 @@ async function resolveSafely(domain) {
 // RDAP holds registered names, not subdomains: rdap.org answers 404 or 400 for
 // app.example.com. Then walk up (at most two labels) to the registered name; the
 // record says which name it describes (ldh_name, looked_up_as). 1.4.0.
+// Which top-level domains publish RDAP at all (IANA's bootstrap file, cached a day). rdap.org
+// answers 404 both for a name that isn't registered and for a TLD whose registry runs no RDAP
+// service (for example .co), so a 404 alone can't say "not registered" (1.6.0).
+const RDAP_BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json";
+const BOOTSTRAP_TTL_MS = 86_400_000;
+let rdapBootstrap = { tlds: null, at: 0 };
+
+async function rdapTlds() {
+  if (rdapBootstrap.tlds && Date.now() - rdapBootstrap.at < BOOTSTRAP_TTL_MS) return rdapBootstrap.tlds;
+  try {
+    const r = await withRetry(() => fetchJSON(RDAP_BOOTSTRAP_URL));
+    if (r.ok && Array.isArray(r.body.services)) {
+      const tlds = new Set(r.body.services.flatMap((s) => s[0] || []).map((t) => String(t).toLowerCase()));
+      if (tlds.size) rdapBootstrap = { tlds, at: Date.now() };
+    }
+  } catch { /* keep the last good copy, if any */ }
+  return rdapBootstrap.tlds;
+}
+
+// The registration can't be read: the registry publishes no RDAP, or we couldn't confirm it does.
+function registryUnreadable(domain, tlds) {
+  const tld = domain.split(".").pop().toLowerCase();
+  return {
+    registered: null,
+    rdap_available: tlds ? false : null,
+    tld,
+    reason: tlds
+      ? `the .${tld} registry publishes no RDAP service, so registration age, locks and expiry can't be read`
+      : "RDAP returned no record and the IANA RDAP directory could not be read, so whether this name is registered is unknown",
+  };
+}
+
+const tldOf = (d) => d.split(".").pop().toLowerCase();
+
 async function rdapLookup(domain, depth = 0) {
+  if (depth === 0) {
+    const tlds = await rdapTlds();
+    if (tlds && !tlds.has(tldOf(domain))) return registryUnreadable(domain, tlds);
+  }
   const url = `https://rdap.org/domain/${encodeURIComponent(domain)}`;
   const res = await withRetry(() => fetchJSON(url));
   if (!res.ok) {
@@ -78,7 +116,11 @@ async function rdapLookup(domain, depth = 0) {
       const up = await rdapLookup(parent, depth + 1);
       return { ...up, looked_up_as: up.looked_up_as || parent };
     }
-    if (res.status === 404) return { registered: false };
+    if (res.status === 404) {
+      const tlds = await rdapTlds();
+      if (!tlds || !tlds.has(tldOf(domain))) return registryUnreadable(domain, tlds);
+      return { registered: false };
+    }
     throw new UpstreamError(`RDAP lookup for '${domain}' failed: HTTP ${res.status}`);
   }
   const j = res.body;

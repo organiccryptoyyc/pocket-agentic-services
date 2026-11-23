@@ -18,7 +18,7 @@ const checks = require("./lib/checks");
 const { cached } = require("./lib/net");
 
 const SERVICE = "agent-trust";
-const VERSION = "1.5.0";
+const VERSION = "1.6.0";
 const VERSION_PATH = "/v1/version";
 const HEALTH_PATH = "/v1/health";
 
@@ -59,7 +59,9 @@ function toClientError(e) {
 // --- scoring (deterministic: same live inputs -> same score everywhere) ----
 
 function scoreDomainTrust(rdap, dns) {
-  if (!rdap.registered) return { score: 0, reasons: ["domain is not registered or RDAP has no record for it"] };
+  // 1.6.0: a registry we can't read is unknown, not unregistered, so there is no score to give.
+  if (rdap.registered === null) return { score: null, reasons: [rdap.reason] };
+  if (!rdap.registered) return { score: 0, reasons: ["domain is not registered (RDAP has no record for it)"] };
   const reasons = [];
   let score = 0;
   if (rdap.age_days != null) {
@@ -179,7 +181,9 @@ async function handleSellerTrust(body) {
     const [rdap, dns, cert] = await Promise.all([checks.rdapLookup(hostname), checks.dnsSignals(hostname), checks.tlsCertInfo(hostname, ips[0])]);
     const domainTrust = scoreDomainTrust(rdap, dns);
     const brand = scoreBrandVerify(cert, rdap, null);
-    const composite = Math.round((domainTrust.score * 0.4 + brand.score * 0.6) * 10) / 10;
+    // 1.6.0: when the registry can't be read, the score rests on the certificate alone and says so.
+    const certOnly = domainTrust.score === null;
+    const composite = certOnly ? brand.score : Math.round((domainTrust.score * 0.4 + brand.score * 0.6) * 10) / 10;
     const recommendation = composite >= 70 ? "trusted" : composite >= 40 ? "proceed_with_caution" : "high_risk";
     return {
       url: rawUrl,
@@ -189,8 +193,11 @@ async function handleSellerTrust(body) {
       recommendation,
       domain_trust: { score: domainTrust.score, reasons: domainTrust.reasons },
       certificate_trust: { score: brand.score, reasons: brand.reasons, certificate: cert },
-      methodology: "40% domain-registration/DNS trust + 60% live TLS certificate trust, both computed fresh from the " +
-        "domain's real current state. Deterministic for the same live state; not a guarantee of business legitimacy.",
+      score_basis: certOnly ? "certificate_only" : "registration_and_certificate",
+      methodology: (certOnly
+        ? "The domain's registry publishes no RDAP, so this score is the live TLS certificate trust alone (registration age, locks and expiry can't be read). "
+        : "40% domain-registration/DNS trust + 60% live TLS certificate trust, both computed fresh from the domain's real current state. ") +
+        "Deterministic for the same live state; not a guarantee of business legitimacy.",
     };
   });
   return withMeta(value, { stale, ageMs });

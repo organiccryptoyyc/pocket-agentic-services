@@ -77,7 +77,9 @@ function domainChecks(dt, asked) {
   const reg = dt.registration || {};
   const out = [];
   const of = reg.looked_up_as ? ` (registered name ${reg.looked_up_as})` : "";
-  if (!reg.registered) out.push(check("domain_registration", "fail", "definitive", "RDAP has no registration record for this domain"));
+  // 1.6.0: a registry with no RDAP (e.g. .co) is unknown, never a fail: the name may well be registered.
+  if (reg.registered === null) out.push(check("domain_registration", "unknown", "definitive", reg.reason || "the registration can't be read"));
+  else if (!reg.registered) out.push(check("domain_registration", "fail", "definitive", "RDAP has no registration record for this domain"));
   else if (reg.days_until_expiration != null && reg.days_until_expiration < 0) out.push(check("domain_registration", "fail", "definitive", "the domain registration has expired"));
   else if (reg.age_days != null && reg.age_days < 30) out.push(check("domain_registration", "warn", "heuristic", `registered only ${reg.age_days} days ago`));
   else if (dt.trust_score < 40) out.push(check("domain_registration", "warn", "heuristic", `low registration trust score (${dt.trust_score}/100)`));
@@ -100,9 +102,10 @@ function tlsCheck(bv) {
 }
 
 function sellerCheck(st) {
-  const data = { seller_trust_score: st.seller_trust_score, recommendation: st.recommendation };
+  const data = { seller_trust_score: st.seller_trust_score, recommendation: st.recommendation, score_basis: st.score_basis || "registration_and_certificate" };
   const r = st.recommendation === "trusted" ? "pass" : st.recommendation === "proceed_with_caution" ? "warn" : "fail";
-  return check("seller_trust", r, "heuristic", `seller trust ${st.seller_trust_score}/100 (${st.recommendation})`, { data });
+  const basis = st.score_basis === "certificate_only" ? "; certificate only, the registry can't be read" : "";
+  return check("seller_trust", r, "heuristic", `seller trust ${st.seller_trust_score}/100 (${st.recommendation}${basis})`, { data });
 }
 
 function brandCheck(lk) {

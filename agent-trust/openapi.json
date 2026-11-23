@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Agent Trust and Compliance API",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "description": "agent-trust on Pocket Network. Every response is a JSON object. All inputs arrive in the POST body. Errors are 4xx with a JSON {error:{code,message}} body, never 5xx or HTML. Every check is a real live call (RDAP, DNS, a live TLS handshake, the U.S. Consolidated Screening List, the public Blockscout explorer, or Pocket Network's public RPC) made at request time. POST /v1/preflight runs every check that applies to one counterparty and returns one verdict."
   },
   "servers": [
@@ -92,7 +92,9 @@
                       "type": "string"
                     },
                     "trust_score": {
-                      "type": "number"
+                      "type": "number",
+                      "nullable": true,
+                      "description": "0-100, higher is more trustworthy. null when the domain's registry publishes no RDAP service (for example .co), so registration can't be read (1.6.0)."
                     },
                     "resolves": {
                       "type": "boolean",
@@ -245,6 +247,14 @@
                     },
                     "verified": {
                       "$ref": "#/components/schemas/Verified"
+                    },
+                    "score_basis": {
+                      "type": "string",
+                      "enum": [
+                        "registration_and_certificate",
+                        "certificate_only"
+                      ],
+                      "description": "certificate_only when the registry publishes no RDAP: the score is the TLS certificate trust alone (1.6.0)."
                     }
                   }
                 }

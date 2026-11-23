@@ -76,6 +76,27 @@ async function main() {
   assert.strictEqual(goneSeller.body.error.code, "domain_not_resolvable");
   assert.match(goneSeller.body.error.message, /not an outage/);
 
+  // 1.6.0: a TLD whose registry runs no RDAP (.co) is unknown, never "not registered" or a fail.
+  const co = await req("/v1/domain-trust", { domain: "theblock.co" });
+  assert.strictEqual(co.status, 200, JSON.stringify(co.body));
+  assert.strictEqual(co.body.registration.registered, null);
+  assert.strictEqual(co.body.registration.rdap_available, false);
+  assert.strictEqual(co.body.trust_score, null, "no score when the registry can't be read");
+  assert.match(co.body.reasons.join(" "), /\.co registry publishes no RDAP/);
+  const coSeller = await req("/v1/seller-trust", { url: "https://theblock.co/" });
+  assert.strictEqual(coSeller.status, 200, JSON.stringify(coSeller.body));
+  assert.strictEqual(coSeller.body.score_basis, "certificate_only");
+  assert.strictEqual(coSeller.body.seller_trust_score, coSeller.body.certificate_trust.score);
+  assert.notStrictEqual(coSeller.body.recommendation, "high_risk", "a valid certificate on an unreadable registry is not high risk");
+  const coPf = await req("/v1/preflight", { url: "https://theblock.co/", domain: "theblock.co" });
+  assert.strictEqual(coPf.status, 200, JSON.stringify(coPf.body));
+  const coChecks = Object.fromEntries(coPf.body.checks.map((c) => [c.id, c]));
+  assert.strictEqual(coChecks.domain_registration.result, "unknown");
+  assert.notStrictEqual(coChecks.seller_trust.result, "fail");
+  assert.strictEqual(coPf.body.verdict, "unknown", "unknown never counts as a pass, and is not a fail");
+  // A covered TLD that RDAP doesn't know is still "not registered".
+  assert.strictEqual(gone.body.registration.registered, false);
+
   const badDomain = await req("/v1/domain-trust", { domain: "not a domain" });
   assert.strictEqual(badDomain.status, 422);
   assert.ok(badDomain.status < 500, "must never be a 5xx");
@@ -227,12 +248,12 @@ async function main() {
   const schema = JSON.parse(fs.readFileSync(path.join(envDir, "pocket-agentic-envelope-v1.schema.json"), "utf8"));
   const st = await req("/v1/seller-trust", { url: "https://example.com/pay" });
   assert.strictEqual(st.status, 200);
-  for (const [r, route] of [[dt, "/v1/domain-trust"], [bv, "/v1/brand-verify"], [st, "/v1/seller-trust"], [sc, "/v1/sanctions-check"], [ethRep, "/v1/reputation"], [eoa, "/v1/reputation"], [ethFallback, "/v1/reputation"], [contract, "/v1/reputation"], [pfClean, "/v1/preflight"], [pfListed, "/v1/preflight"], [pfName, "/v1/preflight"], [pfBpDown, "/v1/preflight"]]) {
+  for (const [r, route] of [[dt, "/v1/domain-trust"], [bv, "/v1/brand-verify"], [st, "/v1/seller-trust"], [sc, "/v1/sanctions-check"], [ethRep, "/v1/reputation"], [eoa, "/v1/reputation"], [ethFallback, "/v1/reputation"], [contract, "/v1/reputation"], [pfClean, "/v1/preflight"], [pfListed, "/v1/preflight"], [pfName, "/v1/preflight"], [pfBpDown, "/v1/preflight"], [co, "/v1/domain-trust"], [coSeller, "/v1/seller-trust"], [coPf, "/v1/preflight"]]) {
     const v = r.body.verified;
     assert.ok(v, `${route}: verified missing`);
     assert.deepStrictEqual(validate(schema, v), [], `${route}: verified fails the schema`);
     assert.strictEqual(v.route, route);
-    assert.strictEqual(v.service_version, "1.4.0");
+    assert.strictEqual(v.service_version, require("../package.json").version);
     assert.ok(v.evidence.length >= 1, `${route}: evidence listed`);
   }
   assert.strictEqual(dt.body.verified.subject.id, "domain:dns:example.com");
