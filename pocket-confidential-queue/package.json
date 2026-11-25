@@ -1,6 +1,6 @@
 {
   "name": "pocket-confidential-queue",
-  "version": "0.1.0",
+  "version": "0.5.1",
   "private": true,
   "description": "Pocket side of the confidential decision layer: holds sealed requests and signed results for the pocket-confidential Liskov worker. Never holds a decryption key.",
   "main": "server.js",

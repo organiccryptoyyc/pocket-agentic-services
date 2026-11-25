@@ -34,7 +34,7 @@ const { createSignals, defaultSources } = require("./lib/signals");
 const { createLists } = require("./lib/lists");
 
 const SERVICE = "pocket-confidential-queue";
-const VERSION = "0.5.0";
+const VERSION = "0.5.1";
 const MAX_BODY = 256 * 1024;
 const MAX_WITNESS_BODY = 1024 * 1024;
 const MAX_REQUEST = 128 * 1024;
@@ -235,7 +235,7 @@ if (require.main === module) {
   const lists = createLists({ dataDir });
   const app = createApp({ dataDir, jobToken: token, signals, lists });
   signals.get().catch(() => {}); // warm the cache at start
-  lists.get().catch(() => {});
+  lists.start(); // refreshes every 12 hours even when no request arrives
   const port = Number(process.env.PORT || 8080);
   const jobPort = Number(process.env.CQ_JOB_PORT || 8090);
   app.publicServer.listen(port, "0.0.0.0", () => console.log(JSON.stringify({ service: SERVICE, version: VERSION, listening: port })));

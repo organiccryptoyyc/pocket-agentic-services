@@ -330,3 +330,35 @@ test("screening lists: built from the official file formats, served to the job, 
     app.jobServer.close(); app.publicServer.close();
   }
 });
+
+test("screening lists: the timer refreshes a stale copy with no request, and keeps it when a refresh fails", async () => {
+  const { createLists } = require("../lib/lists");
+  const csl = JSON.stringify({ results: Array.from({ length: 1200 }, (_, i) => ({ id: `id${i}`, name: `Entity ${i}`, source: "(SDN)" })) });
+  const sdn = Array.from({ length: 60 }, (_, i) => `<sdnEntry><uid>${i}</uid><lastName>H${i}</lastName><id><idType>Digital Currency Address - ETH</idType><idNumber>0x${String(i).padStart(40, "a")}</idNumber></id><id><idType>Website</idType><idNumber>site${i}.example</idNumber></id></sdnEntry>`).join("");
+  let t = Date.parse("2026-11-22T00:00:00Z");
+  let up = true;
+  let calls = 0;
+  const fetchImpl = async (url) => { calls++; return up ? new Response(String(url).includes("trade.gov") ? csl : sdn) : new Response("", { status: 503 }); };
+  const lists = createLists({ dataDir: null, fetchImpl, now: () => t });
+  const until = async (f) => { for (let i = 0; i < 200 && !f(); i++) await new Promise((r) => setTimeout(r, 5)); assert.ok(f()); };
+  const stop = lists.start(5);
+  try {
+    await until(() => lists.peek());
+    const built = () => lists.peek().built_at;
+    assert.strictEqual(built(), "2026-11-22T00:00:00.000Z");
+    t += 11 * 3600_000;
+    await new Promise((r) => setTimeout(r, 40));
+    assert.strictEqual(calls, 2, "not refreshed before 12 hours");
+    t += 2 * 3600_000;
+    await until(() => built() === "2026-11-22T13:00:00.000Z"); // no get() was called
+    up = false;
+    t += 13 * 3600_000;
+    await until(() => calls === 5);
+    await new Promise((r) => setTimeout(r, 40));
+    assert.strictEqual(calls, 5, "a failed refresh waits 30 minutes");
+    assert.strictEqual(built(), "2026-11-22T13:00:00.000Z");
+    up = true;
+    t += 31 * 60_000;
+    await until(() => built() === "2026-11-23T02:31:00.000Z");
+  } finally { stop(); }
+});

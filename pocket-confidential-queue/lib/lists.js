@@ -137,6 +137,15 @@ function createLists({ dataDir, fetchImpl = fetch, now = () => Date.now(), timeo
   }
 
   return {
+    // Checks on a timer, so the lists stay current when no screening arrives: get() on its own
+    // would hand the first customer after a quiet spell the old copy.
+    start(everyMs = RETRY_MS) {
+      const tick = () => { this.get().catch(() => {}); };
+      tick();
+      const t = setInterval(tick, everyMs);
+      t.unref();
+      return () => clearInterval(t);
+    },
     // The current bundle; refreshed in the background when older than 12 hours (a failed refresh
     // is retried after 30 minutes). Waits only when there is no bundle at all.
     async get() {
