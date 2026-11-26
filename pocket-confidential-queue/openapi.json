@@ -2,10 +2,43 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Pocket Confidential",
-    "version": "0.5.1",
+    "version": "0.5.2",
     "description": "Confidential decisions on Pocket Network. A customer seals a request to the public key of a PROOF Liskov job running on Acurast; only that job can open it. The queue behind this API stores ciphertext, commitments and signed results, never plaintext input. Protocol pocket-confidential/0.1: X25519 + HKDF-SHA256 + AES-256-GCM, Ed25519 job signatures, canonical JSON (sorted keys). Services (the `service` field of a sealed request): treasury-stress (liquidity floor and limits under mild, severe and current-conditions shocks; ranges by default); covenant-monitor (a watch on the same engine, re-checked each time the public signals refresh, about every 30 minutes, until the job key changes; discloses only within_limits or the crossed limit); counterparty-screen (names, wallets and domains screened inside the job against the U.S. Consolidated Screening List and OFAC SDN wallet addresses and websites; the answer is sealed to the customer's reply_key); evidence-chain (up to 8 https sources fetched by the job, robots.txt honoured, each with its redirect chain, status, time, SHA-256 of the exact bytes and which customer claims appear; sealed to reply_key). A match is a lead for review, not a legal determination. Analysis only, not advice. Every response is a JSON object."
   },
   "paths": {
+    "/": {
+      "get": {
+        "summary": "How to use the service, plus the current signed key",
+        "description": "Any method; a body is ignored. For portal try-it buttons that call the bare service URL. Does not run a confidential decision.",
+        "responses": {
+          "200": {
+            "description": "{service, version, protocol, how_to[], services[], docs, key_status: available|no_key, key: {announcement, signature}|null, note}",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Same as GET /",
+        "responses": {
+          "200": {
+            "description": "Same as GET /",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/version": {
       "get": {
         "summary": "Service identity",

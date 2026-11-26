@@ -362,3 +362,26 @@ test("screening lists: the timer refreshes a stale copy with no request, and kee
     await until(() => built() === "2026-11-23T02:31:00.000Z");
   } finally { stop(); }
 });
+
+test("the bare service URL answers 200 with the way in and the current key (portal try-it button)", async () => {
+  const t = Date.parse("2026-11-26T00:00:00Z");
+  const q = await start(() => t);
+  try {
+    const empty = { request: { protocol: PROTOCOL, cipher: CIPHER, service: "treasury-stress", request_id: "", to: "", ephemeral_public_key: "", iv: "", ciphertext: "", tag: "", input_commitment: "" } };
+    let r = await q.pub("POST", "/", empty);
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(r.body.key_status, "no_key");
+    assert.strictEqual(r.body.key, null);
+    assert.strictEqual(r.body.how_to.length, 3);
+    const k = jobKey();
+    assert.strictEqual((await q.job("POST", "/job/keys", announcement(k, ENC, t))).status, 200);
+    r = await q.pub("GET", "/");
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(r.body.key_status, "available");
+    assert.strictEqual(r.body.key.announcement.encryption_public_key, ENC);
+    assert.strictEqual(r.body.version, "0.5.2");
+    assert.strictEqual((await q.pub("POST", "/nope", {})).status, 404, "other unknown paths still 404");
+  } finally {
+    q.close();
+  }
+});

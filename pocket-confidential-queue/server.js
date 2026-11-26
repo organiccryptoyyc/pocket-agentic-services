@@ -2,6 +2,8 @@
 //
 // Public API on :8080 (behind the RelayMiner, for customers and agents):
 //   GET  /v1/version, /v1/health
+//   any  /                            how to use the service, plus the current signed key (for portal
+//                                     "try it" buttons that call the bare service URL; body ignored)
 //   GET  /v1/key                      the current signed key announcement from the Liskov job
 //   POST /v1/submit  {request}        a request sealed to that key (protocol pocket-confidential/0.1)
 //   POST /v1/result  {request_id}     queued | working | done (signed result) | error
@@ -34,7 +36,7 @@ const { createSignals, defaultSources } = require("./lib/signals");
 const { createLists } = require("./lib/lists");
 
 const SERVICE = "pocket-confidential-queue";
-const VERSION = "0.5.1";
+const VERSION = "0.5.2";
 const MAX_BODY = 256 * 1024;
 const MAX_WITNESS_BODY = 1024 * 1024;
 const MAX_REQUEST = 128 * 1024;
@@ -79,6 +81,22 @@ function createApp({ dataDir, jobToken, now = () => Date.now(), signals = null, 
     try {
       const url = new URL(req.url, "http://x");
       const route = `${req.method} ${url.pathname}`;
+      if (url.pathname === "/") {
+        // The Agentic Portal's "Run paid call" sends its example to the bare service URL. A sealed
+        // request needs client-side encryption, so answer with the way in instead of a 404.
+        const a = store.currentAnnouncement();
+        return send(res, 200, { service: SERVICE, version: VERSION, protocol: "pocket-confidential/0.1",
+          how_to: [
+            "1. GET /v1/key: the signed key announcement of the online Liskov job (verify it first).",
+            "2. Seal your input to announcement.encryption_public_key (X25519, HKDF-SHA256, AES-256-GCM) and POST /v1/submit {request}.",
+            "3. POST /v1/result {request_id} until status is done; the result is Ed25519-signed by the job key.",
+          ],
+          services: ["treasury-stress", "covenant-monitor", "counterparty-screen", "evidence-chain"],
+          docs: "https://github.com/organiccryptoyyc/pocket-agentic-services/tree/main/pocket-confidential-queue",
+          key_status: a ? "available" : "no_key",
+          key: a || null,
+          note: "This call only describes the service; it does not run a confidential decision. Analysis only, not advice." });
+      }
       if (route === "GET /v1/version") return send(res, 200, { service: SERVICE, version: VERSION, protocol: "pocket-confidential/0.1" });
       if (route === "GET /v1/health") {
         const b = signals && signals.peek();
