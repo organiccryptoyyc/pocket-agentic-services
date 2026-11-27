@@ -24,7 +24,24 @@
         }
       },
       "post": {
-        "summary": "Same as GET /",
+        "summary": "How to use the service, plus the current signed key (same as GET /)",
+        "description": "The bare service URL. A body is ignored, so {} is enough. Returns the steps to use the service and the current signed key announcement. Does not run a confidential decision.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "examples": {
+                "how_to": {
+                  "summary": "How to use the service and the current signed key",
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Same as GET /",
